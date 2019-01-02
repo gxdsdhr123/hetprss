@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.flightdynamic.dao.FltMonitorDao">
+	
+	<resultMap type="com.neusoft.prss.flightdynamic.entity.NodeInfo" id="nodeInfoMap">
+		<result column ="fltid" property="fltid" />  
+		<result column ="id" property="id" />  
+		<result column ="event_time" property="eventTime" />  
+		<result column ="type_commnet" property="typeComment" />  
+		<result column ="person_code" property="personCode" />  
+		<result column ="person_name" property="personName" />  
+		<result column ="task_id" property="taskId" />  
+	</resultMap>
+	
+	<parameterMap id="sendMap" type="java.util.HashMap">    
+	    <parameter property="on_if_success"  jdbcType="FLOAT" javaType="java.lang.Integer" mode="OUT"/>  
+	    <parameter property="out_result_cursor" jdbcType="CURSOR" resultMap="nodeInfoMap" mode="OUT"/>    
+	    <parameter property="is_infltid" jdbcType="FLOAT" javaType="java.lang.String" mode="IN"/>    
+	    <parameter property="is_outfltid" jdbcType="FLOAT" javaType="java.lang.String" mode="IN"/>    
+	    <parameter property="is_id" jdbcType="FLOAT" javaType="java.lang.String" mode="IN"/>    
+	</parameterMap> 
+	
+	<select id="getInFltInfo" resultType="com.neusoft.prss.flightdynamic.entity.FltInfo">
+		select 
+			  flight_number as inFlightNumber--航班号
+			  ,depart_apt4code as departApt4code --起场
+	          ,sta  --计落
+	          ,eta  --预落
+	          ,ata  --实落
+	          ,aircraft_number as aircraftNumber  --机号
+	          ,acttype_code  as acttypeCode--机型
+	          ,actstand_kind as actstandKind --是否远机位
+	    from  fd_flt_info
+		where  fltid = #{fltid}
+	</select>
+	
+	<select id="getOutFltInfo" resultType="com.neusoft.prss.flightdynamic.entity.FltInfo">
+		select flight_number as outFlightNumber--航班号
+		          ,arrival_apt4code as arrivalApt4code  --落场
+		          ,std  --计起
+		          ,etd  --预起
+		          ,atd  --实起
+		          ,actstand_code as actstandCode--机位
+		          ,gate           --登机口
+		          ,actstand_kind as actstandKind --是否远机位
+	    from  fd_flt_info  
+		where  fltid = #{fltid}
+	</select>
+	
+	<select id="getFltmonitorInData" resultType="hashmap">
+		select 
+			v.*,
+			nvl2(FLY_TIME,'飞行'||FLY_TIME||'min','') as FLY_TIME_TEXT,
+			nvl2(HX_TIME,'滑行'||HX_TIME||'min','') as HX_TIME_TEXT
+		from
+		(select 
+		  t.*,
+		  trunc((to_date(t.ATA,'yyyy-mm-dd hh24:mi:ss') - to_date(t.ATD,'yyyy-mm-dd hh24:mi:ss'))*24*60) FLY_TIME, -- 飞行时间
+		  trunc((to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.ATA,'yyyy-mm-dd hh24:mi:ss'))*24*60) HX_TIME, -- 滑行行时间
+		  trunc((to_date(t.ABLQ_KJ_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) ABLQ_KJ_ECOST, -- 廊桥靠接预计用时
+		  trunc((to_date(t.ABLQ_KJ_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) ABLQ_KJ_ACOST, -- 廊桥靠接实际用时
+		  trunc((to_date(t.TC_KTCKJ_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) KTCKJ_ECOST, -- 客梯车靠接预计用时
+		  trunc((to_date(t.TC_KTCKJ_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) KTCKJ_ACOST, -- 客梯车靠接实际用时
+		  trunc((to_date(t.DIFUFUWU_KCM_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_ETM, t.TC_KTCKJ_ETM),'yyyy-mm-dd hh24:mi:ss'))*24*60) KCM_ECOST, -- 开客舱门预计用时
+		  trunc((to_date(t.DIFUFUWU_KCM_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_FTM, t.TC_KTCKJ_FTM),'yyyy-mm-dd hh24:mi:ss'))*24*60) KCM_ACOST, -- 开客舱门实际用时
+		  trunc((to_date(t.DFJJ_XK_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DIFUFUWU_KCM_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) XK_ECOST, -- 下客完成预计用时
+		  trunc((to_date(t.DFJJ_XK_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DIFUFUWU_KCM_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) XK_ACOST, -- 下客完成实际用时
+		  trunc((to_date(t.QJ_WC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DFJJ_XK_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) QJWC_ECOST, -- 清洁完成预计用时
+		  trunc((to_date(t.QJ_WC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DFJJ_XK_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) QJWC_ACOST, -- 清洁完成实际用时
+		  trunc((to_date(t.TC_KTCCL_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.QJ_WC_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) KTCCL_ECOST, -- 客梯车撤离预计用时
+		  trunc((to_date(t.TC_KTCCL_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.QJ_WC_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) KTCCL_ACOST, -- 客梯车撤离实际用时
+		  trunc((to_date(t.ABLQ_CL_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.QJ_WC_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) ABLQ_CL_ECOST, -- 廊桥撤离预计用时
+		  trunc((to_date(t.ABLQ_CL_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.QJ_WC_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) ABLQ_CL_ACOST, -- 廊桥撤离实际用时
+		  trunc((to_date(t.JIWU_FXWC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) FXWC_ECOST, -- 航线放行预计用时
+		  trunc((to_date(t.JIWU_FXWC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) FXWC_ACOST, -- 航线放行实际用时
+		  trunc((to_date(t.TC_QSC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) QSC_ECOST, -- 清水车预计用时
+		  trunc((to_date(t.TC_QSC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) QSC_ACOST, -- 清水车实际用时
+		  trunc((to_date(t.TC_WSC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) WSC_ECOST, -- 污水车预计用时
+		  trunc((to_date(t.TC_WSC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) WSC_ACOST, -- 污水车实际用时
+		  trunc((to_date(t.TC_PCC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) PCC_ECOST, -- 配餐预计用时
+		  trunc((to_date(t.TC_PCC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) PCC_ACOST, -- 配餐实际用时
+		  trunc((to_date(t.YOULIAOJIAYOU_WC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) YLJY_ECOST, -- 加油预计用时
+		  trunc((to_date(t.YOULIAOJIAYOU_WC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) YLJY_ACOST, -- 加油实际用时
+		  trunc((to_date(t.ZX_KHCM_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) KHCM_ECOST, -- 开货舱门预计用时
+		  trunc((to_date(t.ZX_KHCM_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) KHCM_ACOST, -- 开货舱门实际用时
+		  trunc((to_date(t.ZX_GHCM_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) GHCM_ECOST, -- 关货舱门预计用时
+		  trunc((to_date(t.ZX_GHCM_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) GHCM_ACOST, -- 关货舱门实际用时
+		  trunc((to_date(t.TC_JGBDC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) JGBDC_ECOST, -- 进港摆渡车预计用时
+		  trunc((to_date(t.TC_JGBDC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) JGBDC_ACOST -- 进港摆渡车实际用时
+		from WF_TASK_DJG_JK_V t
+		where t.fltid = #{fltid}) v
+	</select>
+	
+	<select id="getFltmonitorOutData" resultType="hashmap">
+		select 
+			v.*,
+			nvl2(QF_TIME,'滑行'||QF_TIME||'min','') as QF_TIME_TEXT
+		from
+		(select 
+		  t.*,
+		  trunc((to_date(t.QJ_WC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_ETM, t.TC_KTCKJ_ETM),'yyyy-mm-dd hh24:mi:ss'))*24*60) QJWC_ECOST, -- 清洁完成预计用时
+		  trunc((to_date(t.QJ_WC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_FTM, t.TC_KTCKJ_FTM),'yyyy-mm-dd hh24:mi:ss'))*24*60) QJWC_ACOST, -- 清洁完成实际用时
+		  trunc((to_date(t.BRD_BTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.QJ_WC_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) DJKS_ECOST, -- 登机开始预计用时
+		  trunc((to_date(t.BRD_BTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.QJ_WC_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) DJKS_ACOST, -- 登机开始实际用时
+		  trunc((to_date(t.BRD_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.BRD_BTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) DJJS_ECOST, -- 登机结束预计用时
+		  trunc((to_date(t.BRD_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.BRD_BTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) DJJS_ACOST, -- 登机结束实际用时
+      trunc((to_date(t.DIFUFUWU_GCM_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.BRD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) GCM_ECOST, -- 关客舱门预计用时
+      trunc((to_date(t.DIFUFUWU_GCM_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.BRD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) GCM_ACOST, -- 关客舱门实际用时
+		  trunc((to_date(t.TC_KTCCL_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DIFUFUWU_GCM_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) KTCCL_ECOST, -- 客梯车撤离预计用时
+		  trunc((to_date(t.TC_KTCCL_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DIFUFUWU_GCM_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) KTCCL_ACOST, -- 客梯车撤离实际用时
+		  trunc((to_date(t.ABLQ_CL_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DIFUFUWU_GCM_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) ABLQ_CL_ECOST, -- 廊桥撤离预计用时
+		  trunc((to_date(t.ABLQ_CL_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DIFUFUWU_GCM_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) ABLQ_CL_ACOST, -- 廊桥撤离实际用时
+		  trunc((to_date(t.JIWU_CLD_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.TC_KTCCL_ETM, t.ABLQ_CL_ETM),'yyyy-mm-dd hh24:mi:ss'))*24*60) CLD_ECOST, -- 撤轮档预计用时
+		  trunc((to_date(t.JIWU_CLD_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.TC_KTCCL_FTM, t.ABLQ_CL_FTM),'yyyy-mm-dd hh24:mi:ss'))*24*60) CLD_ACOST, -- 撤轮档实际用时
+		  trunc((to_date(t.atd,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_CLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) QF_TIME, -- 起飞时间
+		  trunc((to_date(t.JIWU_FXWC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_ETM, t.TC_KTCKJ_ETM),'yyyy-mm-dd hh24:mi:ss'))*24*60) FXWC_ECOST, -- 航线放行预计用时
+		  trunc((to_date(t.JIWU_FXWC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_FTM, t.TC_KTCKJ_FTM),'yyyy-mm-dd hh24:mi:ss'))*24*60) FXWC_ACOST, -- 航线放行实际用时
+		  trunc((to_date(t.TC_QSC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_ETM, t.TC_KTCKJ_ETM),'yyyy-mm-dd hh24:mi:ss'))*24*60) QSC_ECOST, -- 清水车预计用时
+		  trunc((to_date(t.TC_QSC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_FTM, t.TC_KTCKJ_FTM),'yyyy-mm-dd hh24:mi:ss'))*24*60) QSC_ACOST, -- 清水车实际用时
+		  trunc((to_date(t.TC_WSC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_ETM, t.TC_KTCKJ_ETM),'yyyy-mm-dd hh24:mi:ss'))*24*60) WSC_ECOST, -- 污水车预计用时
+		  trunc((to_date(t.TC_WSC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_FTM, t.TC_KTCKJ_FTM),'yyyy-mm-dd hh24:mi:ss'))*24*60) WSC_ACOST, -- 污水车实际用时
+		  trunc((to_date(t.TC_PCC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_ETM, t.TC_KTCKJ_ETM),'yyyy-mm-dd hh24:mi:ss'))*24*60) PCC_ECOST, -- 配餐预计用时
+		  trunc((to_date(t.TC_PCC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_FTM, t.TC_KTCKJ_FTM),'yyyy-mm-dd hh24:mi:ss'))*24*60) PCC_ACOST, -- 配餐实际用时
+		  trunc((to_date(t.YOULIAOJIAYOU_WC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_ETM, t.TC_KTCKJ_ETM),'yyyy-mm-dd hh24:mi:ss'))*24*60) YLJY_ECOST, -- 加油预计用时
+		  trunc((to_date(t.YOULIAOJIAYOU_WC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_FTM, t.TC_KTCKJ_FTM),'yyyy-mm-dd hh24:mi:ss'))*24*60) YLJY_ACOST, -- 加油实际用时
+		  trunc((to_date(t.ZX_KHCM_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_ETM, t.TC_KTCKJ_ETM),'yyyy-mm-dd hh24:mi:ss'))*24*60) KHCM_ECOST, -- 开货舱门预计用时
+		  trunc((to_date(t.ZX_KHCM_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_FTM, t.TC_KTCKJ_FTM),'yyyy-mm-dd hh24:mi:ss'))*24*60) KHCM_ACOST, -- 开货舱门实际用时
+		  trunc((to_date(t.ZX_GHCM_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_ETM, t.TC_KTCKJ_ETM),'yyyy-mm-dd hh24:mi:ss'))*24*60) GHCM_ECOST, -- 关货舱门预计用时
+		  trunc((to_date(t.ZX_GHCM_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_FTM, t.TC_KTCKJ_FTM),'yyyy-mm-dd hh24:mi:ss'))*24*60) GHCM_ACOST, -- 关货舱门实际用时
+		  trunc((to_date(t.TC_CGBDC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_ETM, t.TC_KTCKJ_ETM),'yyyy-mm-dd hh24:mi:ss'))*24*60) CGBDC_ECOST, -- 出港港摆渡车预计用时
+		  trunc((to_date(t.TC_CGBDC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_FTM, t.TC_KTCKJ_FTM),'yyyy-mm-dd hh24:mi:ss'))*24*60) CGBDC_ACOST -- 出港摆渡车实际用时
+		from WF_TASK_DCG_JK_V t
+		where t.fltid = #{fltid}) v
+	</select>
+	
+	<select id="getFltmonitorInOutData" resultType="hashmap">
+		select 
+			v.*,
+			nvl2(FLY_TIME,'飞行'||FLY_TIME||'min','') as FLY_TIME_TEXT,
+			nvl2(HX_TIME,'滑行'||HX_TIME||'min','') as HX_TIME_TEXT,
+			nvl2(QF_TIME,'滑行'||QF_TIME||'min','') as QF_TIME_TEXT
+		from
+		(select 
+		  t.*,
+		  trunc((to_date(t.IN_ATA,'yyyy-mm-dd hh24:mi:ss') - to_date(t.IN_ATD,'yyyy-mm-dd hh24:mi:ss'))*24*60) FLY_TIME, -- 飞行时间
+		  trunc((to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.IN_ATA,'yyyy-mm-dd hh24:mi:ss'))*24*60) HX_TIME, -- 滑行行时间
+		  trunc((to_date(t.ABLQ_KJ_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) ABLQ_KJ_ECOST, -- 廊桥靠接预计用时
+		  trunc((to_date(t.ABLQ_KJ_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) ABLQ_KJ_ACOST, -- 廊桥靠接实际用时
+		  trunc((to_date(t.TC_KTCKJ_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) KTCKJ_ECOST, -- 客梯车靠接预计用时
+		  trunc((to_date(t.TC_KTCKJ_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) KTCKJ_ACOST, -- 客梯车靠接实际用时
+		  trunc((to_date(t.DIFUFUWU_KCM_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_ETM, t.TC_KTCKJ_ETM),'yyyy-mm-dd hh24:mi:ss'))*24*60) KCM_ECOST, -- 开客舱门预计用时
+		  trunc((to_date(t.DIFUFUWU_KCM_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.ABLQ_KJ_FTM, t.TC_KTCKJ_FTM),'yyyy-mm-dd hh24:mi:ss'))*24*60) KCM_ACOST, -- 开客舱门实际用时
+		  trunc((to_date(t.DFJJ_XK_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DIFUFUWU_KCM_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) XK_ECOST, -- 下客完成预计用时
+		  trunc((to_date(t.DFJJ_XK_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DIFUFUWU_KCM_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) XK_ACOST, -- 下客完成实际用时
+		  trunc((to_date(t.QJ_WC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DFJJ_XK_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) QJWC_ECOST, -- 清洁完成预计用时
+		  trunc((to_date(t.QJ_WC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DFJJ_XK_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) QJWC_ACOST, -- 清洁完成实际用时
+		  trunc((to_date(t.BRD_BTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.QJ_WC_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) DJKS_ECOST, -- 登机开始预计用时
+		  trunc((to_date(t.BRD_BTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.QJ_WC_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) DJKS_ACOST, -- 登机开始实际用时
+		  trunc((to_date(t.BRD_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.BRD_BTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) DJJS_ECOST, -- 登机结束预计用时
+		  trunc((to_date(t.BRD_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.BRD_BTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) DJJS_ACOST, -- 登机结束实际用时
+		  trunc((to_date(t.DIFUFUWU_GCM_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.BRD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) GCM_ECOST, -- 关客舱门预计用时
+		  trunc((to_date(t.DIFUFUWU_GCM_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.BRD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) GCM_ACOST, -- 关客舱门实际用时
+		  trunc((to_date(t.TC_KTCCL_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DIFUFUWU_GCM_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) KTCCL_ECOST, -- 客梯车撤离预计用时
+		  trunc((to_date(t.TC_KTCCL_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DIFUFUWU_GCM_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) KTCCL_ACOST, -- 客梯车撤离实际用时
+		  trunc((to_date(t.ABLQ_CL_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DIFUFUWU_GCM_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) ABLQ_CL_ECOST, -- 廊桥撤离预计用时
+		  trunc((to_date(t.ABLQ_CL_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.DIFUFUWU_GCM_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) ABLQ_CL_ACOST, -- 廊桥撤离实际用时
+		  trunc((to_date(t.JIWU_CLD_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.TC_KTCCL_ETM, t.ABLQ_CL_ETM),'yyyy-mm-dd hh24:mi:ss'))*24*60) CLD_ECOST, -- 撤轮档预计用时
+		  trunc((to_date(t.JIWU_CLD_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(nvl(t.TC_KTCCL_FTM, t.ABLQ_CL_FTM),'yyyy-mm-dd hh24:mi:ss'))*24*60) CLD_ACOST, -- 撤轮档实际用时
+		  trunc((to_date(t.out_atd,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_CLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) QF_TIME, -- 起飞时间
+		  trunc((to_date(t.JIWU_FXWC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) FXWC_ECOST, -- 航线放行预计用时
+		  trunc((to_date(t.JIWU_FXWC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) FXWC_ACOST, -- 航线放行实际用时
+		  trunc((to_date(t.TC_QSC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) QSC_ECOST, -- 清水车预计用时
+		  trunc((to_date(t.TC_QSC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) QSC_ACOST, -- 清水车实际用时
+		  trunc((to_date(t.TC_WSC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) WSC_ECOST, -- 污水车预计用时
+		  trunc((to_date(t.TC_WSC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) WSC_ACOST, -- 污水车实际用时
+		  trunc((to_date(t.TC_PCC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) PCC_ECOST, -- 配餐预计用时
+		  trunc((to_date(t.TC_PCC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) PCC_ACOST, -- 配餐实际用时
+		  trunc((to_date(t.YOULIAOJIAYOU_WC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) YLJY_ECOST, -- 加油预计用时
+		  trunc((to_date(t.YOULIAOJIAYOU_WC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) YLJY_ACOST, -- 加油实际用时
+		  trunc((to_date(t.ZX_KHCM_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) KHCM_ECOST, -- 开货舱门预计用时
+		  trunc((to_date(t.ZX_KHCM_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) KHCM_ACOST, -- 开货舱门实际用时
+		  trunc((to_date(t.ZX_GHCM_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) GHCM_ECOST, -- 关货舱门预计用时
+		  trunc((to_date(t.ZX_GHCM_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) GHCM_ACOST, -- 关货舱门实际用时
+		  trunc((to_date(t.TC_JGBDC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) JGBDC_ECOST, -- 进港摆渡车预计用时
+		  trunc((to_date(t.TC_JGBDC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.JIWU_DLD_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) JGBDC_ACOST, -- 进港摆渡车实际用时
+		  trunc((to_date(t.TC_CGBDC_ETM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.TC_JGBDC_ETM,'yyyy-mm-dd hh24:mi:ss'))*24*60) CGBDC_ECOST, -- 出港港摆渡车预计用时
+		  trunc((to_date(t.TC_CGBDC_FTM,'yyyy-mm-dd hh24:mi:ss') - to_date(t.TC_JGBDC_FTM,'yyyy-mm-dd hh24:mi:ss'))*24*60) CGBDC_ACOST -- 出港摆渡车实际用时
+		from WF_TASK_JCG_JK_V t
+		where t.in_fltid = #{inFltid} and t.out_fltid = #{outFltid}) v
+	</select>
+	
+	<select id="getNodeData" parameterMap="sendMap" statementType="CALLABLE">
+		call jm_jkt_p(?	,?	,?	,?	,?)
+	</select>
+	<select id="getInPassengerInfo" resultType="com.neusoft.prss.flightdynamic.entity.PassengerInfo">
+		select 
+			pax_num as passengerNum,
+			vip_flag_text as vipFlagText
+		from
+		fd_flt_cla_passenger  t1
+		full join
+		fd_vip_info_v  t2
+		on(t2.fltid=t1.fltid)
+		where t1.fltid=#{fltid}
+	</select>
+	<select id="getOutPassengerInfo" resultType="com.neusoft.prss.flightdynamic.entity.PassengerInfo">
+		select
+			bkg_num as bookNum,
+			pax_num as passengerNum,
+			pck_num as operatedNum,
+			pnck_num as onlineOperateNum,
+			pack_num as selfhelpOperateNum,
+			pcck_num as counterOperateNum,
+			psc_num as seizedNum,
+			pbd_num as boardingNum,
+			ckcl_num as unoperateNum,
+			bdcl_num as unboardingNum,
+			vip_flag_text as vipFlagText
+		from
+		fd_flt_cla_passenger  t1
+		left join
+		fd_vip_info_v  t2
+		on(t2.fltid=t1.fltid)
+		where t1.fltid=#{fltid} 
+	</select>
+	
+	<select id="getPersonFlow" resultType="hashmap">
+		select a.id,
+	      to_daytime(to_char(a.create_date, 'yyyy-mm-dd hh24:mi:ss')) as t1,
+	      to_daytime(to_char(a.create_date, 'yyyy-mm-dd hh24:mi:ss')) as t2,
+	      to_daytime(c.finish_time) as t3,
+	      to_daytime(a.START_TM) as t4,
+	      to_daytime(a.END_TM) as t5
+	  from (select * from jm_task where id=#{taskId}) a
+	  left 
+	  join jm_task_proc_inst b
+	    on (a.id = b.task_id)
+	  left 
+	  join (select * from wf_hist_task where icon = '到') c
+	    on (b.proc_inst_id = c.order_id)
+	</select>
+	
+	<select id="getTaskMsg" resultType="com.neusoft.prss.flightdynamic.entity.PersonEvent$TimeData">
+		<![CDATA[
+			--提醒消息
+			select
+				to_daytime(finish_time) as time,
+				textflie as eventDes
+			 from(
+			   select to_char(SENDTIME, 'yyyy-mm-dd hh24:mi:ss') as finish_time,
+			          e.MTITLE as textflie
+			     from jm_task a,
+			          jm_task_proc_inst b,
+			          (select id, order_id
+			             from wf_hist_task
+			           union all
+			           select id, order_id
+			             from wf_task) c,
+			          wf_task_msg_log_rel d,
+			          mm_info e
+			    where a.id = b.task_id
+			      and b.proc_inst_id = c.order_id
+			      and c.id = d.task_id
+			      and d.mid = e.id
+			      and a.id = #{taskId}
+			   union
+			   select to_char(SENDTIME, 'yyyy-mm-dd hh24:mi:ss') as finish_time,
+			          e.MTITLE as textflie
+			     from jm_task a,
+			          jm_task_proc_inst b,
+			          (select id, order_id
+			             from wf_hist_task
+			           union all
+			           select id, order_id
+			             from wf_task) c,
+			          wf_order_msg_log d,
+			          mm_info e
+			    where a.id = b.task_id
+			      and b.proc_inst_id = c.order_id
+			      and c.id = d.task_id
+			      and d.mid = e.id
+			      and a.id = #{taskId}
+			) order by finish_time
+		]]>
+	</select>
+	<select id="getAbnormalityEvent" resultType="com.neusoft.prss.flightdynamic.entity.PersonEvent$TimeData">
+		<![CDATA[
+			 --不正常事件
+			 select
+				to_daytime(finish_time) as time,
+				textflie as eventDes
+			 from(
+			  select finish_time,
+			         '晚到位' || TIME_ROUND_ID(expire_time, finish_time) || '分钟' as textflie
+			    from jm_task a, jm_task_proc_inst b, wf_hist_task c
+			   where a.id = b.task_id
+			     and b.proc_inst_id = c.order_id
+			     and finish_time is not null
+			     and expire_time is not null
+			     and TIME_ROUND_ID(expire_time, finish_time) > 10
+			     and parent_task_id = 'start'
+			     and a.id=#{taskId}
+			  union all
+			  select END_TM as finish_time,'保障超时' || TIME_ROUND_ID(E_END_TM, END_TM) || '分钟' as textflie
+			    from jm_task a
+			   where END_TM is not null
+			     and E_END_TM is not null
+			     and TIME_ROUND_ID(E_END_TM, END_TM) > 10
+			     and a.id=#{taskId}
+			) order by finish_time
+		]]>
+	</select>
+	
+	<select id="getPhoneByUserId" resultType="String">
+		select phone from sys_user where id = #{userId}
+	</select>
+</mapper>

@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dubbo="http://code.alibabatech.com/schema/dubbo"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans  
+        http://www.springframework.org/schema/beans/spring-beans.xsd  
+        http://code.alibabatech.com/schema/dubbo  
+        http://code.alibabatech.com/schema/dubbo/dubbo.xsd  
+        ">
+	<!-- consumer application name -->
+	<dubbo:application name="prss-consumer-service" />
+	<dubbo:monitor protocol="registry" />
+	<!-- registry address, used for consumer to discover services -->
+	<dubbo:registry address="zookeeper://10.150.6.35:2181?backup=10.150.6.25:2181,10.150.6.26:2181" file="${user.home}/.dubbo/pbprss-consumer-service.cache"/>
+	<!-- **********包头机场************** -->
+	<!-- 选中作业人 -->
+	<dubbo:reference id="workerArrangeService"
+		interface="com.neusoft.prss.arrange.service.WorkerArrangeService"
+		check="true" version="5.0" />
+		
+	<!-- 人员排班 -->
+	<dubbo:reference id="workerArrangePlanService"
+		interface="com.neusoft.prss.arrange.service.WorkerArrangePlanService"
+		check="true" version="5.0" />
+		
+	<!-- 消息订阅用到 -->
+	<dubbo:reference id="jobManagerService"
+		interface="com.neusoft.prss.job.service.JobManagerService" check="true"
+		version="5.0" />
+		
+	<!-- 手动创建任务 -->
+	<dubbo:reference id="taskArrangeService"
+		interface="com.neusoft.prss.taskarrange.service.TaskArrangeService"
+		check="true" version="5.0" />
+
+	<!-- 时间节点 -->
+	<dubbo:reference id="NodeTimeService"
+		interface="com.neusoft.prss.nodetime.service.NodeTimeService" check="true"
+		version="5.0" />
+
+	<!-- 手动分人总调度服务 -->
+	<dubbo:reference id="arrangeService"
+		interface="com.neusoft.prss.arrange.service.WorkerArrangeService" check="true"
+		version="5.0" />
+	
+	<!-- rule service 规则引擎 -->
+	<dubbo:reference id="ruleService"
+		interface="com.neusoft.prss.rule.service.RuleService" check="true"
+		version="5.0" />
+		
+	<dubbo:reference id="processService"
+		interface="com.neusoft.prss.workflow.service.ProcessService" check="true"
+		version="5.0" />
+	<dubbo:reference id="orderService"
+		interface="com.neusoft.prss.workflow.service.OrderService" check="true"
+		version="5.0" />
+	<dubbo:reference id="wfTaskService"
+		interface="com.neusoft.prss.workflow.service.TaskService" check="true"
+		version="5.0" />
+	<dubbo:reference id="wfBtnEventService"
+		interface="com.neusoft.prss.workflow.service.WFBtnEventService" check="true"
+		version="5.0" />
+	<dubbo:reference id="taskExtraService" interface="com.neusoft.prss.workflow.service.TaskExtraService" check="true"
+		version="5.0" />
+	<!-- redis cache sync service -->
+	<dubbo:reference id="cacheSynService" interface="com.neusoft.prss.cacheSyn.service.CacheSynService" check="true" version="5.0" />
+	<!-- redis cache service -->
+	<dubbo:reference id="cacheService"
+		interface="com.neusoft.prss.cache.service.CacheService" check="true"
+		version="5.0" />
+	<!-- 文件上传service -->
+	<dubbo:reference id="fileService"
+		interface="com.neusoft.prss.file.service.FileService" check="true"
+		version="5.0" />
+	<!-- message send service -->
+	<dubbo:reference id="messageSendService"
+		interface="com.neusoft.prss.message.service.MessageSendService" check="true"
+		version="5.0" />
+	<!-- message common service -->
+	<dubbo:reference id="messageCommonService"
+		interface="com.neusoft.prss.message.service.MessageCommonService"
+		check="true" version="5.0" />
+
+	<dubbo:reference id="fdgridService"
+		interface="com.neusoft.prss.flightdynamic.service.FdGridService"
+		check="true" version="5.0" />
+
+	<dubbo:reference id="getFltInfoService"
+		interface="com.neusoft.prss.getfltinfo.service.GetFltInfoService"
+		check="true" version="5.0" />
+
+	<dubbo:reference id="gridService"
+		interface="com.neusoft.prss.grid.service.GridColumnService" check="true"
+		version="5.0" />
+
+	<dubbo:reference id="mmHisService"
+		interface="com.neusoft.prss.message.service.HistoryService" check="true"
+		version="5.0" />
+	<dubbo:reference id="fdHisService"
+		interface="com.neusoft.prss.flightdynamic.service.FdHisService" check="true"
+		version="5.0" />
+
+	<dubbo:reference id="tmHisService"
+		interface="com.neusoft.prss.telegraph.service.HistoryService" check="true"
+		version="5.0" />
+
+	<!-- 调度历史 -->
+	<dubbo:reference id="schedulingHisService"
+		interface="com.neusoft.prss.scheduling.service.SchedulingHisListService"
+		check="true" version="5.0" />
+	<dubbo:reference id="schedulingHisGanttService"
+		interface="com.neusoft.prss.scheduling.service.SchedulingHisGanttService"
+		check="true" version="5.0" />
+	<!-- 获取航班历史信息服务 -->
+
+	<dubbo:reference id="getFltHisService"
+		interface="com.neusoft.prss.getflthis.service.GetFltHisService" check="true"
+		version="5.0" />
+
+	<!-- 获取员工操作记录历史信息服务 -->
+	<dubbo:reference id="operatorRecordServiceHis"
+		interface="com.neusoft.prss.operatorrecord.service.OperatorRecordService"
+		check="true" version="5.0" />
+
+	<!-- 国际长期计划 -->
+	<dubbo:reference id="internationalPlanService"
+		interface="com.neusoft.prss.plan.service.InternationalPlanService"
+		check="true" version="5.0" />
+	<!-- 公务、通航长期计划 -->
+	<dubbo:reference id="specialPlanService"
+		interface="com.neusoft.prss.plan.service.SpecialPlanService" check="true"
+		version="5.0" />
+	<!-- 中航信长期计划 -->
+	<dubbo:reference id="travelskyPlanService"
+		interface="com.neusoft.prss.plan.service.TravelskyPlanService" check="true"
+		version="5.0" />
+
+	<!-- 操作记录日志服务 -->
+	<dubbo:reference id="operLogService"
+		interface="com.neusoft.prss.common.service.OperationLogService" check="true"
+		version="5.0" />
+	<!-- 任务操作日志写入 -->
+	<dubbo:reference id="writeLogService"
+		interface="com.neusoft.prss.common.service.OperLogWriteService" check="true"
+		version="5.0" />
+
+	<!-- 局方长期计划 -->
+	<dubbo:reference id="caacPlanService"
+		interface="com.neusoft.prss.plan.service.CAACPlanService" check="true"
+		version="5.0" />
+
+	<!-- 次日计划 -->
+	<dubbo:reference id="tomorrowPlanService"
+		interface="com.neusoft.prss.plan.service.TomorrowPlanService" check="true"
+		version="5.0" />
+
+	<!-- 空管次日计划 -->
+	<dubbo:reference id="atmbPlanService"
+		interface="com.neusoft.prss.plan.service.ATMBPlanService" check="true"
+		version="5.0" />
+
+	<!-- 航班报文 -->
+	<dubbo:reference id="telegraphFlightService"
+		interface="com.neusoft.prss.telegraph.service.TelegraphFlightService"
+		check="true" version="5.0" />
+		
+	<!-- 机位预排 -->
+	<dubbo:reference id="dispatchActstandService" interface="com.neusoft.prss.actstand.service.DispatchActstandService" 
+	check="true" version="5.0"/>
+	
+	<!-- 航班配对 -->
+	<dubbo:reference id="flightPairService"  interface="com.neusoft.prss.flight.service.FlightPairService" 
+	check="true" version="5.0"/>
+	<!-- **********包头机场 end*********** -->
+    <!-- 长期计划筛选 -->
+    <dubbo:reference id="planQueryService"
+		interface="com.neusoft.prss.plan.service.PlanQueryService" check="true"
+		version="5.0" />
+		
+	<!-- 停靠机型规则 -->
+    <dubbo:reference id="parkingSpaceRuleService"
+		interface="com.neusoft.prss.stand.service.ParkingSpaceRuleService" check="true"
+		version="5.0" />
+		
+	 <!-- 机位互斥规则 -->
+	 <dubbo:reference id="parkingMutexRuleService"
+		interface="com.neusoft.prss.stand.service.ParkingMutexRuleService" check="true"
+		version="5.0" />
+		
+	 <!-- 机位web服务 -->
+     <dubbo:reference id="standWebService" 
+     	interface="com.neusoft.prss.stand.service.StandWebService" check="true" 
+     	version="5.0" />
+     	
+     <!-- 登机口web服务 -->
+     <dubbo:reference id="gateWebService" 
+     	interface="com.neusoft.prss.gate.service.GateWebService" check="true" 
+     	version="5.0" />
+        
+     <!-- 条件分配规则 -->
+     <dubbo:reference id="conditionRuleService"
+        interface="com.neusoft.prss.stand.service.ConditionRuleService" check="true"
+        version="5.0" />
+        
+     <!-- 登机口分配规则 -->
+     <dubbo:reference id="gateRuleService"
+        interface="com.neusoft.prss.stand.service.GateRuleService" check="true"
+        version="5.0" />
+        
+	<!-- 机号拆分 -->
+	 <dubbo:reference id="fdRelService"
+		interface="com.neusoft.prss.flightdynamic.service.FdRelService" check="true"
+		version="5.0" />
+		
+	<!-- 航班列值变更 -->
+	 <dubbo:reference id="fdChangeService"
+		interface="com.neusoft.prss.flightdynamic.service.FDChangeService" check="true"
+		version="5.0" />
+		
+	<!--  -->
+	 <dubbo:reference id="updateFltinfoService"
+		interface="com.neusoft.prss.fltinfo.service.UpdateFltinfoService" check="true"
+		version="5.0" />
+	<!-- 计划动态页面自动计算ETA -->
+	<dubbo:reference id="flightTimeService"
+		interface="com.neusoft.prss.asup.service.FlightTimeService" check="true"
+		version="5.0" />
+	<!-- ASUP报文消息处理类 -->
+	<dubbo:reference id="asupPMessageHandlerService"
+		interface="com.neusoft.prss.asup.service.ASUPMessageHandlerService" check="true"
+		version="5.0" />
+	<!-- 离港信息录入 -->
+	<dubbo:reference id="departPsgInfoService"
+		interface="com.neusoft.prss.flightdynamic.service.DepartPsgInfoService" check="true"
+		version="5.0" />
+	<!-- 托飞机记录 -->
+	<dubbo:reference id="dragPlaneRecordService"
+		interface="com.neusoft.prss.stats.service.DragPlaneRecordService" check="true"
+		version="5.0" />	
+	<!-- 任务预排 -->
+	<dubbo:reference id="prearrangeService"
+		interface="com.neusoft.prss.prearrange.service.PrearrangeService" check="true"
+		version="5.0" />
+	<!-- 大屏调用历史 -->
+    <dubbo:reference id="imaxHisService" 
+    	interface="com.neusoft.prss.imax.service.ImaxHisService" check="true" 
+    	version="5.0"/>		
+    <!-- 机场放行正常率统计表  -->
+    <dubbo:reference id="fltNomalFxStatsService" 
+    	interface="com.neusoft.prss.statisticalanalysis.service.FltNomalFxStatsService" check="true" 
+    	version="5.0"/>
+    <!-- 周报统计表  -->
+    <dubbo:reference id="fltWeeklyStatsService" 
+    	interface="com.neusoft.prss.statisticalanalysis.service.FltWeeklyStatsService" check="true" 
+    	version="5.0"/>
+    <!-- 机务统计表 -->
+	<dubbo:reference id="saFltJiwuService"
+		interface="com.neusoft.prss.statisticalanalysis.service.SaFltJiwuService" check="true"
+		version="5.0" />
+	<!-- 关舱门后机坪等待超60分钟以上航班情况即时报告表 -->
+	<dubbo:reference id="saFltGcmWaitingService"
+		interface="com.neusoft.prss.statisticalanalysis.service.SaFltGcmWaitingService" check="true"
+		version="5.0" />
+	<!-- 航班架次统计表 -->
+	<dubbo:reference id="saFltNumService"
+		interface="com.neusoft.prss.statisticalanalysis.service.SaFltNumService" check="true"
+		version="5.0" />
+	<!-- 航班正常率统计表 -->
+	<dubbo:reference id="saFltNormalService"
+		interface="com.neusoft.prss.statisticalanalysis.service.SaFltNormalService" check="true"
+		version="5.0" />
+	<!-- 航务保障部管制/运行指挥中心导出数据 -->
+	<dubbo:reference id="atmzbowExportService"
+		interface="com.neusoft.prss.statisticalanalysis.service.ATMZBOWExportService" check="true"
+		version="5.0" />
+		<!-- 行李转盘规则配置 -->
+	<dubbo:reference id="baggageCarouselRuleService"
+		interface="com.neusoft.prss.stand.service.BaggageCarouselRuleService" check="true"
+		version="5.0" />
+	<!-- 手持机异常、违规点击统计，异常、违规人员点击统计 -->
+	<dubbo:reference id="abnormalClickRecordService"
+		interface="com.neusoft.prss.statisticalanalysis.service.AbnormalClickRecordService" check="true"
+		version="5.0" />
+	<!-- 登机口分配服务 -->
+	<dubbo:reference id="dispatchGateService"
+		interface="com.neusoft.prss.gate.service.DispatchGateService" check="false"
+		version="5.0" />
+	<!-- 值机柜台分配 -->
+	<dubbo:reference id="dispatchCounterService" interface="com.neusoft.prss.counter.service.DispatchCounterService" 
+	check="false" version="5.0"/>
+	<!-- 特车员工工作量统计 -->
+	<dubbo:reference id="tcStatisticsService"
+		interface="com.neusoft.prss.statisticalanalysis.service.TcStatisticsService" check="false"
+		version="5.0" />
+	<!-- 客舱清洁工作量统计 -->
+	<dubbo:reference id="kcqjStatisticsService"
+		interface="com.neusoft.prss.statisticalanalysis.service.KCQJStatisticsService" check="false"
+		version="5.0" />
+	<!-- 机务航班运输统计 -->
+	<dubbo:reference id="jwStatsFltTransportService"
+		interface="com.neusoft.prss.statisticalanalysis.service.JWStatsFltTransportService" check="false"
+		version="5.0" />
+	<!-- 进出港计费统计 -->
+	<dubbo:reference id="inOutBillingStatisticsService"
+		interface="com.neusoft.prss.statisticalanalysis.service.InOutBillingStatisticsService" check="false"
+		version="5.0" />
+	<!-- 廊桥计费统计 -->
+    <dubbo:reference id="bridgeChargingService"
+        interface="com.neusoft.prss.statisticalanalysis.service.BridgeChargingService" check="false"
+		version="5.0" />
+	<!-- 特车计费、详情单 -->
+	<dubbo:reference id="billTcFwService"
+		interface="com.neusoft.prss.produce.service.BillTcFwService" check="false"
+		version="5.0" />
+	<!-- 员工工作量统计 -->
+     <dubbo:reference id="workloadService"
+        interface="com.neusoft.prss.statisticalanalysis.service.WorkloadService" check="false"
+		version="5.0" />
+</beans> 

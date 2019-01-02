@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.statisticalanalysis.dao.QcDailyGuaranteeRecordDao">
+
+	<select id="getTotalData" resultType="hashmap" parameterType="hashmap">
+		SELECT SUM(SF_NUM) SF_NUM ,SUM(GZ_NUM)GZ_NUM,SUM(ZZ_NUM)ZZ_NUM,
+		SUM(QC_NUM) QC_NUM, SUM(SD_NUM) SD_NUM,SUM(BP_NUM) BP_NUM,
+		SUM(FLT_NUM) FLT_NUM,AIRLINE
+		FROM SA_FLTBZ_QCCZ_DAY_V@Prss2prssp
+		WHERE STAT_DAY = #{beginTime}
+		<if test="highTime !=null ">  
+	        AND STAT_HOUR = #{highTime}  
+	    </if>  
+		GROUP BY AIRLINE
+	</select>
+	
+		<select id="getHighTime" resultType="int" parameterType="string">
+		select STAT_HOUR 
+  		  from (	select SUM(SF_NUM)+SUM(GZ_NUM)+SUM(ZZ_NUM) TOTAL,STAT_HOUR
+					from SA_FLTBZ_QCCZ_DAY_V@Prss2prssp
+					where STAT_DAY = #{beginTime}
+					group by STAT_HOUR
+					order by TOTAL desc,STAT_HOUR) 
+		 where rownum = 1 
+	</select>
+	<select id="getFlightNumsList_index" resultType="hashmap" parameterType="string">
+	SELECT SUM(A.COUNT)COUNT,FLIGHT_HOUR,AIRLINE FROM
+	(SELECT
+		SUM( SF_NUM ) + SUM( GZ_NUM ) + SUM( ZZ_NUM ) COUNT,
+		STAT_HOUR FLIGHT_HOUR,
+		CASE AIRLINE
+	         WHEN '厦航'  THEN '南航系'
+					 WHEN '南航'  THEN '南航系'
+					 WHEN 'BGS外航'  THEN 'BGS外航'
+	         ELSE ''
+	   END AIRLINE
+	FROM
+		SA_FLTBZ_QCCZ_DAY_V@Prss2prssp 
+	WHERE
+		STAT_DAY = #{beginTime} 
+	GROUP BY
+		AIRLINE,STAT_HOUR)A
+	GROUP BY FLIGHT_HOUR,AIRLINE 
+	</select>
+	
+</mapper>

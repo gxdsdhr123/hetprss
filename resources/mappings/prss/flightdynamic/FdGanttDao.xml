@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.flightdynamic.dao.FdGanttDao">
+	<!-- 航班动态 查询Y轴数据 -->
+	<select id="getFdYData" resultType="com.alibaba.fastjson.JSONObject">
+		select *
+		  from (select distinct NVL(APRON_CODE, 'P' || GROUP_CODE) "id",
+		                        '0' "pid",
+		                        '1' "level",
+		                        NVL(APRON_CODE, 'P' || GROUP_CODE) "name"
+		          from dim_bay
+		         where GROUP_CODE is not null
+		        union all
+		        select distinct bay_code "id",
+		                        apron_code "pid",
+		                        '2' "level",
+		                        bay_code "name"
+		          from dim_bay
+		         where apron_code is not null) a
+		 order by "level", "name"
+	</select>
+	<!-- 航班动态 查询数据 -->
+	<select id="getFdData" parameterType="hashmap"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select a.id "id",
+		a.in_fltid "in_fltid",
+		a.out_fltid "out_fltid",
+		a.in_flight_number "in_fltno",
+		a.out_flight_number "out_fltno",
+		a.actstand_code "actstand",
+		a.gantt_btm "start",
+		a.gantt_etm "end",
+		a.status "status"
+		from fd_flt_iorel a,fd_flt_info in_tab,fd_flt_info
+		out_tab
+		where a.in_fltid = in_tab.fltid(+)
+		and a.out_fltid =
+		out_tab.fltid(+)
+		<if test="aircraft != null and aircraft != ''">
+			and (in_tab.acttype_code in (${aircraft}) or
+			out_tab.acttype_code in (${aircraft}))
+		</if>
+		<if test="airline != null and airline != ''">
+			and (in_tab.aln_2code in (${airline}) or out_tab.aln_2code
+			in (${airline}))
+		</if>
+		<if test="departAirport != null and departAirport != ''">
+			and in_tab.depart_apt4code = #{departAirport}
+		</if>
+		<if test="arriveAirport != null and arriveAirport != ''">
+			and out_tab.arrival_apt4code = #{arriveAirport}
+		</if>
+		<if test="GAFlag != null and GAFlag != ''">
+			and (in_tab.actstand_code in (select bay_code from dim_bay
+			where remote_label = #{GAFlag}) or out_tab.actstand_code in (select
+			bay_code from dim_bay where remote_label = #{GAFlag}))
+		</if>
+		<if test="alnFlag != null and alnFlag != ''">
+			and (in_tab.aln_2code in (select airline_code from
+			dim_airline where d_or_i = #{alnFlag}) or out_tab.aln_2code in
+			(select airline_code from dim_airlines where d_or_i = #{alnFlag}))
+		</if>
+		<if test="acttypeSizes != null and acttypeSizes != ''">
+			and (in_tab.acfttype_shape = #{acttypeSizes} or
+			out_tab.acfttype_shape = #{acttypeSizes})
+		</if>
+		<if test="actStatus != null and actStatus != ''">
+			and (in_tab.status = #{actStatus} or out_tab.status =
+			#{actStatus})
+		</if>
+		<if test='identifying =="1"'>
+			and (in_tab.ssg_flag = '1' or out_tab.ssg_flag = '1')
+		</if>
+		<if test='identifying =="2"'>
+			and (in_tab.son_aln_code in (select airlines_code from
+			dim_airlines_sub where airlines_code2 in ('MU','CZ','HU') and
+			airlines_chinese_name like '%北京%')
+			or out_tab.son_aln_code in (select
+			airlines_code from dim_airlines_sub
+			where airlines_code2 in
+			('MU','CZ','HU') and airlines_chinese_name
+			like '%北京%'))
+		</if>
+		<if test="terminal != null and terminal != ''">
+			and (in_tab.terminal_code in (${terminal}) or
+			out_tab.terminal_code in (${terminal}))
+		</if>
+		<if test="apron != null and apron != ''">
+			and (in_tab.apron_code in (${apron}) or
+			out_tab.apron_code in (${apron}))
+		</if>
+		<if test="fltPropertys != null and fltPropertys != ''">
+			and (in_tab.property_code = #{fltPropertys} or
+			out_tab.property_code = #{fltPropertys})
+		</if>
+		<if test='flightScope == "1"'>
+			and
+			substr(nvl(nvl(in_tab.ata,in_tab.eta),in_tab.sta),0,10) =
+			to_char(sysdate,'yyyy-mm-dd')
+			and
+			substr(nvl(nvl(out_tab.atd,out_tab.etd),out_tab.std),0,10) =
+			to_char(sysdate,'yyyy-mm-dd')
+		</if>
+		<if test='flightScope=="2"'>
+			and
+			substr(nvl(nvl(in_tab.ata,in_tab.eta),in_tab.sta),0,10) =
+			to_char(sysdate,'yyyy-mm-dd')
+			and out_tab.fltid is null
+		</if>
+		<if test='flightScope=="3"'>
+			and in_tab.fltid is null
+			and
+			substr(nvl(nvl(out_tab.atd,out_tab.etd),out_tab.std),0,10) =
+			to_char(sysdate,'yyyy-mm-dd')
+		</if>
+		<if test='flightScope=="4"'>
+			and (in_tab.atd is not null and in_tab.ata is null )
+			or
+			(ceil((to_date(out_tab.etd,'YYYY-MM-DD HH24:MI')- SYSDATE)*24) &gt;
+			0
+			and ceil((to_date(out_tab.etd,'YYYY-MM-DD HH24:MI')- SYSDATE)*24)
+			&lt; 3
+			)
+		</if>
+		<if test='flightScope=="5"'>
+			and in_tab.atd is not null
+			and in_tab.ata is null
+		</if>
+		<if test='flightScope=="6"'>
+			and ceil((to_date(out_tab.etd,'YYYY-MM-DD HH24:MI')-
+			SYSDATE)*24) &gt; 0
+			and ceil((to_date(out_tab.etd,'YYYY-MM-DD
+			HH24:MI')- SYSDATE)*24) &lt; 3
+		</if>
+		order by a.gantt_btm
+	</select>
+	<!-- 根据iorel中的主键id获取航班状态 -->
+	<select id="getGanttStatus" resultType="String">
+		select case status
+		when
+		'0' then '进港未起飞'
+		when '1' then '进港已起飞'
+		when '2' then '出港未起飞'
+		when '3'
+		then '出港已起飞'
+		end "status"
+		from fd_flt_iorel
+		where id = #{id}
+	</select>
+	<!-- 根据fltid获取航班信息 -->
+	<select id="getGanttInfo" resultType="com.alibaba.fastjson.JSONObject">
+		select b.description_cn "depApt",
+	           c.description_cn "arrApt",
+	           a.aircraft_number "actNumber",
+	           a.acttype_code "actType",
+	           a.std "std",
+	           a.etd "etd",
+	           a.atd "atd",
+	           a.sta "sta",
+	           a.eta "eta",
+	           a.ata "ata",
+	           a.atd "atd",
+	           a.bag_crsl "crsl",
+	           nvl(a.gate,' ') "gate",
+			   nvl(a.bag_chute,' ') "chute",
+	           d.checkin_counter "counter" 
+		  from fd_flt_info a,dim_airport b,dim_airport c,fd_flt_info_checkin d 
+	     where a.depart_apt4code = b.icao_code(+) 
+			   and a.arrival_apt4code = c.icao_code(+) 
+	       and a.fltid = d.fltid(+)
+			   and a.fltid = #{id}
+	</select>
+	
+	<!-- 单航班甘特图 查询Y轴数据 -->
+	<select id="getOneFltGanttY" resultType="com.alibaba.fastjson.JSONObject">
+		select distinct w.id as
+		"id", '0' "pid",'1' "level", w.display_name as "name"
+		from wf_process w
+		left join jm_task t on t.proc_id = w.id
+		where fltid = #{fltid}
+		union all
+		select distinct to_char(t.id) as "id", w.id as "pid",'2' "level",
+		t.name as
+		"name"
+		from wf_process w
+		left join jm_task t on t.proc_id =
+		w.id
+		where fltid = #{fltid}
+	</select>
+
+	<!-- 航班动态 查询数据 -->
+	<select id="getOneFltData" parameterType="hashmap"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select t.id as "field",
+		w.display_name,
+		t.name,
+		t.start_tm,
+		t.end_tm,
+		t.e_start_tm as "start",
+		t.e_end_tm as "end",
+		ROUND(TO_NUMBER(to_date(t.end_tm, 'yyyy-MM-dd hh24:mi:ss') -
+		to_date(t.start_tm, 'yyyy-MM-dd hh24:mi:ss')) * 24 * 60) || '/' ||
+		ROUND(TO_NUMBER(to_date(t.e_end_tm, 'yyyy-MM-dd hh24:mi:ss') -
+		to_date(t.e_start_tm, 'yyyy-MM-dd hh24:mi:ss')) * 24 * 60) as "text"
+		from wf_process w
+		left join jm_task t on t.proc_id = w.id
+		where fltid =
+		#{fltid}
+	</select>
+	
+	<select id="getSingleFlightInfo" parameterType="hashmap" resultType="hashmap">
+		select nvl(d.description_cn,a.depart_apt3code) "depAirport",
+		       nvl(e.description_cn,b.arrival_apt3code) "arrAirport",
+		       case c.status 
+		         when '0' then
+		          '进港未起飞'
+		         when '1' then
+		          '进港已起飞'
+		         when '2' then
+		          '出港未起飞'
+		         when '3' then
+		          '出港已起飞'
+		       end "status",
+		       coalesce(f.icao_code,g.icao_code,a.acttype_code,b.acttype_code) "actType",
+		       nvl(a.aircraft_number,b.aircraft_number) "actNumber",
+		       a.flight_number "inFltNumber",
+		       b.flight_number "outFltNumber",
+		       to_daytime(a.sta) "sta",
+		       to_daytime(a.eta) "eta",
+		       to_daytime(a.ata) "ata",
+		       to_daytime(b.std) "std",
+		       to_daytime(b.etd) "etd",
+		       to_daytime(b.atd) "atd",
+		       nvl(a.actstand_code,b.actstand_code) "actStand",
+		       b.gate "gate" 
+		  from rtdb.fd_flt_info    a,
+		       rtdb.fd_flt_info    b,
+		       rtdb.fd_flt_iorel   c,
+		       dim_airport d,
+		       dim_airport e,
+		       dim_actype f,
+		       dim_actype g
+		 where 1=1 
+		   <if test="inFltid != null and inFltid != ''">
+		   		and a.fltid = ${inFltid} 
+		   		and a.depart_apt4code = d.icao_code(+) 
+		   		and a.acttype_code = f.todb_actype_code(+) 
+		   </if>
+		   <if test="outFltid != null and outFltid != ''">
+		   		and b.fltid = ${outFltid} 
+		   		and b.arrival_apt4code = e.icao_code(+) 
+		   		and b.acttype_code = g.todb_actype_code(+) 
+		   </if>
+		   and (a.fltid = c.in_fltid or b.fltid = c.out_fltid) 
+	</select>
+	<select id="getFdSingleYData" parameterType="hashmap"  resultType="com.alibaba.fastjson.JSONObject">
+		select distinct "id", "name"
+		  from (select b.id "id",b.display_name "name"
+		          from jm_task a, wf_process b
+		         where a.proc_id = b.id
+		           and (a.fltid = #{inFltid} or a.fltid = #{outFltid})
+		         order by a.e_start_tm)
+	</select>
+	<select id="ganttSingleData" parameterType="hashmap"  resultType="com.alibaba.fastjson.JSONObject">
+		select a.proc_id "id",
+		       a.start_tm "start",
+		       a.end_tm "end",
+		       a.e_start_tm "estart",
+		       a.e_end_tm "eend",
+		       count(b.id) "err"
+		  from jm_task a, jm_exceptional_info b
+		 where (a.fltid = #{inFltid} or a.fltid = #{outFltid})
+		   and a.fltid = b.fltid(+) 
+		   and a.operator = b.user_id(+) 
+		 group by a.proc_id, a.start_tm, a.end_tm, a.e_start_tm, a.e_end_tm 
+		 order by a.e_start_tm
+	</select>
+</mapper>

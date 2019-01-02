@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.flightdynamic.dao.PassengerMonitorDao">
+
+	<select id="getDataList" resultType="Map" parameterType="Map">
+		SELECT * FROM (	
+			SELECT
+				A.FLTID,
+				UPPER(A.FLIGHT_NUMBER)FLIGHT_NUMBER,
+				A.FLIGHT_DATE,
+				SUBSTR(A.ETD, 12)ETD,
+				A.ALN_2CODE,
+				A.N_APT4CODE,
+				A.GATE,
+				A.BRD_BTM,
+				A.BRD_ETM,
+				A.HTCH_CLO_TM ,
+				B.BSUGST_CHECK_TM,
+				B.ESUGST_CHECK_TM,
+				B.COBT,
+				C.OFF_CHOCK_TM,
+				NVL(PCCK_NUM+PACK_NUM+PNCK_NUM,0)||'('||NVL(PCCK_NUM,0)||'/'||NVL(PACK_NUM,0)||'/'||NVL(PNCK_NUM,0)||')'  PAX_NUM,
+				NVL(PCK_NUM_ADULT+PCK_NUM_CHILDREN+PCK_NUM_BABY,0)||'('||NVL(PCK_NUM_ADULT,0)||'/'||NVL(PCK_NUM_CHILDREN,0)||'/'||NVL(PCK_NUM_BABY,0)||')' PCK_NUM,
+				NVL(PSC_NUM_ADULT+PSC_NUM_CHILDREN+PSC_NUM_BABY,0)||'('||NVL(PSC_NUM_ADULT,0)||'/'||NVL(PSC_NUM_CHILDREN,0)||'/'||NVL(PSC_NUM_BABY,0)||')' PSC_NUM,
+				NVL(PBD_NUM_ADULT+PBD_NUM_CHILDREN+PBD_NUM_BABY,0)||'('||NVL(PBD_NUM_ADULT,0)||'/'||NVL(PBD_NUM_CHILDREN,0)||'/'||NVL(PBD_NUM_BABY,0)||')' PBD_NUM,
+				ROW_NUMBER() OVER(ORDER BY A.FLIGHT_DATE DESC,ETD DESC) NUM
+			FROM
+				FD_FLT_INFO A
+			LEFT JOIN FD_FLT_CLA_AIRGROUND B ON A.FLTID=B.FLTID
+			LEFT JOIN FD_FLT_CLA_SAFEGUARDS C ON A.FLTID=C.FLTID
+			LEFT JOIN FD_FLT_CLA_PASSENGER D ON A.FLTID=D.FLTID
+		<where>
+			<if test="flightNumber !=null and flightNumber !=''">
+				AND UPPER(A.FLIGHT_NUMBER) LIKE '%${flightNumber}%'
+			</if>
+			
+			<if test="flightDate !=null and flightDate !=''">
+				AND A.FLIGHT_DATE = #{flightDate}
+			</if>
+			
+			<if test="airline !=null and airline !=''">
+				AND A.ALN_2CODE in ('${airline}')
+			</if>
+			
+			<if test="airport !=null and airport !=''">
+				AND A.N_APT4CODE in ('${airport}')
+			</if>
+			
+			<if test="etd !=null and etd !=''">
+				AND SUBSTR(A.ETD, 12) BETWEEN SUBSTR(#{etd}, 1, 5) AND SUBSTR(#{etd}, 6)
+			</if>
+		</where>
+		ORDER BY A.FLIGHT_DATE DESC,ETD DESC )
+		WHERE <![CDATA[NUM>#{begin} AND NUM<=#{end}]]>
+
+	</select>
+
+	<select id="getListCount" resultType="int" parameterType="Map">
+		SELECT 
+			COUNT(9) NUM
+		FROM 
+			FD_FLT_INFO A
+		LEFT JOIN FD_FLT_CLA_AIRGROUND B ON A.FLTID=B.FLTID
+		LEFT JOIN FD_FLT_CLA_SAFEGUARDS C ON A.FLTID=C.FLTID
+		LEFT JOIN FD_FLT_CLA_PASSENGER D ON A.FLTID=D.FLTID
+		<where>
+			<if test="flightNumber !=null and flightNumber !=''">
+				AND UPPER(A.FLIGHT_NUMBER) LIKE '%${flightNumber}%'
+			</if>
+			
+			<if test="flightDate !=null and flightDate !=''">
+				AND A.FLIGHT_DATE = #{flightDate}
+			</if>
+			
+			<if test="airline !=null and airline !=''">
+				AND A.ALN_2CODE in ('${airline}')
+			</if>
+			
+			<if test="airport !=null and airport !=''">
+				AND A.N_APT4CODE in ('${airport}')
+			</if>
+			
+			<if test="etd !=null and etd !=''">
+				AND SUBSTR(A.ETD, 12) BETWEEN SUBSTR(#{etd}, 1, 5) AND SUBSTR(#{etd}, 6)
+			</if>
+		</where>
+
+	</select>
+	
+	<select id="getAirports" resultType="hashmap">
+		SELECT ICAO_CODE,DESCRIPTION_CN FROM DIM_AIRPORT
+	</select>
+	
+	<select id="getAirlines" resultType="hashmap">
+		SELECT
+			AIRLINE_CODE,
+			DESCRIPTION_CN 
+		FROM
+			DIM_AIRLINES UNION ALL
+		SELECT
+			AIRLINES_SUB_CODE2 AIRLINE_CODE,
+			AIRLINES_SUB_CHINESE_NAME DESCRIPTION_CN 
+		FROM
+			DIM_AIRLINES_SUB
+	</select>
+
+
+
+</mapper>

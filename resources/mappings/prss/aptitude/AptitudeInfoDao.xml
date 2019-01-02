@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.aptitude.dao.AptitudeInfoDao">
+	
+	<select id="getTableHeader" resultType="hashmap" parameterType="hashmap">
+		SELECT B2.RESTYPE field,B2.TYPENAME title
+		FROM DIM_RESKIND A2,DIM_RESTYPE B2
+		WHERE A2.RESKIND = B2.RESKIND AND A2.DEPID =#{officeId}
+		ORDER BY B2.SORT_NUM,B2.RESTYPE
+	</select>
+	
+	<select id="getDimLimit" resultType="string" parameterType="hashmap">
+		SELECT JW_LIMIT||','||JX_LIMIT||','||HS_LIMIT 
+		FROM AM_OFFICE_LIMIT_CONF 
+		WHERE OFFICE_ID =#{officeId}
+	</select>
+	
+	<select id="getAreaInfoByLimit" resultType="hashmap" parameterType="hashmap">
+		SELECT ID "value", AREA_NAME "text"
+  		FROM DIM_AREA_CONF
+ 		WHERE OFFICE_ID = #{officeId} AND LIMIT_TYPE = #{type} 
+   		AND LIMIT_LEVEL = 0
+	</select>
+	
+	<select id="getGridDataCount"  resultType="int" parameterType="hashmap">
+		SELECT count(1)
+		  FROM (SELECT T1.ID,
+		               A.GROUP_ID,
+		               A.GROUP_NAME,
+		               C.ID LONGIN_ID,
+		               C.NAME LOGIN_NAME
+		               <foreach collection="fieldArray" item="obj" >
+		               ,MAX(DECODE(APTITUDE_ID, #{obj.FIELD}, APTITUDE_ID, null)) "FIELD_${obj.FIELD}"
+		               </foreach>
+		          FROM AM_GROUP_INFO       A,
+		               AM_GROUP_WORKER_REL B,
+		               SYS_USER            C,
+		               AM_APTITUDE_INFO    T1
+		         WHERE A.GROUP_ID = B.GROUP_ID
+		           AND B.WORKER_ID = C.ID
+		           AND T1.WORK_ID(+) = C.ID
+		           AND C.OFFICE_ID = #{officeId}
+		         GROUP BY T1.ID, A.GROUP_ID, A.GROUP_NAME, C.ID, C.NAME) TT1
+		   <if test="limitArr != null">
+		       LEFT JOIN (SELECT B.ID
+		       			<!-- 机位-->
+		       			<if test="limitArr[0] == 1 ">
+			               ,MAX(DECODE(B.LIMIT_TYPE, 0, B.ELEMENTS, null)) JW_LIMIT
+			               ,MAX(DECODE(B.LIMIT_TYPE, 0, C.AREA_NAME, null)) JW_NAME
+		       			</if>
+		       			<!-- 机型-->
+		       			<if test="limitArr[1] == 1 ">
+			               	,MAX(DECODE(B.LIMIT_TYPE, 1, B.ELEMENTS, null)) JX_LIMIT
+		               		,MAX(DECODE(B.LIMIT_TYPE, 1, C.AREA_NAME, null)) JX_NAME
+		       			</if>
+		       			<!-- 航空公司-->
+		       			<if test="limitArr[2] == 1 ">
+			               ,MAX(DECODE(B.LIMIT_TYPE, 2, B.ELEMENTS, null)) HS_LIMIT
+		               		,MAX(DECODE(B.LIMIT_TYPE, 2, C.AREA_NAME, null)) HS_NAME
+		       			</if>
+		          FROM AM_APTITUDE_LIMITS B, DIM_AREA_CONF C
+		         WHERE B.ELEMENTS = C.ID(+)
+		           AND B.OFFICE_ID = #{officeId}
+		         GROUP BY B.ID) TT2 ON TT1.ID = TT2.ID
+		 </if>
+		 WHERE 
+		 TT1.LOGIN_NAME LIKE '%${searchName}%' or TT1.GROUP_NAME LIKE '%${searchName}%' 
+		<if test="limitArr != null">
+			<!-- 机位-->
+			<if test="limitArr[0] == 1 ">
+				 or TT2.JW_NAME LIKE '%${searchName}%' 
+			</if>
+			<!-- 机型-->
+			<if test="limitArr[1] == 1 ">
+				or TT2.JX_NAME LIKE '%${searchName}%'
+			</if>
+			<!-- 航空公司-->
+			<if test="limitArr[2] == 1 ">
+				or TT2.HS_NAME LIKE '%${searchName}%'
+			</if>
+		</if>
+		 ORDER BY GROUP_ID, GROUP_NAME, LONGIN_ID, LOGIN_NAME, TT1.ID
+	</select>
+	
+	<select id="getGridData" parameterType="hashmap" resultType="hashmap" >
+			SELECT TT1.*,rownum RM
+			<if test="limitArr != null">
+				<!-- 机位-->
+				<if test="limitArr[0] == 1 ">
+					 , TT2.JW_LIMIT
+				</if>
+				<!-- 机型-->
+				<if test="limitArr[1] == 1 ">
+					, TT2.JX_LIMIT
+				</if>
+				<!-- 航空公司-->
+				<if test="limitArr[2] == 1 ">
+					, TT2.HS_LIMIT
+				</if>
+			</if>
+			  FROM (SELECT T1.ID,
+			               A.GROUP_ID,
+			               A.GROUP_NAME,
+			               C.ID LONGIN_ID,
+			               C.NAME LOGIN_NAME
+			               <foreach collection="fieldArray" item="obj" >
+			               ,MAX(DECODE(APTITUDE_ID, #{obj.FIELD}, APTITUDE_ID, null)) "FIELD_${obj.FIELD}"
+			               </foreach>
+			          FROM AM_GROUP_INFO       A,
+			               AM_GROUP_WORKER_REL B,
+			               SYS_USER            C,
+			               AM_APTITUDE_INFO    T1
+			         WHERE A.GROUP_ID = B.GROUP_ID
+			           AND B.WORKER_ID = C.ID
+			           AND T1.WORK_ID(+) = C.ID
+			           AND C.OFFICE_ID = #{officeId}
+			         GROUP BY T1.ID, A.GROUP_ID, A.GROUP_NAME, C.ID, C.NAME) TT1
+			   <if test="limitArr != null">
+			       LEFT JOIN (SELECT B.ID
+			       			<!-- 机位-->
+			       			<if test="limitArr[0] == 1 ">
+				               ,MAX(DECODE(B.LIMIT_TYPE, 0, B.ELEMENTS, null)) JW_LIMIT
+				               ,MAX(DECODE(B.LIMIT_TYPE, 0, C.AREA_NAME, null)) JW_NAME
+			       			</if>
+			       			<!-- 机型-->
+			       			<if test="limitArr[1] == 1 ">
+				               	,MAX(DECODE(B.LIMIT_TYPE, 1, B.ELEMENTS, null)) JX_LIMIT
+			               		,MAX(DECODE(B.LIMIT_TYPE, 1, C.AREA_NAME, null)) JX_NAME
+			       			</if>
+			       			<!-- 航空公司-->
+			       			<if test="limitArr[2] == 1 ">
+				               ,MAX(DECODE(B.LIMIT_TYPE, 2, B.ELEMENTS, null)) HS_LIMIT
+			               		,MAX(DECODE(B.LIMIT_TYPE, 2, C.AREA_NAME, null)) HS_NAME
+			       			</if>
+			          FROM AM_APTITUDE_LIMITS B, DIM_AREA_CONF C
+			         WHERE B.ELEMENTS = C.ID(+)
+			           AND B.OFFICE_ID = #{officeId}
+			         GROUP BY B.ID) TT2 ON TT1.ID = TT2.ID
+			 </if>
+			 WHERE 
+			 TT1.LOGIN_NAME LIKE '%${searchName}%' or TT1.GROUP_NAME LIKE '%${searchName}%' 
+			<if test="limitArr != null">
+				<!-- 机位-->
+				<if test="limitArr[0] == 1 ">
+					 or TT2.JW_NAME LIKE '%${searchName}%' 
+				</if>
+				<!-- 机型-->
+				<if test="limitArr[1] == 1 ">
+					or TT2.JX_NAME LIKE '%${searchName}%'
+				</if>
+				<!-- 航空公司-->
+				<if test="limitArr[2] == 1 ">
+					or TT2.HS_NAME LIKE '%${searchName}%'
+				</if>
+			</if>
+			 ORDER BY
+			 <if test="sortName != null and sortOrder != null">
+				 ${sortName} ${sortOrder},
+			 </if>
+			 GROUP_ID, LONGIN_ID, TT1.ID
+	</select>
+	<delete id="deleteInfo" parameterType="hashmap">
+		delete from am_aptitude_info where office_id =#{officeId} and id=#{id}
+	</delete>
+	<delete id="deleteLimitInfo" parameterType="hashmap">
+		delete from am_aptitude_limits where office_id =#{officeId} and id=#{id}
+	</delete>
+	<insert id="addAptiInfo" parameterType="hashmap">
+		${aptiduteSql}
+	</insert>
+	
+	<insert id="addLimitInfo"  parameterType="hashmap">
+		insert into am_aptitude_limits(id,elements,limit_level,limit_type,office_id,update_time)
+		SELECT #{id},#{id2},1,#{id3},#{officeId},sysdate from dual
+	</insert>
+	
+	<select id="getId" resultType="string">
+		SELECT am_aptitude_info_s.nextval from dual
+	</select>
+	
+	<delete id="deleteDivEleDetail" parameterType="string">
+		DELETE 
+		FROM
+			am_division_element_detail 
+		WHERE
+			id IN (
+		SELECT
+			id 
+		FROM
+			am_division_info 
+		WHERE
+			parent_aptitude_id IN
+		<foreach item="id" index="index" collection="array" open="(" separator="," close=")">  
+			#{id}  
+		</foreach> 
+		)
+	</delete>
+	
+	<delete id="deleteDivLimit" parameterType="string">
+		DELETE 
+		FROM
+			am_division_limits 
+		WHERE
+			id IN (
+		SELECT
+			id 
+		FROM
+			am_division_info 
+		WHERE
+			parent_aptitude_id IN 
+		<foreach item="id" index="index" collection="array" open="(" separator="," close=")">  
+			#{id}  
+		</foreach> 
+		)
+	</delete>
+	
+	<delete id="deleteDivInfo" parameterType="string">
+		DELETE 
+		FROM
+			am_division_info 
+		WHERE
+			parent_aptitude_id IN 
+		<foreach item="id" index="index" collection="array" open="(" separator="," close=")">  
+			#{id}  
+		</foreach> 
+	</delete>
+	
+	<delete id="deleteDivTempLimit" parameterType="string">
+		DELETE 
+		FROM
+			am_division_temp_limits 
+		WHERE
+			id IN ( SELECT id FROM am_division_temp WHERE parent_aptitude_id IN 
+		<foreach item="id" index="index" collection="array" open="(" separator="," close=")">  
+			#{id}  
+		</foreach> 
+		)
+	</delete>
+	
+	<delete id="deleteDivTemp" parameterType="string">
+		DELETE 
+		FROM
+			am_division_temp 
+		WHERE
+			parent_aptitude_id IN
+		<foreach item="id" index="index" collection="array" open="(" separator="," close=")">  
+			#{id}  
+		</foreach> 
+	</delete>
+	
+	<delete id="deleteAptiLimit" parameterType="string">
+		delete from am_aptitude_limits where id in 
+		<foreach item="id" index="index" collection="array" open="(" separator="," close=")">  
+			#{id}  
+		</foreach> 
+	</delete>
+	
+	<delete id="deleteApti" parameterType="string">
+		delete from am_aptitude_info where id in 
+		<foreach item="id" index="index" collection="array" open="(" separator="," close=")">  
+			#{id}  
+		</foreach> 
+	</delete>
+	
+</mapper>

@@ -1,0 +1,20 @@
+.chart-box .box-body > div {
+	margin:5px 0;
+}
+
+/*±í¸ñ*/
+.layui-table  thead tr th{
+	font-size:20px;
+}
+.layui-table  tbody tr td{
+	font-size:18px;
+}
+
+#tableData{
+	margin-top:20px;
+	height:300px;
+}
+
+#tableData .box-body{
+	height:100%;
+}

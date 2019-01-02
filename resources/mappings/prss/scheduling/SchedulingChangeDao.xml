@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.scheduling.dao.SchedulingChangeDao">
+
+	<select id="getPlusInfo" resultType="hashmap">
+		SELECT IN_SPECIAL_CARGO,IN_ZX_REMARK,OUT_BAGGAGE_REAL,OUT_ZX_REMARK,OUT_LARGE_BAGGAGE,MAINTENANCE_REMARK
+		FROM FD_FLT_PLUS_V WHERE FLTID=#{fltid}
+	
+	</select>
+	
+	<update id="saveZXInRemark">
+		MERGE INTO FD_FLT_PLUS T1 
+	
+	    USING(SELECT #{fltid} FLTID,4 ATTR_ID FROM DUAL ) T2
+	
+	    ON(T1.FLTID=T2.FLTID AND T1.ATTR_ID = T2.ATTR_ID)
+	
+	    WHEN MATCHED THEN
+	
+	    UPDATE SET T1.ATTR_VAL=#{inZxRemark}
+	
+	    WHEN NOT MATCHED THEN
+	
+	    INSERT(ID,FLTID,ATTR_ID,ATTR_VAL) VALUES(FD_FLT_PLUS_S.NEXTVAL,T2.FLTID,T2.ATTR_ID,#{inZxRemark})
+
+	</update>
+	<update id="saveZXInCargo">
+		MERGE INTO FD_FLT_PLUS T1 
+	
+	    USING(SELECT #{fltid} FLTID,3 ATTR_ID FROM DUAL ) T2
+	
+	    ON(T1.FLTID=T2.FLTID AND T1.ATTR_ID = T2.ATTR_ID)
+	
+	    WHEN MATCHED THEN
+	
+	    UPDATE SET T1.ATTR_VAL=#{inSpecialCargo}
+	
+	    WHEN NOT MATCHED THEN
+	
+	    INSERT(ID,FLTID,ATTR_ID,ATTR_VAL) VALUES(FD_FLT_PLUS_S.NEXTVAL,T2.FLTID,T2.ATTR_ID,#{inSpecialCargo})
+		
+	</update>
+	<update id="saveZXOutBagReal">
+		MERGE INTO FD_FLT_PLUS T1 
+	
+	    USING(SELECT #{fltid} FLTID,5 ATTR_ID FROM DUAL ) T2
+	
+	    ON(T1.FLTID=T2.FLTID AND T1.ATTR_ID = T2.ATTR_ID)
+	
+	    WHEN MATCHED THEN
+	
+	    UPDATE SET T1.ATTR_VAL=#{outBaggageReal}
+	
+	    WHEN NOT MATCHED THEN
+	
+	    INSERT(ID,FLTID,ATTR_ID,ATTR_VAL) VALUES(FD_FLT_PLUS_S.NEXTVAL,T2.FLTID,T2.ATTR_ID,#{outBaggageReal})
+		
+	</update>
+	<update id="saveZXOutLarge">
+		MERGE INTO FD_FLT_PLUS T1 
+	
+	    USING(SELECT #{fltid} FLTID,7 ATTR_ID FROM DUAL ) T2
+	
+	    ON(T1.FLTID=T2.FLTID AND T1.ATTR_ID = T2.ATTR_ID)
+	
+	    WHEN MATCHED THEN
+	
+	    UPDATE SET T1.ATTR_VAL=#{outLargeBaggage}
+	
+	    WHEN NOT MATCHED THEN
+	
+	    INSERT(ID,FLTID,ATTR_ID,ATTR_VAL) VALUES(FD_FLT_PLUS_S.NEXTVAL,T2.FLTID,T2.ATTR_ID,#{outLargeBaggage})
+		
+	</update>
+	<update id="saveZXOutRemark">
+		MERGE INTO FD_FLT_PLUS T1 
+	
+	    USING(SELECT #{fltid} FLTID,6 ATTR_ID FROM DUAL ) T2
+	
+	    ON(T1.FLTID=T2.FLTID AND T1.ATTR_ID = T2.ATTR_ID)
+	
+	    WHEN MATCHED THEN
+	
+	    UPDATE SET T1.ATTR_VAL=#{outZxRemark}
+	
+	    WHEN NOT MATCHED THEN
+	
+	    INSERT(ID,FLTID,ATTR_ID,ATTR_VAL) VALUES(FD_FLT_PLUS_S.NEXTVAL,T2.FLTID,T2.ATTR_ID,#{outZxRemark})
+		
+	</update>
+	
+	<update id="savePlusData" parameterType="com.alibaba.fastjson.JSONObject">
+		MERGE INTO FD_FLT_PLUS P
+		USING (SELECT #{fltid} FLTID,#{attrId} ATTR_ID FROM DUAL) N
+		ON (P.FLTID = N.FLTID AND P.ATTR_ID = N.ATTR_ID)
+		WHEN MATCHED THEN
+			UPDATE SET ATTR_VAL = #{value}
+		WHEN NOT MATCHED THEN
+ 			INSERT (ID,FLTID,ATTR_ID,ATTR_VAL) VALUES (fd_flt_plus_s.nextval,#{fltid},#{attrId},#{value})
+	</update>
+	
+</mapper>

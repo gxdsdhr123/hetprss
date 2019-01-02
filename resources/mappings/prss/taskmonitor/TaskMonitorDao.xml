@@ -1,0 +1,493 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.taskmonitor.dao.TaskMonitorDao">
+	
+	<select id="getDefSwitch" resultType="integer">
+		<![CDATA[
+			select
+			   min(case
+			       when to_date(to_char(sysdate,'yyyy-mm-dd ')||start_time,'yyyy-mm-dd hh24mi') <= sysdate and 
+			            to_date(to_char(sysdate,'yyyy-mm-dd ')||end_time,'yyyy-mm-dd hh24mi') >= sysdate
+			       then 0
+			       else 1
+			       end) state
+			from JM_BDC_BUZY_TIME
+		]]>
+	</select>
+	
+	<select id="highTasks" resultType="string">
+		select a.id
+		from jm_task a left join jm_task b on a.fltid = b.fltid
+		where b.id = #{taskId}
+	</select>
+	
+	<select id="getJmTask"  resultType="hashmap">
+		select * from jm_task where id = #{taskId}
+	</select>
+	
+	<select id="getUnfinishTaskCount" resultType="integer">
+		<![CDATA[
+			select count(1)   from jm_task
+	     	where job_state in ('1', '2')  and operator = #{operator}
+     	]]>
+	</select>
+	<insert id="saveWorkerPos" parameterType="hashmap">
+		<![CDATA[
+			insert into am_worker_pos
+			(
+				ID,
+				WORKER_ID,
+				POS_TYPE,
+				POS,
+				UPDATE_TM,
+				OPERATOR,
+				OFFICE_ID
+			)
+			values
+			(
+				am_worker_pos_s.nextval,
+				#{workerId},
+				#{posType},
+				#{pos},
+				to_char(sysdate,'yyyy-mm-dd hh24:mi:ss'),
+				#{operator},
+				#{officeId}
+			)
+		]]>
+	</insert>
+	
+	<select id="getShifts" resultType="com.alibaba.fastjson.JSONObject">
+		select a.shifts_name "name",a.stime "start",a.etime "end" 
+		  from dim_shifts_type a,sys_user b
+		 where a.creator_id = b.id(+) 
+		   and shifts_name is not null 
+           and stime is not null 
+           and etime is not null
+           and (b.office_id = #{officeId})
+	</select>
+	
+	<select id="getWorkerShiftsInfo" resultType="com.alibaba.fastjson.JSONObject">
+		select b.name,
+		       a.worker_id,
+		       a.shifts_id,
+		       a.stime1_label,
+		       a.etime1_label,
+		       a.stime2_label,
+		       a.etime2_label,
+		       a.stime3_label,
+		       a.etime3_label
+		  from am_worker_plan a, sys_user b
+		 where a.worker_id = b.id
+		   and a.worker_id in (${workerId})
+		   <choose>
+			   	<when test="plus == 1">
+					   and a.pdate = to_char(sysdate + 1, 'yyyy-MM-dd')
+			   	</when>
+			   	<otherwise>
+					   and a.pdate = to_char(sysdate, 'yyyy-MM-dd')
+			   	</otherwise>
+		   </choose>
+	</select>
+	
+	<insert id="setOverWorkTime">
+		insert into am_worker_plan
+		  (ID,
+		   OFFICE_ID,
+		   WORKER_ID,
+		   PDATE,
+		   STIME1,
+		   ETIME1,
+		   BUSY_INTERVAL,
+		   IDLE_INTERVAL,
+		   SORTNUM,
+		   SHIFTS_TYPE,
+		   STIME1_LABEL,
+		   ETIME1_LABEL,
+		   SHIFTS_ID)
+		values
+		  (am_worker_plan_s.nextval,
+		   #{officeId},
+		   #{workerId},
+		   <choose>
+			   	<when test="plus == 1">
+					   to_char(sysdate+1, 'yyyy-MM-dd'),
+			   	</when>
+			   	<otherwise>
+					   to_char(sysdate, 'yyyy-MM-dd'),
+			   	</otherwise>
+		   </choose>
+		   #{startTime},
+		   #{endTime},
+		   0,
+		   0,
+		   1,
+		   0,
+		   #{start},
+		   #{end},
+		   -1)
+	</insert>
+	<select id="getNodeIds" resultType="com.neusoft.prss.taskmonitor.entity.TaskNode$Node" >
+		select 
+			node_id as id, 
+			t2.label as name
+		  from wf_process_node t1, wf_node t2
+		 where process_id = (select proc_id from jm_task where id = #{taskId})
+		   and t1.node_id = t2.id
+		 order by node_order
+	</select>
+	
+	<select id="getTaskInfo"  resultType="com.neusoft.prss.taskmonitor.entity.TaskNode">
+		select a.id,
+		       --当前状态
+		       case
+		         when c.PARENT_TASK_ID = 'start' then
+		          null
+		         when c.display_name = '已完成' then
+		          '完成'
+		         else
+		          (select display_name
+		             from wf_hist_task_v
+		            where id = c.PARENT_TASK_ID)
+		       end as status
+		       --任务名
+		      ,
+		       name,
+		       (SELECT VEHICLE_NUMBER
+		          FROM (SELECT VEHICLE_NUMBER,
+		                       OPER_ID,
+		                       ROW_NUMBER() OVER(PARTITION BY OPER_ID ORDER BY OPER_BOUND_DATE DESC) AS ROW_NUM
+		                  FROM BILL_VEHICLE_BOUND
+		                 WHERE STATUS = 1)
+		         WHERE ROW_NUM = 1
+		           AND OPER_ID = a.OPERATOR) AS carId,
+		       d.flight_number flightNumber,
+		       d.flight_number2 flightNumber2,
+		       d.actstand_code actstandCode,
+		       (select icao_code
+		             from DIM_ACTYPE
+		            where TODB_ACTYPE_CODE = d.acttype_code) as acttypeCode
+		  from jm_task a,
+		       jm_task_proc_inst b,
+		       (select order_id, PARENT_TASK_ID, display_name
+		          from wf_task
+		        union
+		        select order_id, PARENT_TASK_ID, '已完成'
+		          from wf_hist_task_v
+		         where display_name = '完成') c,
+		       fd_flt_info d
+		 where a.id = b.task_id(+)
+		   and b.proc_inst_id = c.order_id(+)
+		   and a.fltid = d.fltid
+		   and a.id = #{taskId}
+	</select>
+	
+	<select id="getNodeVal" resultType="com.neusoft.prss.taskmonitor.entity.TaskNode$Node">
+		select 
+		       to_daytime(c.finish_time) as aVal,
+		       node_id as id
+		  from jm_task a, jm_task_proc_inst b, wf_hist_task_v c
+		 where a.id = b.task_id
+		   and b.proc_inst_id = c.order_id
+		   and a.id=#{taskId}
+		union
+		select 
+		       to_daytime(c.finish_time) as aVal,
+		       node_id as id
+		  from jm_task a, jm_task_proc_inst b, wf_task c
+		 where a.id = b.task_id
+		   and b.proc_inst_id = c.order_id
+		   and a.id=#{taskId}
+	</select>
+	
+	<select id="getWorkingGroupMember" resultType="string">
+		 select t2.name
+		  FROM (SELECT distinct T3.WORKER_ID,
+		                        leader_id,
+		                        case
+		                          when T3.WORKER_ID = leader_id then
+		                           1
+		                          else
+		                           0
+		                        end as order_id
+		          FROM AM_TASK_TEAM T1
+		          JOIN AM_TEAM_WORKER_REL T2
+		            ON (T1.TEAM_ID = T2.TEAM_ID)
+		          JOIN AM_TEAM_WORKER_REL T3
+		            ON (T1.TEAM_ID = T3.TEAM_ID)
+		         WHERE OFFICE_ID = #{officeId}
+		           AND t2.WORKER_ID = #{id}) t1,
+		       sys_user t2
+		 where t1.WORKER_ID = t2.id
+		 order by order_id desc
+	</select>
+	
+	<select id="getUnreadErrorNum" resultType="java.lang.Integer">
+		select count(*) from jm_exceptional_info 
+		where (permissions = '1' or (permissions = '0' and office_id = #{officeId})
+		      <if test="officeId=='47350fa8cad44e47803ef8cb7f209c30' or officeId=='ac7ad3fc34764812ba28fc1fc61876cf' or officeId =='7067d126e1564c14a297a23d93b1eb0e'">
+		          or permissions = '2'
+		      </if>
+		) 
+		and create_date > to_date(#{time},'yyyy-mm-dd hh24:mi:ss')
+	</select>
+	
+	<select id="selectFengong" resultType="hashmap" >
+		SELECT distinct T1.ID, AREA_NAME
+		  
+         <if test="schemaId == 6">
+          	FROM (SELECT WORKER_ID, ID,case aptitude_id when 'JWHXBZqwfz' then 4 when 'JWHXBZqwxz' then 3 when 'JWHXBZfx' then 2 else 1 end showid
+				  FROM AM_DIVISION_INFO
+				 WHERE OFFICE_ID = #{officeId}
+				 GROUP BY WORKER_ID, ID,aptitude_id 
+				 order by WORKER_ID,showid desc) T1
+		  	JOIN (SELECT * FROM AM_DIVISION_LIMITS WHERE LIMIT_TYPE = 2) T2
+		 </if>
+		 <if test="schemaId == 5">
+		 	FROM (SELECT WORKER_ID, ID
+		          FROM AM_DIVISION_INFO
+		         WHERE OFFICE_ID = #{officeId}
+		         GROUP BY WORKER_ID, ID) T1
+		 	JOIN (SELECT * FROM AM_DIVISION_LIMITS WHERE LIMIT_TYPE = 0) T2
+		 </if>
+		    ON (T1.ID = T2.ID)
+		  JOIN (SELECT * FROM DIM_AREA_CONF WHERE LIMIT_LEVEL = 1) T3
+		    ON (T2.ELEMENTS = T3.ID)
+		 WHERE T1.WORKER_ID = #{operator}
+	</select>
+	
+	<select id="selectJiWei" resultType="hashmap" >
+		select id, area_name
+			  from dim_area_conf
+			 where parent_id in 
+			 	(select elements
+					 from am_aptitude_limits
+					where id in (select distinct parent_aptitude_id
+					               from am_division_info
+					              where worker_Id = #{operator}
+		 <if test="schemaId == 6">
+		 	and id = #{fengongId}
+		 	)
+         	and limit_type = 2)
+         	and area_name like '%航空公司分工%'
+         </if>
+         <if test="schemaId == 5">
+         	and id = #{fengongId}
+         	)
+         	and limit_type = 0)
+         </if>
+         order by id
+	</select>
+	
+	<select id="getJiWeiNameById" resultType="String" >
+		select area_name from dim_area_conf where id = #{jiweiId}
+	</select>
+	
+	<update id="saveFengongJiwei" >
+		update am_division_limits 
+		set elements = #{jiweiId} 
+		where id = #{fengongId} 
+		<if test="schemaId == 6">
+			and limit_type = 2
+		</if>
+		<if test="schemaId == 5">
+			and limit_type = 0
+		</if>
+	</update>
+	
+	<select id="getTaskIdsByJobKind"  resultType="hashmap">
+		select t.id,t.operator,t.proc_id,p.proc_inst_id order_id
+		from jm_task t , jm_task_proc_inst p
+		where t.id = p.task_id(+) and t.job_kind = #{jobKind} and t.fltid = #{fltid}
+		 and t.job_state != '3'
+	</select>
+	
+	<update id="flightOutScreen">
+		MERGE INTO fd_flt_plus T1
+		USING (SELECT #{fltid} as fltid, attr_id, '1' as attr_val FROM FD_FLT_PLUS_CONF where attr_name = 'outScreen' and job_kind = #{jobKind}) T2
+		ON (T1.fltid = T2.fltid and T1.attr_id = T2.attr_id)
+		WHEN MATCHED THEN
+		  UPDATE SET T1.attr_val = T2.attr_val
+		WHEN NOT MATCHED THEN
+		  INSERT
+		    (id, fltid, attr_id, attr_val)
+		  VALUES
+		    (fd_flt_plus_s.nextval, T2.fltid, T2.attr_id, T2.attr_val)
+	</update>
+	
+	<select id="getListCount" resultType="int" >
+		select count(*)
+		  from fd_flt_out_clean a, fd_flt_out_clean b
+		 where a.fltid = b.relation_id(+)
+         <choose>
+           	<when test="type != 'ALL'">
+                and a.job_type = #{type}
+		   		and b.job_type(+) = #{type}
+		    </when>
+		    <otherwise>
+	    		and a.job_type = b.job_type(+)
+           		and a.job_type in ('WS','LJ')
+		    </otherwise>
+         </choose>
+   		 and a.in_out_flag = 'A'
+	     <if test="searchTime != '' ">
+         		and to_char(a.update_time,'yyyymmdd') = #{searchTime}
+		 </if>
+		 order by a.update_time desc
+	</select>
+
+	<select id="getList" resultType="hashmap" >
+		select *
+		  from (SELECT A.*, rownum rn
+		          from (select a.fltid           inFltId,
+						       a.flight_number   inflightnumber,
+						       a.actstand_code   inactstandcode,
+						       a.ata,
+						       a.job_type,
+						       case a.job_type when 'LJ' then '垃圾车' when 'WS' then '污水车' when 'QC' then '清舱' end job_name,
+						       a.aircraft_number inaircraftnumber,
+						       b.fltid           outfltid,
+						       b.flight_number   outflightnumber,
+						       b.actstand_code   outactstandcode,
+						       b.std,
+						       case a.status when '1' then '是' else '否' end status,
+						       (select name from sys_user where id = a.operator) operator,
+						       to_char(a.update_time,'yyyy-mm-dd hh24:mi:ss') update_time
+						  from fd_flt_out_clean a, fd_flt_out_clean b
+						 where a.fltid = b.relation_id(+)
+		                  <choose>
+			             	<when test="type != 'ALL'">
+			                   and a.job_type = #{type}
+	               			   and b.job_type(+) = #{type}
+               			    </when>
+               			    <otherwise>
+             			    	and a.job_type = b.job_type(+)
+			               		and a.job_type in ('WS','LJ')
+               			    </otherwise>
+			              </choose>
+							   and a.in_out_flag = 'A'
+						   <if test="searchTime != '' ">
+						       and to_char(a.update_time,'yyyymmdd') = #{searchTime}
+						   </if>
+						 order by a.update_time desc
+						) A
+		         where #{end} >= rownum)
+		 where rn > #{begin}
+	</select>
+	
+	<select id="getInFlightByFltId" resultType="hashmap" >
+		select fltid,flight_date,flight_number,aircraft_number,actstand_code,ata,sta
+		  from fd_flt_info
+		 where fltid = #{inFltId}
+	</select>
+	
+	<insert id="saveNoClean" parameterType="hashmap">
+		insert into fd_flt_out_clean(id,fltid,flight_date,flight_number,aircraft_number,
+				actstand_code,ata,sta,operator,update_time,status,in_out_flag,job_type) 
+		values(fd_flt_out_clean_s.nextval,#{FLTID},#{FLIGHT_DATE},#{FLIGHT_NUMBER},
+				#{AIRCRAFT_NUMBER},#{ACTSTAND_CODE},#{ATA},#{STA},#{operator},
+				sysdate,#{status},#{in_out_flag},#{type})
+	</insert>
+	
+	<delete id="deleteNoCleanByFltId" parameterType="hashmap">
+		delete from fd_flt_out_clean where (fltid = #{inFltId} or relation_id = #{inFltId}) and job_type = #{type}
+	</delete>
+	
+	<update id="releaseVehicle">
+		update BILL_VEHICLE_BOUND set STATUS = 2 where VEHICLE_NUMBER=#{id} and STATUS = 1
+	</update>
+	
+	<insert id="logReleaseVehicle">
+		insert into am_device_stop
+		(ID,DEVICE_ID,STOP_TM,OPERATOR,OFFICE_ID)
+		values
+		(am_device_stop_s.nextval,#{id},to_char(sysdate,'yyyy-mm-dd hh24:mi:ss'),#{userId},#{officeId})
+	</insert>
+	
+	<select id="getTaskList" resultType="com.neusoft.prss.taskmonitor.entity.TaskInfo">
+		<![CDATA[
+			SELECT T1.id,
+	             case
+	               when T1.IOTYPE like 'A%' then
+	                T2.IN_FLIGHT_NUMBER
+	             END as inFltNum,
+	             case
+	               when T1.IOTYPE like 'D%' then
+	                T2.OUT_FLIGHT_NUMBER
+	             END as outFltNum,
+	             to_daytime(ETA) as eta,
+	             to_daytime(ETD) as etd,
+	             ICAO_CODE as acttypeCode,
+	             ACTSTAND_CODE as actstandCode,
+	             CASE
+	               WHEN T1.NAME LIKE '%靠接%' OR T1.NAME LIKE '%对靠%' THEN
+	                '对靠'
+	               WHEN T1.NAME LIKE '%撤离%' THEN
+	                '撤离'
+	               WHEN T1.NAME LIKE '%靠撤%' THEN
+	                '靠撤'
+	               ELSE
+	                NULL
+	             END AS taskType,
+	             T1.NODE_STATE as nodeState,
+	             DW_NODE_ID as nodeId,
+	             T1.PROC_ID procId,
+	             T4.PROC_INST_ID orderId,
+	             T1.JOB_STATE jobState,
+	             T1.fltid,
+	             T1.Job_Type jobType,
+	             T1.Operator,
+	             T1.e_Start_Tm startTime,
+	             T1.e_End_Tm endTime
+	        FROM JM_TASK T1
+	        JOIN (SELECT A.FLTID         AS IN_FLTID,
+	                     C.FLTID         AS OUT_FLTID,
+	                     A.FLIGHT_NUMBER AS IN_FLIGHT_NUMBER,
+	                     C.FLIGHT_NUMBER AS OUT_FLIGHT_NUMBER,
+	                     A.ETA,
+	                     C.ETD,
+	                     D.ICAO_CODE,
+	                     NVL(A.ACTSTAND_CODE,C.ACTSTAND_CODE) as ACTSTAND_CODE
+	                FROM (SELECT * FROM FD_FLT_INFO WHERE IN_OUT_FLAG LIKE 'A%') A
+	                FULL JOIN FD_FLT_IOREL B
+	                  ON (A.FLTID = B.IN_FLTID)
+	                FULL JOIN (SELECT * FROM FD_FLT_INFO WHERE IN_OUT_FLAG LIKE 'D%') C
+	                  ON (C.FLTID = B.OUT_FLTID)
+	                LEFT JOIN dim_actype D
+	                  ON NVL(A.ACTTYPE_CODE,C.ACTTYPE_CODE) = D.ACTYPE_CODE) T2
+	          ON (T1.FLTID = T2.IN_FLTID OR T1.FLTID = T2.OUT_FLTID)
+	        LEFT JOIN (SELECT TASK_ID,
+	                          MAX(DECODE(LABEL, '到位', NODE_ID, NULL)) AS DW_NODE_ID
+	                     FROM (SELECT B.ID AS TASK_ID, C.LABEL, C.ID AS NODE_ID
+	                             FROM WF_PROCESS_NODE A, JM_TASK B, WF_NODE C
+	                            WHERE A.PROCESS_ID = B.PROC_ID
+	                              AND A.NODE_ID = C.ID)
+	                    GROUP BY TASK_ID) T3
+	          ON (T3.TASK_ID = T1.ID)
+	       LEFT JOIN jm_task_proc_inst T4
+	          ON (T1.Id = T4.TASK_ID)
+       WHERE OPERATOR = #{operator}
+         AND JOB_KIND = #{jobKind}
+         AND JOB_STATE IN ('1', '2')
+         AND DEL_FLAG = 0
+		]]>
+	</select>
+	
+	<resultMap type="hashmap" id="walkthroughTaskMap">
+		<result column="id" property="jobTaskId" javaType="string"/>
+		<result column="proc_id" property="procId"/>
+		<result column="operator" property="actor"/>
+	</resultMap>
+	<select id="getWalkthroughTask" resultMap="walkthroughTaskMap">
+		<![CDATA[
+			select t.id,t.proc_id,t.operator from jm_task t
+			where t.job_kind = #{jobKind} and t.job_state = '1'
+		]]>
+	</select>
+	<update id="releaseTaskOperator">
+		<![CDATA[
+			update jm_task t
+			set t.job_state = '6' , t.operator = ''
+			where t.id = #{taskId}
+		]]>
+	</update>
+</mapper>

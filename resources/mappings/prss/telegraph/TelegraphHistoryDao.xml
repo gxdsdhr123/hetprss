@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.telegraph.dao.TelegraphHistoryDao">
+
+	<sql id="receive">
+		SELECT DISTINCT T.FLIGHT_DATE,
+		       T.TG_TYPE_ID,
+		       T.FLIGHT_NUMBER,
+		       TO_CHAR(T.ACCEPT_TIME, 'yyyy-mm-dd hh24:mi') ACCEPT_TIME,
+		       TO_CHAR(T.SEND_TIME, 'yyyy-mm-dd hh24:mi') SEND_TIME,
+		       '已收' TYPE,
+		       1 SENDORRECIEVE,
+		       T.XMLDATA TEXT,
+		       T.FLIGHT_DATE MFLIGHTDATE,
+		       T.FLIGHT_NUMBER FLIGHTNUMBER,
+		       DECODE(A.TMID, NULL, 0, 1) FAVORITE,
+		       DECODE(ISREAD,NULL, 0, 1) ISREAD,
+		       T.ALN_2CODE,
+		       C.UNION_CODE,
+		       T.ID,
+		       T.FLTID,
+		       null NAME,
+		       T.PRIORITY,
+		       T.SEND_ADDRESS,
+		       DECODE(ISPRINT,NULL, 0, 1) ISPRINT,
+               E.TG_CODE
+		  FROM TM_ORIGINAL_XMLDATA T
+		  	LEFT JOIN TM_FAVORITE A
+		    	ON T.ID = A.TMID
+		   	AND A.TYPE = '已收'
+		   	AND A.USERID = '${userId}'
+    	   	LEFT JOIN FD_FLT_AIRLINE_OWNERSHIP_V C
+    			ON T.FLIGHT_NUMBER = C.FLIGHT_NUMBER
+    	   	LEFT JOIN TM_TYPE E
+    			ON T.TG_TYPE_ID = E.ID
+    		WHERE 1=1 
+    		<if test="fltId != null and fltId != ''">
+    			AND T.FLTID = ${fltId}
+    		</if>
+	</sql>
+	<sql id="send">
+		SELECT DISTINCT T.FLIGHT_DATE,
+		       T.TG_TYPE_ID,
+		       T.FLIGHT_NUMBER,
+		       TO_CHAR(T.ACCEPT_TIME, 'yyyy-mm-dd hh24:mi') ACCEPT_TIME,
+		       TO_CHAR(T.SEND_TIME, 'yyyy-mm-dd hh24:mi') SEND_TIME,
+		       '已发' TYPE,
+		       2 SENDORRECIEVE,
+		       T.TG_TEXT TEXT,
+		       T.FLIGHT_DATE MFLIGHTDATE,
+		       T.FLIGHT_NUMBER FLIGHTNUMBER,
+		       DECODE(A.TMID, NULL, 0, 1) FAVORITE,
+		       DECODE(ISREAD,NULL, 0, 1) ISREAD,
+		       T.ALN_2CODE,
+		       C.UNION_CODE,
+		       T.ID,
+		       T.FLTID,
+		       D.NAME,
+		       T.PRIORITY,
+		       H.ADDRESS,
+		       DECODE(ISPRINT,NULL, 0, 1) ISPRINT,
+               E.TG_CODE
+		  FROM TM_INFO T
+		  LEFT JOIN TM_FAVORITE A
+		    ON A.TYPE = '已发'
+		   AND T.ID = A.TMID
+		   AND A.USERID = '${userId}'
+    	   LEFT JOIN FD_FLT_AIRLINE_OWNERSHIP_V C
+    		ON T.FLIGHT_NUMBER = C.FLIGHT_NUMBER
+    	   LEFT JOIN SYS_USER D
+    	   	ON T.USER_ID = D.ID
+    	   LEFT JOIN (SELECT to_char(WM_CONCAT(B.TG_ADDRESS)) ADDRESS, A.TG_INFO_ID
+               FROM TM_INFO_TO A, TM_SITE B
+              WHERE A.TG_SITE_ID = B.ID
+              GROUP BY A.TG_INFO_ID) H
+    		ON T.ID = H.TG_INFO_ID
+    	   LEFT JOIN TM_TYPE E
+    		ON T.TG_TYPE_ID = E.ID
+    		WHERE 1=1 
+    		<if test="fltId != null and fltId != ''">
+    			AND T.FLTID = ${fltId}
+    		</if>
+	</sql>
+	<select id="getList" parameterType="Map" resultType="Map">
+		SELECT b.* FROM (SELECT B.*, rownum || ''  R FROM ( select * from (
+			<if test="isHis != null and isHis == 2">
+				<include refid="receive"></include>
+			</if>
+			<if test="isHis != null and isHis == 3">
+				<include refid="send"></include>
+			</if>
+			<if test="isHis != null and isHis == 4">
+				<include refid="receive"></include>
+				union
+				<include refid="send"></include>
+			</if>
+		)a  where 1=1 
+		<if test="mflightdate!=null and mflightdate!=''"> <![CDATA[ and a.mflightdate = '${mflightdate}' ]]>
+		</if>
+		<if test="flightnumber!=null and flightnumber!=''"> <![CDATA[ and a.flightnumber like '%${flightnumber}%' ]]>
+		</if>
+		<if test="sendorrecieve !=null and sendorrecieve !=''"> and SENDORRECIEVE=#{sendorrecieve}</if>
+		<if test="status !=null and status !=''"> and ISREAD=#{status}</if>
+		<if test="telegraphType !=null and telegraphType !=''"> and TG_TYPE_ID in (${telegraphType})</if>
+		<if test="airplane !=null and airplane !=''"> and ALN_2CODE in ('${airplane}')</if>
+		<if test="isfavoriter !=null and isfavoriter !=''"> and FAVORITE =#{isfavoriter}</if>
+		<if test="unioncode !=null and unioncode !=''"> and UNION_CODE =#{unioncode} </if>
+		<if test="beginTime !=null and beginTime !=''"> <![CDATA[ and a.ACCEPT_TIME >= '${beginTime}' ]]>
+		</if>
+		<if test="endTime !=null and endTime !=''"> <![CDATA[ and a.ACCEPT_TIME <= '${endTime}' ]]>
+		</if>
+		<if test="ids !=null and ids !=''"> and ID in(${ids}) </if>
+		<if test="sortName !=null and sortName !=''">
+		ORDER BY 
+			<if test="isHis != null and isHis == 2">
+				ISREAD ,
+			</if>
+		${sortName} ${sortOrder}
+		
+		</if>
+		 ) B WHERE 1=1
+		<if test="end !=null and end !=''"> and rownum &lt;= ${end}   </if>
+		) B WHERE 1=1
+		<if test="begin !=null and begin !=''"> and r &gt; ${begin}   </if>
+	</select>
+	
+	<select id="getCount" resultType="int" parameterType="Map">
+		select count(*) from(
+			select * from (
+				<if test="isHis != null and isHis == 2">
+					<include refid="receive"></include>
+				</if>
+				<if test="isHis != null and isHis == 3">
+					<include refid="send"></include>
+				</if>
+				<if test="isHis != null and isHis == 4">
+					<include refid="receive"></include>
+					union
+					<include refid="send"></include>
+				</if>
+			) a  where 1=1 
+			<if test="mflightdate!=null and mflightdate!=''"> <![CDATA[ and a.mflightdate = '${mflightdate}' ]]>
+			</if>
+			<if test="flightnumber!=null and flightnumber!=''"> <![CDATA[ and a.flightnumber like '%${flightnumber}%' ]]>
+			</if>
+			
+			<if test="sendorrecieve !=null and sendorrecieve !=''"> and SENDORRECIEVE=#{sendorrecieve}</if>
+			<if test="status !=null and status !=''"> and ISREAD=#{status}</if>
+			<if test="telegraphType !=null and telegraphType !=''"> and TG_TYPE_ID in (${telegraphType})</if>
+			<if test="airplane !=null and airplane !=''"> and ALN_2CODE in ('${airplane}')</if>
+			<if test="isfavoriter !=null and isfavoriter !=''"> and FAVORITE =#{isfavoriter}</if>
+			<if test="unioncode !=null and unioncode !=''"> and UNION_CODE =#{unioncode}</if>
+			<if test="beginTime !=null and beginTime !=''"> <![CDATA[ and a.ACCEPT_TIME >= '${beginTime}' ]]>
+			</if>
+			<if test="endTime !=null and endTime !=''"> <![CDATA[ and a.ACCEPT_TIME <= '${endTime}' ]]>
+			</if>
+			
+		) a 
+	</select>
+	
+	<!-- 航空公司 -->
+	<select id="loadAirline" resultType="Map">
+		select AIRLINE_CODE code, DESCRIPTION_CN||'【'||AIRLINE_CODE||'】' description from DIM_AIRLINES    ORDER BY description
+	</select>
+	
+	<!-- 报文类型 -->
+	<select id="loadTelegraphType" resultType="Map">
+		select t.id code, tg_code description from tm_type t  ORDER BY DESCRIPTION
+	</select>
+	<!-- 标识 -->
+	<insert id="insertFavorite" parameterType="Map">
+		insert into TM_FAVORITE(TMID,USERID,TYPE)
+		values(#{id},#{userId},#{sendorrecieve})
+	</insert>
+	<!-- 取消标识 -->
+	<delete id="deleteFavorite" parameterType="Map">
+		delete from TM_FAVORITE t where t.tmid=#{id} and t.userId = #{userId}
+	</delete>
+	
+	<!-- 报文已读 -->
+	<update id="isRead" parameterType="Map">
+		<if test="type != null and type==1">
+			update TM_ORIGINAL_XMLDATA set ISREAD=1 where id=#{id}
+		</if>
+		<if test="type != null and type==2">
+			update TM_INFO set ISREAD=1 where id=#{id}
+		</if>
+	</update>
+	<update id="updatePrint" parameterType="Map">
+		update TM_ORIGINAL_XMLDATA set ISPRINT = 1 WHERE ID = #{ID}
+	</update>
+	<sql id="flightList">
+		SELECT T.FLTID,T.FLIGHT_DATE,T.FLIGHT_NUMBER,T.AIRCRAFT_NUMBER,T.IN_OUT_FLAG FROM FD_FLT_INFO T 
+	</sql>
+	<select id="getFlightList" parameterType="Map" resultType="Map">
+		<include refid="flightList"></include>
+		 where 1=1 
+		<if test="flightdate !=null and flightdate !=''"> <![CDATA[ and T.FLIGHT_DATE = '${flightdate}' ]]></if>
+		<if test="flightnumber!=null and flightnumber!=''"> <![CDATA[ and T.FLIGHT_NUMBER like '%${flightnumber}%' ]]></if>
+		<if test="fiotype !=null and fiotype !='all'"> <![CDATA[ and T.IN_OUT_FLAG like '%${fiotype}%' ]]></if>
+		ORDER BY FLTID DESC
+	</select>
+	
+	<update id="pigeonhole" parameterType="Map">
+		update TM_ORIGINAL_XMLDATA 
+		set FLTID = ${fltId} ,FLIGHT_DATE= '${flightDate}',FLIGHT_NUMBER= '${flightNumber}',AIRCRAFT= '${aircraftNumber}'
+		where id = ${id}
+	</update>
+	
+	<select id="getInfo" parameterType="Map" resultType="com.alibaba.fastjson.JSONObject">
+		<if test="isHis != null and isHis ==2">
+			SELECT T.XMLDATA TEXT,
+			       T.FLIGHT_DATE,
+			       T.FLIGHT_NUMBER,
+			       T.PRIORITY,
+			       SUBSTR(A.IN_OUT_FLAG, 0, 1) IOTYPE,
+			       B.TG_CODE,
+			       T.FLTID
+			  FROM TM_ORIGINAL_XMLDATA T
+			  LEFT JOIN TM_TYPE B
+			    ON B.ID = T.ID
+			  LEFT JOIN FD_FLT_INFO A
+			    ON T.FLTID = A.FLTID
+			  WHERE T.ID = ${id}
+		</if>
+		<if test="isHis != null and isHis ==3">
+			SELECT T.TG_TEXT TEXT,
+			       T.FLIGHT_DATE,
+			       T.FLIGHT_NUMBER,
+			       A.PRIORITY,
+			       T.IOTYPE,
+			       B.TG_CODE
+			  FROM TM_INFO T
+			  LEFT JOIN TM_TEMPLATE A
+			    ON T.TG_TEMPL_ID = A.ID
+			  LEFT JOIN TM_TYPE B
+			    ON B.ID = T.ID
+			  WHERE T.ID = ${id}
+		</if>
+	</select>
+	
+</mapper>

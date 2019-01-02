@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.arrange.dao.AmbulatoryShiftsTypeDao">
+	<resultMap id="BaseResultMap"
+		type="com.neusoft.prss.arrange.entity.AmbulatoryShiftsType">
+		<result column="SHIFTS_ID" jdbcType="DECIMAL" property="shiftsId" />
+		<result column="SHIFTS_NAME" jdbcType="VARCHAR" property="shiftsName" />
+		<result column="STARTIME" jdbcType="VARCHAR" property="startime" />
+		<result column="ENDTIME" jdbcType="VARCHAR" property="endtime" />
+		<result column="BIND_FLT" jdbcType="VARCHAR" property="bindFlt" />
+		<result column="WEEK_CODE" jdbcType="VARCHAR" property="weekCode" />
+		<result column="OFFICE_ID" jdbcType="VARCHAR" property="officeId" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		SHIFTS_ID,SHIFTS_NAME,STARTIME,ENDTIME,BIND_FLT,WEEK_CODE,OFFICE_ID
+	</sql>
+	<select id="getAmbulatoryShiftsTypeList" resultMap="BaseResultMap">
+		select
+		<include refid="Base_Column_List" />
+		from
+		dim_ambulatory_shifts_type
+		where OFFICE_ID = #{officeId}
+		order by shifts_id, week_code
+	</select>
+	<select id="getASTypeById" resultMap="BaseResultMap">
+		select
+		<include refid="Base_Column_List" />
+		from
+		dim_ambulatory_shifts_type
+		where
+		shifts_id = #{id}
+		order by week_code
+	</select>
+	<delete id="delAST">
+		delete from dim_ambulatory_shifts_type
+		where SHIFTS_ID = #{id}
+	</delete>
+	<insert id="doInsertAST">
+		insert into dim_ambulatory_shifts_type
+		(SHIFTS_ID,SHIFTS_NAME,STARTIME,ENDTIME,BIND_FLT,WEEK_CODE,OFFICE_ID)
+		values
+		(#{shiftsId},#{shiftsName},#{startime},#{endtime},#{bindFlt},#{weekCode},#{officeId})
+	</insert>
+	<select id="getSeq" resultType="java.lang.Integer">
+		select
+		dim_AMBULATORY_SHIFTS_TYPE_S.nextval from dual
+	</select>
+	<select id="getFltByDay" parameterType="String" resultType="java.lang.String">
+		select in_fltno fltno from pm_longterm_main 
+		where
+		aln_flag_code='I' and in_plan_week like '%${day}%' 
+		union
+		select out_fltno fltno from pm_longterm_main 
+		where 
+		aln_flag_code='I' and out_plan_week like '%${day}%'
+	</select>
+	<select id="getFltNotDay" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select in_fltno fltno, in_plan_date planDate from pm_longterm_main 
+		where 
+		aln_flag_code='I' and in_plan_week not like '%${day}%' 
+		union 
+		select out_fltno fltno, out_plan_date planDate from pm_longterm_main 
+		where 
+		aln_flag_code='I' and out_plan_week not like '%${day}%'
+	</select>
+</mapper>

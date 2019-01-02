@@ -1,0 +1,688 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.scheduling.dao.SchedulingListDao">
+	<!-- 获取航班动态动态列中基本信息部分数据 -->
+	<select id="getBaseData" parameterType="hashmap"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select ${detail} in_tab.fltid "in_fltid", out_tab.fltid "out_fltid", in_tab."prop_code", in_tab.status "inStatus",out_tab.status "outStatus",in_tab.inactstatus "inactstatus",out_tab.outactstatus "outactstatus"
+      		,same_aircraft_number(in_tab.fltid) "in_flt_air_status",same_aircraft_number(out_tab.fltid) "out_flt_air_status"	
+      from (select a.*, b.out_fltid,a.property_code "prop_code"
+              from (select m.*,n.status inactstatus from fd_flt_info m,fd_flight_status_v n where in_out_flag in ('A0','A1') and m.fltid = n.fltid(+)) a full outer join fd_flt_iorel b 
+	                  on a.fltid = b.in_fltid) in_tab 
+	                  full outer join 
+	                 (select p.*,q.status outactstatus from fd_flt_info p,fd_flight_status_v q where in_out_flag in ('D0','D1') and p.fltid = q.fltid(+)) out_tab 
+	                  on in_tab.out_fltid = out_tab.fltid
+	   where 1=1
+   		<choose>
+   			<!-- 今日航班 -->
+   			<when test="time_type == 1">
+   				and ( out_tab.flight_date = to_char(SYSDATE,'yyyyMMdd') or in_tab.flight_date = to_char(SYSDATE,'yyyyMMdd'))
+   			</when>
+   			<!-- 未执行航班 -->
+   			<when test="time_type == 2">
+   				and ((in_tab.in_out_flag LIKE 'A%' AND in_tab.ATA IS NULL) OR (out_tab.in_out_flag LIKE 'D%' AND out_tab.ATD IS NULL))
+   			</when>
+   			<!-- 最近航班 -->
+   			<when test="time_type == 3">
+   				${timer_conf}
+   			</when>
+   			<!-- 次日航班 -->
+   			<when test="time_type == 4">
+   				and ( out_tab.flight_date = to_char(SYSDATE+1,'yyyyMMdd') or in_tab.flight_date = to_char(SYSDATE+1,'yyyyMMdd'))
+   			</when>
+   			<!-- 进港航班列表 -->
+   			<when test="time_type == 5">
+   				and in_tab.fltid is not null
+   			</when>
+   			<!-- 出港航班列表 -->
+   			<when test="time_type == 6">
+   				and out_tab.fltid is not null
+   			</when>
+   		</choose>
+	    
+		<!-- 跑道 -->
+		<if test="runways != null and runways != ''">
+			and (in_tab.fltid in (select fltid from fd_flt_cla_arrival where instr(#{runways},RUNWAY_CODE)>0)
+				or out_tab.fltid in (select fltid from fd_flt_cla_depart where instr(#{runways},RUNWAY_CODE)>0))
+		</if>
+		<!-- 始发中转过夜 -->
+		<if test="stayFlag != null and stayFlag != ''">
+			and (instr(#{stayFlag},in_tab.in_out_flag)>0 or 
+			instr(#{stayFlag},out_tab.in_out_flag)>0)
+		</if>
+		<!-- 机型 -->
+		<if test="actType != null and actType != ''">
+			and (instr(#{actType},in_tab.acttype_code)>0 or 
+			instr(#{actType},out_tab.acttype_code)>0)
+		</if>
+		<!-- 机号 -->
+		<if test="aircraftNo != null and aircraftNo != ''">
+			and (instr(#{aircraftNo},in_tab.aircraft_number)>0 or 
+			instr(#{aircraftNo},out_tab.aircraft_number)>0)
+		</if>
+		<!-- 分子公司 -->
+		<if test="branch != null and branch != ''">
+			and (in_tab.AIRCRAFT_NUMBER in (select ACREG_CODE from dim_acreg where own_city=#{branch})  or
+			out_tab.AIRCRAFT_NUMBER in (select ACREG_CODE from dim_acreg where own_city=#{branch}))
+		</if>
+		<!-- 航空公司 -->
+		<if test="airline != null and airline != ''">
+			and (instr(#{airline},in_tab.aln_3code)>0 or instr(#{airline},out_tab.aln_3code)>0 )
+		</if>
+		<!-- 航空公司二字码 -->
+		<if test="airline2Code != null and airline2Code != ''">
+			and (instr(#{airline2Code},in_tab.aln_2code)>0 or instr(#{airline2Code},out_tab.aln_2code)>0 )
+		</if>
+		<!-- 旅客服务调度列表去除CA、ZH航班 -->
+		<if test="schema != null and schema != '' and schema =='13'">
+			and in_tab.aln_2code not in ('CA','ZH') and out_tab.aln_2code not in ('CA','ZH') 
+		</if>
+		<!-- 机位 -->
+		<if test="bay != null and bay != ''">
+			and (instr(#{bay},in_tab.ACTSTAND_CODE)>0 or instr(#{bay},out_tab.ACTSTAND_CODE)>0 )
+		</if>
+		<!-- 廊桥/远机位 -->
+		<if test="GAFlag != null and GAFlag != ''">
+			<if test="GAFlag =='1'.toString()">
+				and (exists (select 1 from dim_bay t2 where in_tab.actstand_code=t2.bay_code and t2.bay_name is not null) or exists (select 1 from dim_bay t2 where out_tab.actstand_code=t2.bay_code and t2.bay_name is not null))
+			</if >
+			<if  test="GAFlag =='2'.toString()">
+				and (in_tab.ACTSTAND_KIND IN ('Y','A') or out_tab.ACTSTAND_KIND IN ('N','A'))
+			</if>
+			<if  test="GAFlag =='3'.toString()">
+				and (exists (select 1 from dim_bay t2 where in_tab.actstand_code=t2.bay_code and t2.remote_label='N' and t2.bay_name is null) or exists (select 1 from dim_bay t2 where out_tab.actstand_code=t2.bay_code and t2.remote_label='N' and t2.bay_name is null))
+			</if>
+			<if test="GAFlag =='1,2'.toString()">
+				and ((in_tab.ACTSTAND_KIND IN ('Y','A') or out_tab.ACTSTAND_KIND IN ('N','A')) or (exists (select 1 from dim_bay t2 where in_tab.actstand_code=t2.bay_code and t2.bay_name is not null) or exists (select 1 from dim_bay t2 where out_tab.actstand_code=t2.bay_code and t2.bay_name is not null)))
+			</if >
+			<if test="GAFlag =='1,3'.toString()">
+				and (in_tab.ACTSTAND_KIND='N' or out_tab.ACTSTAND_KIND='Y')
+			</if >
+			<if test="GAFlag =='2,3'.toString()">
+				and ((in_tab.ACTSTAND_KIND IN ('Y','A') or out_tab.ACTSTAND_KIND IN ('N','A')) or (exists (select 1 from dim_bay t2 where in_tab.actstand_code=t2.bay_code and t2.remote_label='N' and t2.bay_name is null) or exists (select 1 from dim_bay t2 where out_tab.actstand_code=t2.bay_code and t2.remote_label='N' and t2.bay_name is null)))
+			</if >
+		</if>
+		<!-- 延误 -->
+		<if test='delay!=null and delay!=""'>
+			and (in_tab.DELAY_REASON in (SELECT DELAY_CODE FROM DIM_DELAY WHERE instr(#{delay},DELAY_TYPE)>0)  or
+			out_tab.DELAY_REASON in (SELECT DELAY_CODE FROM DIM_DELAY WHERE instr(#{delay},DELAY_TYPE)>0))
+		</if>
+		<!-- 延误原因 -->
+		<if test="delyReson != null and delyReson != ''">
+			and (instr(#{delyReson},in_tab.DELAY_REASON)>0 or instr(#{delyReson},out_tab.DELAY_REASON)>0 )
+		</if>
+		<!-- 保障状态 -->
+		<if test='guarantee!="" and guarantee!=null'>
+			and (in_tab.fltid in (select fltid from fd_delay_info where delay_type in (select id from dim_delay_type where instr(#{guarantee},id)&gt;0 or instr(#{guarantee},parent)&gt;0)) 
+				 or out_tab.fltid in (select fltid from fd_delay_info where delay_type in (select id from dim_delay_type where instr(#{guarantee},id)&gt;0 or instr(#{guarantee},parent)&gt;0))) 
+		</if>
+		<if test="departAirport != null and departAirport != ''">
+			and instr(#{departAirport},in_tab.depart_apt3code)>0 
+		</if>
+		<if test="arriveAirport != null and arriveAirport != ''">
+			and instr(#{arriveAirport},out_tab.arrival_apt3code)>0 
+		</if>
+		<!-- 航班性质 -->
+		<if test="alnFlag != null and alnFlag != ''">
+			and (instr(#{alnFlag},in_tab.FLT_ATTR_CODE)>0 
+			or instr(#{alnFlag},out_tab.FLT_ATTR_CODE)>0)
+		</if>
+		<!-- 
+		<if test="gate != null and gate != ''">
+			and (instr(#{gate},in_tab.gate)>0 or instr(#{gate},out_tab.gate)>0 )
+		</if>
+		 -->
+		<if test="gate != null and gate != ''">
+			and (in_tab.gate 
+			<foreach  collection="gates" item="gate" open="in (" close=")" separator=",">   
+                #{gate}  
+            </foreach>
+            or out_tab.gate 
+            <foreach  collection="gates" item="gate" open="in (" close=")" separator=",">   
+                #{gate}  
+            </foreach>
+            ) 
+		</if>
+		<!-- 当前日期前后时间段 -->
+		<if test='(beforeHour !="" and beforeHour != null) and (afterHour != "" and afterHour != null)'>
+			<choose>
+				<when test='timetype!="" and timetype!=null'>
+					and to_char(to_date(${timetype},'yyyy-mm-dd hh24:mi'),'yyyyMMdd') between to_char((sysdate-${beforeHour}),'yyyyMMdd') and to_char((sysdate+${afterHour}),'yyyyMMdd')
+				</when>
+			</choose>
+		</if>
+		<!-- 状态 -->
+		<if test='acfStatus!=null and acfStatus!=""'>
+			and (instr(#{acfStatus},in_tab.STATUS)>0 or instr(#{acfStatus},out_tab.STATUS)>0 )
+		</if>
+		<!-- 日期 -->
+		<if test='searchFlightDate!=null and searchFlightDate!=""'>
+			and (in_tab.flight_date = #{searchFlightDate} or out_tab.flight_date = #{searchFlightDate})
+		</if>
+		<if test='identifying =="1"'>
+			and (in_tab.ssg_flag = '1' or out_tab.ssg_flag = '1')
+		</if>
+		<if test='identifying =="2"'>
+			and (in_tab.son_aln_code in (select airlines_code from
+			dim_airlines_sub where airlines_code2 in ('MU','CZ','HU') and
+			airlines_chinese_name like '%北京%')
+			or out_tab.son_aln_code in (select
+			airlines_code from dim_airlines_sub
+			where airlines_code2 in
+			('MU','CZ','HU') and airlines_chinese_name
+			like '%北京%'))
+		</if>
+		<if test="terminals != null and terminals != ''">
+			and (instr(#{terminals},in_tab.terminal_code)>0 or instr(#{terminals},out_tab.terminal_code)>0 )
+		</if>
+		<if test="apron != null and apron != ''">
+			and (in_tab.apron_code 
+			<foreach  collection="aprons" item="apron" open="in (" close=")" separator=",">   
+                #{apron}  
+            </foreach>
+            or out_tab.apron_code 
+            <foreach  collection="aprons" item="apron" open="in (" close=")" separator=",">   
+                #{apron}  
+            </foreach>
+            ) 
+		</if>
+		<if test="fltPropertys != null and fltPropertys != ''">
+			and (instr(#{fltPropertys},in_tab.property_code)>0 or instr(#{fltPropertys},out_tab.property_code)>0 )
+		</if>
+		<if test='flightScope == "1"'>
+			and in_tab.fltid is not null
+		</if>
+		<if test='flightScope == "2"'>
+			and out_tab.fltid is not null
+		</if>
+		<if test='fltdate!="" and fltdate!=null'>
+			<if test='flightScope == "1"'>
+				and in_tab.FLIGHT_DATE=#{fltdate}
+			</if>
+			 <if test='flightScope == "2"'>
+				and out_tab.FLIGHT_DATE=#{fltdate}
+			</if>
+			<if test='flightScope == "" or flightScope == null'>
+				and (in_tab.FLIGHT_DATE=#{fltdate} or out_tab.FLIGHT_DATE=#{fltdate})
+			</if>
+		</if>
+		
+		<if test='actkinds!="" and actkinds!=null'>
+			and (exists(select 1 from dim_actype t2 where in_tab.acttype_code=t2.todb_actype_code and instr(#{actkinds},t2.acfttype_category)>0) or exists(select 1 from dim_actype t2 where out_tab.acttype_code=t2.todb_actype_code and instr(#{actkinds},t2.acfttype_category)>0))
+		</if>
+		<if test='timetype!="" and timetype!=null'>
+			<choose>
+				<!-- 当都为空时 筛选该字段为空 -->
+		        <when test='(beginTime=="" or beginTime==null) and (endTime=="" or endTime==null)'>
+					and (${timetype} is null or ${timetype}='')
+		        </when>
+		        <otherwise>
+		            and to_char(to_date(${timetype},'yyyy-mm-dd hh24:mi'),'hh24mi') between #{beginTime} and #{endTime}
+		        </otherwise>
+		    </choose>
+		    
+		</if>
+		<if test='alntype!="" and alntype!=null'>
+			and (instr(#{alntype},in_tab.FLT_ATTR_CODE)>0 or instr(#{alntype},out_tab.FLT_ATTR_CODE)>0 )
+		</if>
+		
+		<if test='vipFlags!="" and vipFlags!=null'>
+			and (in_tab.fltid in (select fltid from fd_vip_info_v
+				 <where>  
+		            vip_flag_text  
+		            <foreach  collection="vipFlags" item="vipFlag" open="in (" close=")" separator=",">   
+		                #{vipFlag}  
+		            </foreach>  
+		        </where>  
+				) or  
+					out_tab.fltid in (select fltid from fd_vip_info_v 
+					<where>  
+		            vip_flag_text  
+		            <foreach  collection="vipFlags" item="vipFlag" open="in (" close=")" separator=",">   
+		                #{vipFlag}  
+		            </foreach>  
+		        	</where>  
+				) )
+		</if>
+		
+		<if test='direction!="" and direction!=null'>
+			and out_tab.fltid in (select fltid from fd_flt_cla_depart where AP_DIRECTION=#{direction})
+		</if>
+		<if test='dprks!="" and dprks!=null'>
+			AND (in_tab.fltid in 
+			(select fltid from fd_flt_cla_deic where DPRK_CODE=#{dprks}) or
+			out_tab.fltid in
+			(select fltid from fd_flt_cla_deic where DPRK_CODE=#{dprks}))
+		</if>
+		<if test='dcnds!="" and dcnds!=null'>
+			AND (in_tab.fltid in 
+			(select fltid from fd_flt_cla_deic where DCND_CODE=#{dcnds}) or
+			out_tab.fltid in
+			(select fltid from fd_flt_cla_deic where DCND_CODE=#{dcnds}))
+		</if>
+		<if test='slowDeice!="" and slowDeice!=null'>
+			AND (in_tab.fltid in 
+			(select fltid from fd_flt_cla_deic where DSLDI_FLAG=#{slowDeice}) or
+			out_tab.fltid in
+			(select fltid from fd_flt_cla_deic where DSLDI_FLAG=#{slowDeice}))
+		</if>
+		<!-- 除冰航班：0-不除冰 1-定点除冰  空''-机位除冰 -->
+		<if test='iceFlt!="" and iceFlt!=null'>
+			and (instr(#{iceFlt},in_tab.DEIC_FLAG)>0 or instr(#{iceFlt},out_tab.DEIC_FLAG)>0 )
+		</if>
+		
+		<if test='outDot!="" and outDot!=null'>
+			and out_tab.fltid in (select fltid from fd_flt_cla_depart where ap_code=#{outDot})
+		</if>
+		<!-- 客梯车 远机位 -->
+		<if test='ktFar!="" and ktFar!=null'>
+			and (in_tab.actstand_code in (select bay_code from dim_bay where remote_label = 'Y') 
+				or out_tab.actstand_code in (select bay_code from dim_bay where remote_label = 'Y'))
+		</if>
+		<!-- 排序 -->
+		<if test='timer_conf != null and timer_conf != ""'>
+			order by ${order_by}
+		</if>
+		
+	</select>
+
+	<!-- 获取航班动态动态列中配置部分数据 -->
+	<select id="getConfigData" parameterType="hashmap"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select ${detail} in_tab.fltid "in_fltid", out_tab.fltid
+		"out_fltid"
+		from (select a.*, b.out_fltid
+		from (select * from ${tabname}) a
+		full outer join fd_flt_iorel b on a.fltid = b.in_fltid) in_tab
+		full outer join (select * from ${tabname}) out_tab on in_tab.out_fltid =
+		out_tab.fltid
+		where nvl(in_tab.fltid, out_tab.fltid) is not null
+	</select>
+
+	<!-- 获取航班动态动态列中其他信息部分数据 -->
+	<select id="getOtherData" parameterType="hashmap"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select a.fltid "fltid",${col} from ${tabName} a
+	</select>
+
+	<!-- 获取航班动态动态列中其他信息部分数据 -->
+	<select id="getFiltConf" parameterType="String"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select * from fd_filter_conf where reskind = #{reskind}
+	</select>
+
+	<!-- 分页获取航空公司 -->
+	<select id="getAirlines" parameterType="hashmap"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select "id","text" from (select rownum "r",
+		airline_code "id",
+		description_cn "text"
+		from dim_airlines
+		where (description_cn like '%${q}%'
+		or upper(description_en) like upper('%${q}%')
+		or airline_code like upper('%${q}%'))
+		and rownum &lt;= ${end}) t
+		where t."text" is not null
+		and t."r" &gt;=${start}
+	</select>
+
+	<!-- 获取航空公司总数 -->
+	<select id="getAirlineTotNum" parameterType="hashmap"
+		resultType="Integer">
+		select count(1) as count
+		from dim_airlines
+		where description_cn like '%${q}%'
+		or upper(description_en) like upper('%${q}%')
+		or airline_code like upper('%${q}%')
+	</select>
+
+	<!-- 分页获取机型 -->
+	<select id="getActTypes" parameterType="hashmap"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select "id","text" from (select rownum "r",
+		todb_actype_code "id",
+		description_cn "text"
+		from dim_actype
+		where (todb_actype_code like upper('%${q}%')
+		or upper(description_cn) like upper('%${q}%')
+		or upper(description_en) like upper('%${q}%'))
+		and rownum &lt;= ${end}) t
+		where t."text" is not null
+		and t."r" &gt;=${start}
+	</select>
+
+	<!-- 获取机型总数 -->
+	<select id="getActTypeTotNum" parameterType="hashmap"
+		resultType="Integer">
+		select count(1) as count
+		from dim_actype
+		where actype_code like upper('%${q}%')
+		or upper(description_cn) like upper('%${q}%')
+		or upper(description_en) like upper('%${q}%')
+	</select>
+
+	<!-- 分页获取机场 -->
+	<select id="getAirports" parameterType="hashmap"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select "id","text" from (select rownum "r",
+		icao_code "id",
+		description_cn "text"
+		from dim_airport
+		where (icao_code like upper('%${q}%')
+		or airport_code like upper('%${q}%')
+		or description_cn like '%${q}%'
+		or upper(description_en) like upper('%${q}%'))
+		and rownum &lt;= ${end}) t
+		where t."text" is not null
+		and t."r" &gt;=${start}
+	</select>
+
+	<!-- 获取机场总数 -->
+	<select id="getAirportTotNum" parameterType="hashmap"
+		resultType="Integer">
+		select count(1) as count
+		from dim_airport
+		where icao_code like upper('%${q}%')
+		or airport_code like upper('%${q}%')
+		or description_cn like '%${q}%'
+		or upper(description_en) like upper('%${q}%')
+	</select>
+	
+	<select id="getFilterOrderSqlbyShema" parameterType="String"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select filter,sort from fd_flt_filter_order
+	</select>
+
+	<select id="getSemaByOfficeId" resultType="com.alibaba.fastjson.JSONObject">
+		select office_id,
+		task_flag,
+		to_char(task_update_time, 'YYYY-MM-DD HH24:mi') task_update_time,
+		worker_flag,
+		to_char(worker_update_time,'YYYY-MM-DD HH24:mi') worker_update_time
+		from jm_sema
+		where office_id = #{officeId}
+	</select>
+
+	<update id="updateSema">
+		${sql}
+	</update>
+
+	<insert id="setSemaLog">
+		insert into jm_sema_log values
+		(jm_sema_log_s.nextval, #{officeId}, #{str}, #{operator}, sysdate)
+	</insert>
+	
+	<select id="getAttrCode" resultType="String">
+		SELECT FLT_ATTR_CODE FROM fd_flt_info WHERE fltid = #{fileId}
+	</select>
+	
+	<select id="getDGate" resultType="String">
+		SELECT d_gate FROM fd_flt_info WHERE fltid = #{fileId}
+	</select>
+	
+	<update id="updateDGate">
+		UPDATE fd_flt_info SET d_gate = #{dGate} WHERE fltid = #{fileId}
+	</update>
+	
+	<select id="getPrintColInfo" resultType="com.alibaba.fastjson.JSONObject">
+		select a.id "id",
+		a.tab_name "tabName",
+		a.tab_alias "tab_alias",
+		b.col_name "colName",
+		b.col_alias "alias",
+		d.tab_name "dimKey",
+		d.col_name "dimCol",
+		b.col_func "colFunc",
+		b.col_alias "field",
+		c.col_cnname "title"
+		from sys_grid_table a,
+		sys_grid_column b,
+		SYS_GRID_COLUMN_PRINT c,
+		sys_grid_table_dim d
+		where a.id = b.tab_id
+		and b.id = c.col_id
+		and b.dim_tab = d.id(+)
+		and c.schema_id = #{schema}
+		order by c.show_order
+	</select>
+	
+	<!-- 任务指派单页进出港航班信息 -->
+	<resultMap id="fltInfoMap" type="com.alibaba.fastjson.JSONObject">
+		<result column="in_fltid" property="inFltId" jdbcType="VARCHAR"/>
+		<result column="in_flt_num" property="inFltNum" jdbcType="VARCHAR"/>
+		<result column="in_flt_num2" property="inFltNum2" jdbcType="VARCHAR"/>
+		<result column="in_aircraft_num" property="inAircraftNum" jdbcType="VARCHAR"/>
+		<result column="in_acttype_code" property="inActtypeCode" jdbcType="VARCHAR"/>
+		<result column="in_actstand_code" property="inActstandCode" jdbcType="VARCHAR"/>
+		<result column="in_route_3code" property="inRoute3code" jdbcType="VARCHAR"/>
+		<result column="in_route_name" property="inRouteName" jdbcType="VARCHAR"/>
+		<result column="in_eta" property="inEta" jdbcType="VARCHAR"/>
+		<result column="in_etd" property="inEtd" jdbcType="VARCHAR"/>
+        <result column="in_flight_date" property="inFlightDate" jdbcType="VARCHAR"/>
+        <result column="in_aln_cnname" property="inAlnCnname" jdbcType="VARCHAR"/>
+        <result column="in_std" property="inStd" jdbcType="VARCHAR"/>
+        <result column="in_atd" property="inAtd" jdbcType="VARCHAR"/>
+        <result column="in_delay_reason" property="inDelayReason" jdbcType="VARCHAR"/>
+        <result column="supervision_user" property="supervisionUser" jdbcType="VARCHAR"/>
+        
+        <result column="out_fltid" property="outFltId" jdbcType="VARCHAR"/>
+		<result column="out_flt_num" property="outFltNum" jdbcType="VARCHAR"/>
+		<result column="out_flt_num2" property="outFltNum2" jdbcType="VARCHAR"/>
+		<result column="out_aircraft_num" property="outAircraftNum" jdbcType="VARCHAR"/>
+		<result column="out_acttype_code" property="outActtypeCode" jdbcType="VARCHAR"/>
+		<result column="out_actstand_code" property="outActstandCode" jdbcType="VARCHAR"/>
+		<result column="out_route_3code" property="outRoute3code" jdbcType="VARCHAR"/>
+		<result column="out_route_name" property="outRouteName" jdbcType="VARCHAR"/>
+		<result column="out_eta" property="outEta" jdbcType="VARCHAR"/>
+		<result column="out_etd" property="outEtd" jdbcType="VARCHAR"/>
+        <result column="out_flight_date" property="outFlightDate" jdbcType="VARCHAR"/>
+        <result column="out_aln_cnname" property="outAlnCnname" jdbcType="VARCHAR"/>
+        <result column="out_std" property="outStd" jdbcType="VARCHAR"/>
+        <result column="out_atd" property="outAtd" jdbcType="VARCHAR"/>
+        <result column="out_delay_reason" property="outDelayReason" jdbcType="VARCHAR"/>
+	</resultMap>
+	
+	<resultMap id="fltMailInfoMap" type="com.alibaba.fastjson.JSONObject">
+		<result column="id" property="id" jdbcType="VARCHAR"/>
+		<result column="in_flight_number" property="inFltNum" jdbcType="VARCHAR"/>
+		<result column="in_flight_number2" property="inFltNum2" jdbcType="VARCHAR"/>
+		<result column="in_flight_date" property="inFltDate" jdbcType="VARCHAR"/>
+		<result column="out_flight_number" property="outFltNum" jdbcType="VARCHAR"/>
+		<result column="out_flight_number2" property="outFltNum2" jdbcType="VARCHAR"/>
+		<result column="out_flight_date" property="outFltDate" jdbcType="VARCHAR"/>
+		<result column="mail_package_type" property="mailPackageType" jdbcType="VARCHAR"/>
+		<result column="arrival_apt" property="arrivalApt" jdbcType="VARCHAR"/>
+		<result column="apt_type" property="aptType" jdbcType="VARCHAR"/>
+		<result column="mail_weight" property="mailWeight" jdbcType="VARCHAR"/>
+		<result column="mail_cabin" property="mailCabin" jdbcType="VARCHAR"/>
+		<result column="package_weight" property="packageWeight" jdbcType="VARCHAR"/>
+		<result column="package_number" property="packageNum" jdbcType="VARCHAR"/>
+        <result column="flag" property="flag" jdbcType="VARCHAR"/>
+        <result column="operator_date" property="operatorDate" jdbcType="VARCHAR"/>
+        <result column="control_user" property="controlUser" jdbcType="VARCHAR"/>
+        <result column="supervision_user" property="supervisionUser" jdbcType="VARCHAR"/>
+        <result column="control_user_name" property="controlUserName" jdbcType="VARCHAR"/>
+        <result column="supervision_user_name" property="supervisionUserName" jdbcType="VARCHAR"/>
+        <result column="print_flag" property="printFlag" jdbcType="VARCHAR"/>
+	</resultMap>
+	
+	<!-- 获取任务指派单页进出港航班信息 -->
+	<select id="getFltInfo" resultMap="fltInfoMap">
+		select t1.*,t2.*,t3.supervision_user  from (select in_fltid,out_fltid from fd_flt_iorel 
+		<where>
+			<if test='inFltId!="" and inFltId!=null' >
+				and in_fltid = #{inFltId}
+			</if>
+			<if test='outFltId!="" and outFltId!=null' >
+				and out_fltid = #{outFltId}
+			</if>
+		</where>
+		) t,
+		(select fltid in_fltid,flight_number in_flt_num,flight_number2 in_flt_num2,aircraft_number in_aircraft_num,acttype_code in_acttype_code,t1.description_cn in_aln_cnname,to_daytime(std) in_std,to_daytime(atd) in_atd,delay_reason in_delay_reason,
+	    actstand_code in_actstand_code,route_name in_route_name,route_3code in_route_3code,to_daytime(eta) in_eta,to_daytime(etd) in_etd,flight_date in_flight_date from fd_flt_info t,dim_airlines t1 where t.aln_3code = t1.icao_code(+) and t.in_out_flag like 'A%') t1,
+	    (select fltid out_fltid,flight_number out_flt_num,flight_number2 out_flt_num2,aircraft_number out_aircraft_num,acttype_code out_acttype_code,t1.description_cn out_aln_cnname,to_daytime(std) out_std,to_daytime(atd) out_atd,delay_reason out_delay_reason,
+	    actstand_code out_actstand_code,route_name out_route_name,route_3code out_route_3code,to_daytime(eta) out_eta,to_daytime(etd) out_etd,flight_date out_flight_date from fd_flt_info t,dim_airlines t1 where t.aln_3code = t1.icao_code(+) and t.in_out_flag like 'D%') t2,
+	    (select fltid,operator supervision_user from jm_task where job_kind = 'DFJPCZJZ') t3
+	    where t.in_fltid = t1.in_fltid(+) and t.out_fltid = t2.out_fltid(+) and t.in_fltid = t3.fltid(+)
+	</select>
+	
+	<!-- 获取装卸调用列表任务指派单进港货邮行、进港行李解析信息 -->
+	<select id="getFltMailInfo" resultMap="fltMailInfoMap">
+		select t.id,t.in_flight_number ,t.in_flight_number2 ,t.in_flight_date,t.out_flight_number ,t.out_flight_number2 ,t.out_flight_date ,mail_package_type ,
+		arrival_apt ,apt_type,nvl(mail_weight,0) mail_weight ,mail_cabin,nvl(package_weight,0) package_weight,nvl(package_number,0) package_number,
+		flag,operator_date ,control_user,supervision_user,t1.name control_user_name,t2.name supervision_user_name,t.print_flag
+		from fd_flt_mail_info t,sys_user t1,sys_user t2 
+		where t.control_user = t1.id(+) and t.supervision_user = t2.id(+)
+		and ((t.in_flight_date = #{inFltDate} and t.in_flight_number2 = #{inFltNum2}) or ((t.out_flight_date = #{outFltDate} and t.out_flight_number2 = #{outFltNum2})))
+		order by t.apt_type,mail_package_type
+	</select>
+	
+	<!-- 删除货邮行、行李信息 -->
+	<delete id="delFltMailInfo" parameterType="java.util.HashMap">
+		delete from fd_flt_mail_info
+		<where>
+			<if test='inFltId!="" and inFltId!=null' >
+				and in_fltid = #{inFltId}
+			</if>
+			<if test='outFltId!="" and outFltId!=null' >
+				and out_fltid = #{outFltId}
+			</if>
+			<if test='id!="" and id!=null' >
+				and id = #{id}
+			</if>
+		</where>
+	</delete>
+	
+	<!-- 更新货邮行、行李信息 -->
+	<update id="updateFltMailInfo" parameterType="com.alibaba.fastjson.JSONObject">
+            UPDATE fd_flt_mail_info 
+            <trim prefix="set" suffixOverrides=",">
+				<if test="inFltId != null">
+					in_fltid = #{inFltId},
+				</if>
+				<if test="outFltId != null">
+					out_fltid = #{outFltId},
+				</if>
+            	<if test="inFltNum != null">
+					in_flight_number = #{inFltNum},
+				</if>
+				<if test="inFltNum2!= null">
+					in_flight_number2 = #{inFltNum2},
+				</if>
+				<if test="inFlightDate!= null">
+					in_flight_date = #{inFlightDate},
+				</if>
+				<if test="outFltNum != null">
+					out_flight_number = #{outFltNum},
+				</if>
+				<if test="outFltNum2!= null">
+					out_flight_number2 = #{outFltNum2},
+				</if>
+				<if test="outFlightDate!= null">
+					out_flight_date = #{outFlightDate},
+				</if>
+				<if test="controlUser!= null">
+					control_user = #{controlUser},
+				</if>
+				<if test="supervisionUser!= null">
+					supervision_user = #{supervisionUser},
+				</if>
+				<if test="mailPackageType!= null">
+					mail_package_type = #{mailPackageType},
+				</if>
+				<if test="arrivalApt!= null">
+					arrival_apt = #{arrivalApt},
+				</if>
+				<if test="aptType!= null">
+					apt_type = #{aptType},
+				</if>
+				<if test="mailWeight!= null">
+					mail_weight = #{mailWeight},
+				</if>
+				<if test="mailCabin!= null">
+					mail_cabin = #{mailCabin},
+				</if>
+				<if test="packageWeight!= null">
+					package_weight = #{packageWeight},
+				</if>
+				<if test="packageNum!= null">
+					package_number = #{packageNum},
+				</if>
+				<if test="flag!= null">
+					flag = #{flag},
+				</if>
+				<if test="printFlag!= null">
+					print_flag = #{printFlag},
+				</if>
+				operator_date = sysdate,
+		    </trim>
+		    <where>
+				<if test="id!= null">
+					and id = #{id}
+				</if>
+				<if test="ids!= null">
+					and id in(${ids})
+				</if>
+		    </where>
+	</update>
+	
+	<!-- 新增货邮行、行李信息 -->
+	<insert id="importFltMailInfo" parameterType="java.util.List">
+		INSERT INTO fd_flt_mail_info (id,in_fltid,out_fltid,in_flight_number ,in_flight_number2 ,in_flight_date,out_flight_number ,out_flight_number2 ,out_flight_date,mail_package_type ,
+		arrival_apt ,apt_type,mail_weight ,mail_cabin,package_weight,package_number,flag,operator_date ,control_user,supervision_user,print_flag)
+		select fd_flt_mail_info_s.NEXTVAL,in_fltid,out_fltid,in_flight_number ,in_flight_number2 ,in_flight_date,out_flight_number ,out_flight_number2 ,out_flight_date,mail_package_type ,
+		arrival_apt ,apt_type,mail_weight ,mail_cabin,package_weight,package_number,flag,operator_date ,control_user,supervision_user,print_flag
+		 from(
+		<foreach collection="list" item="item" index="index" separator="union all">
+			SELECT
+			<if test="item.inFltId==''">
+				null in_fltid,
+			</if>
+			<if test="item.inFltId!=''">
+				${item.inFltId} in_fltid,
+			</if>
+			<if test="item.outFltId==''">
+				null out_fltid,
+			</if>
+			<if test="item.outFltId!=''">
+				${item.outFltId} out_fltid,
+			</if>
+			#{item.inFltNum} in_flight_number,
+			#{item.inFltNum2} in_flight_number2,
+			#{item.inFltDate} in_flight_date,
+			#{item.outFltNum} out_flight_number,
+			#{item.outFltNum2} out_flight_number2,
+			#{item.outFltDate} out_flight_date,
+			#{item.controlUser} control_user,
+			#{item.supervisionUser} supervision_user,
+			#{item.mailPackageType} mail_package_type,
+			#{item.arrivalApt} arrival_apt,
+			#{item.aptType} apt_type,
+			'${item.mailWeight}' mail_weight,
+			'${item.mailCabin}' mail_cabin,
+			'${item.packageWeight}' package_weight,
+			'${item.packageNumber}' package_number,
+			#{item.flag} flag,
+			sysdate operator_date,
+			'0' print_flag
+			from dual
+		</foreach>
+		) t
+	</insert>
+	
+	<update id="saveFilterConf">
+		MERGE INTO BILL_DFJPCZJZ_FILTER_CONF T1 USING ( SELECT #{type} TYPE from dual ) T2 ON ( T1.TYPE = T2.TYPE ) 
+		WHEN MATCHED THEN
+		UPDATE 
+			SET T1.${fieldName} = #{value} 
+			WHEN NOT MATCHED THEN
+			INSERT ( TYPE, ${fieldName} )
+		VALUES (T2.TYPE,#{value})
+				
+	</update>
+	
+	<select id="getFilterConf" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT * FROM BILL_DFJPCZJZ_FILTER_CONF
+	</select>
+	
+</mapper>

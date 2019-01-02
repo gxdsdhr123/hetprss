@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.rule.dao.WaterFillRuleDao">
+	<resultMap type="com.neusoft.prss.rule.entity.RuleInfo" id="RuleInfo">
+		<id column="ID" property="id" />
+		<result column="COLIDS" property="colids"/>
+		<result column="RULE" property="rule"/>
+		<result column="IF_MANUAL" property="ifManual"/>
+		<result column="IF_VALID" property="ifValid"/>
+		<result column="CREATE_TIME" property="createTime"/>
+		<result column="CREATE_NAME" property="createUser"/>
+		<result column="UPDATE_TIME" property="updateTime"/>
+		<result column="UPDATE_NAME" property="updateUser"/>
+		<result column="NAME" property="name"/>
+		<result column="DESCRIPTION" property="description"/>
+		<result column="TEXT" property="text"/>
+		<result column="DRL_STR" property="drlStr"/>
+		<result column="RULE_EXT" property="ruleExt"/>
+	</resultMap>
+	
+	<insert id="insertRuleInfo" parameterType="com.neusoft.prss.rule.entity.RuleInfo" useGeneratedKeys="true" keyProperty="id">
+		<selectKey keyProperty="id" resultType="String" order="BEFORE" >
+        	select RM_RULE_INFO_S.NEXTVAL as id from dual
+		</selectKey>
+		INSERT INTO RM_RULE_INFO (ID, COLIDS, RULE, IF_MANUAL, IF_VALID, CREATE_TIME, CREATE_USER, NAME, DESCRIPTION, TEXT, DRL_STR, RULE_EXT) 
+		VALUES (
+			#{id},
+			#{colids, jdbcType=VARCHAR},
+			#{rule, jdbcType=VARCHAR},
+			#{ifManual, jdbcType=INTEGER},
+			#{ifValid, jdbcType=INTEGER},
+			sysdate, 
+			#{createUser, jdbcType=VARCHAR},
+			#{name, jdbcType=VARCHAR},
+			#{description, jdbcType=VARCHAR},
+			#{text, jdbcType=VARCHAR},
+			#{drlStr, jdbcType=VARCHAR},
+			#{ruleExt, jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<update id="updateRuleInfo" parameterType="com.neusoft.prss.rule.entity.RuleInfo">
+		UPDATE RM_RULE_INFO SET 
+			COLIDS=#{colids, jdbcType=VARCHAR}, 
+			RULE=#{rule, jdbcType=VARCHAR}, 
+			IF_MANUAL=#{ifManual, jdbcType=INTEGER}, 
+			IF_VALID=#{ifValid, jdbcType=INTEGER}, 
+			UPDATE_TIME=sysdate, 
+			UPDATE_USER=#{updateUser, jdbcType=VARCHAR}, 
+			NAME=#{name, jdbcType=VARCHAR}, 
+			DESCRIPTION=#{description, jdbcType=VARCHAR}, 
+			TEXT=#{text, jdbcType=VARCHAR}, 
+			DRL_STR=#{drlStr, jdbcType=VARCHAR}, 
+			RULE_EXT=#{ruleExt, jdbcType=VARCHAR}
+		where id = #{id}
+	</update>
+	
+	<delete id="deleteRuleInfo" parameterType="String">
+		delete from RM_RULE_INFO where id = #{ruleId}
+	</delete>
+	
+	<insert id="insertRuleDatavalueRel" parameterType="java.util.List">
+		insert all
+		<foreach collection="list" item="tabdata" index="index">
+			INTO RM_RULE_DATAVALUE_REL (RULE_ID, DATA_TYPE, VAL) 
+			VALUES (
+				#{tabdata.ruleId}, 
+				#{tabdata.dataType}, 
+				#{tabdata.val}
+			)
+		</foreach>
+		select 1 from dual
+	</insert>
+	
+	<delete id="deleteRuleDatavalueRel" parameterType="String">
+		delete from RM_RULE_DATAVALUE_REL where rule_id = #{ruleId}
+	</delete>
+	
+	<select id="loadRuleInfo" parameterType="String" resultMap="RuleInfo">
+		select A.ID, 
+			A.COLIDS, 
+			A.RULE, 
+			A.IF_MANUAL, 
+			A.IF_VALID, 
+			TO_CHAR(A.CREATE_TIME, 'yyyy-mm-dd hh24:mi:ss') CREATE_TIME, 
+			A.CREATE_USER, 
+			A.UPDATE_TIME, 
+			A.UPDATE_USER, 
+			A.NAME, 
+			A.DESCRIPTION, 
+			A.TEXT, 
+			A.DRL_STR, 
+			A.RULE_EXT, 
+			B.NAME CREATE_NAME, 
+			C.NAME UPDATE_NAME 
+		from RM_RULE_INFO a
+		left join sys_user b on a.create_user = b.id
+		left join sys_user c on a.update_user = c.id
+		where a.id = #{ruleId}
+	</select>
+	
+	<select id="loadAtcactype" resultType="Map">
+		SELECT TODB_ACTYPE_CODE code,DESCRIPTION_CN description FROM DIM_ACTYPE   ORDER BY CODE       
+	</select>
+	
+	<select id="loadAirline" resultType="Map">
+		select AIRLINE_CODE code, DESCRIPTION_CN||'【'||AIRLINE_CODE||'】' description from DIM_AIRLINES    ORDER BY description
+	</select>
+	
+	<select id="loadRuleDataValueRel" parameterType="String" resultType="Map">
+		select * from RM_RULE_DATAVALUE_REL where rule_id = #{ruleId}
+	</select>
+	
+	<select id="getRuleListCount" resultType="int" parameterType="Map">
+		SELECT COUNT(9) NUM
+		  FROM JM_WATER_FILL_RULE T
+		  JOIN RM_RULE_INFO A
+		    ON T.RULEID = A.ID
+		WHERE 1=1 
+		<if test="name!=null and name!=''"><![CDATA[ and a.name like '%'||#{name}||'%' ]]> </if>
+	</select>
+	
+	<select id="getRuleList" resultType="Map" parameterType="Map">
+		SELECT * FROM (
+		SELECT A.ID,
+		       A.NAME,
+		       A.DESCRIPTION,
+		       A.IF_VALID,
+		       B.NAME CREATE_NAME,
+		       TO_CHAR(A.CREATE_TIME, 'yyyy-mm-dd hh24:mi:ss') CREATE_TIME,
+		       T.ADDEDWATER,
+		       ROW_NUMBER() OVER(ORDER BY T.ID DESC) NUM
+		  FROM JM_WATER_FILL_RULE T
+		  JOIN RM_RULE_INFO A
+		  LEFT JOIN SYS_USER B
+		    ON A.CREATE_USER = B.ID ON T.RULEID = A.ID
+		WHERE 1=1 
+		<if test="name!=null and name!=''"><![CDATA[ and a.name like '%'||#{name}||'%' ]]> </if>
+		 ORDER BY NUM )
+		 WHERE <![CDATA[NUM>#{begin} AND NUM<=#{end}]]>
+	</select>
+	<insert id="insertWaterFill" parameterType="com.neusoft.prss.rule.entity.RuleWaterFillVO" useGeneratedKeys="true" keyProperty="id">
+		<selectKey keyProperty="id" resultType="String" order="BEFORE" >
+        	select JM_WATER_FILL_RULE_S.NEXTVAL as id from dual
+		</selectKey>
+		INSERT INTO JM_WATER_FILL_RULE (ID, RULEID, ADDEDWATER) 
+		VALUES (
+			#{id},
+			#{ruleId, jdbcType=INTEGER},
+			#{addedWater, jdbcType=VARCHAR})
+	</insert>
+	
+	<update id="updateWaterFill" parameterType="com.neusoft.prss.rule.entity.RuleWaterFillVO">
+		UPDATE JM_WATER_FILL_RULE SET 
+			addedWater=#{addedWater, jdbcType=VARCHAR}
+		where ruleId = #{ruleId}
+	</update>
+	
+	<delete id="deleteWaterFillInfo" parameterType="String">
+		delete from JM_WATER_FILL_RULE where ruleid = #{ruleId}
+	</delete>
+	
+	<!-- 获取规则加水量信息-->
+	<resultMap type="com.neusoft.prss.rule.entity.RuleWaterFillVO" id="waterFill">
+		<result property="id" column="id" javaType="String"/>
+		<result property="ruleId" column="ruleId" javaType="String"/>
+		<result property="addedWater" column="addedWater" javaType="String"/>
+	</resultMap>
+	<select id="getWaterFill" resultMap="waterFill" parameterType="string">
+	    SELECT T.ID, T.RULEID, T.ADDEDWATER
+	      FROM JM_WATER_FILL_RULE T
+	     WHERE T.RULEID =#{0}
+	</select>
+</mapper>

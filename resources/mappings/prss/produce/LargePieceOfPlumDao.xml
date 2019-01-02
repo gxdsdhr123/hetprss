@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="com.neusoft.prss.produce.dao.LargePieceOfPlumDao">
+
+	<!-- 查询查理-->
+	<select id="getCharlieList" resultType="hashmap">
+		SELECT
+			ID,
+			NAME 
+		FROM
+			sys_user
+<!-- 		WHERE 1 = 1  -->
+<!-- 			office_id = '6cbe05d24e2e4945a1422ef1d476e0aa' -->
+<!-- 			office_id in('6cbe05d24e2e4945a1422ef1d476e0aa', 'a0ba647b30324e8585bee083fb29a392')  -->
+	</select>
+	<!-- 查询航班信息 -->
+	<select id="getAirFligthInfo" resultType="hashmap">
+		SELECT
+			FLTID, 
+			FLIGHT_NUMBER FLIGHTNUMBER, 	    <!-- 航班号 -->
+			ACTSTAND_CODE ACTSTANDCODE,   	<!-- 机位 -->
+			AIRCRAFT_NUMBER AIRCRAFTNUMBER, 	<!-- 机号 -->
+			ETA,				<!-- 预落 -->
+			ETD, 				<!-- 预起 -->
+			ACTTYPE_CODE ACTTYPECODE       <!-- 机型 -->
+		FROM
+			FD_FLT_INFO 
+		WHERE
+			FLIGHT_DATE = #{flightDate}
+			AND FLIGHT_NUMBER = #{flightNumber}
+			AND IN_OUT_FLAG LIKE 'D%'
+	</select>
+	<!-- 获取最大id -->
+<!-- 	<select id="maxIdBS" resultType="string"> -->
+<!-- 		select max(id) FROM BILL_ZPDJXL_HD_GOODS -->
+<!-- 	</select> -->
+<!-- 	<select id="maxIdCS" resultType="string"> -->
+<!-- 		select max(id) FROM bill_zpxllx_hd_goods -->
+<!-- 	</select> -->
+	<!-- 获取大件行李数据  -->
+	<select id="getBSData" resultType="hashmap">
+		SELECT * FROM(
+			select
+				ROWNUM NO
+				,FLTID
+				,ID ID
+				,ACTSTAND_CODE ACTSTANDCODE
+				,FLIGHT_DATE FLIGHTDATE
+				,FLIGHT_NUMBER FLIGHTNUMBER
+				,AIRCRAFT_NUMBER AIRCRAFTNUMBER
+				,SIGNATORY
+				,ETA
+				,ETD
+				,ACT_TYPE ACTTYPECODE
+				,OPERATOR
+				,OPERATOR_NAME
+				,PHOTO_CODE
+			from BILL_ZPDJXL_HD
+			<trim prefix="WHERE" prefixOverrides="AND |OR ">
+				<if test="null != searchData">
+					and FLIGHT_DATE like #{searchData}
+					or FLIGHT_NUMBER like #{searchData}
+					or AIRCRAFT_NUMBER like #{searchData}
+					or OPERATOR_NAME like #{searchData}
+				</if>
+			</trim>
+			order by FLIGHT_DATE desc
+		)
+		<trim prefix="WHERE" prefixOverrides="AND |OR ">
+			<if test="totalSize != 0">		
+			 	and NO BETWEEN #{begin} AND #{end} ORDER BY NO, FLIGHTDATE desc
+			</if>
+			<if test="null != searchId">
+				and id = #{searchId}
+			</if>
+			<if test="null != flightDate and null != flightNumber">
+				and FLIGHTDATE = #{flightDate} and FLIGHTNUMBER = #{flightNumber}
+			</if>
+		</trim>
+	</select>
+	<!-- 行李拉下单 -->
+	<select id="getCSData" resultType="hashmap">
+		SELECT * FROM(
+			select
+				ROWNUM NO
+				,FLTID
+				,ID ID
+				,ACTSTAND_CODE ACTSTANDCODE
+				,FLIGHT_DATE FLIGHTDATE
+				,FLIGHT_NUMBER FLIGHTNUMBER
+				,AIRCRAFT_NUMBER AIRCRAFTNUMBER
+				,SIGNATORY
+				,ETA
+				,ETD
+				,ACT_TYPE ACTTYPECODE
+				,OPERATOR
+				,OPERATOR_NAME
+				,PHOTO_CODE
+			from bill_zpxllx_hd
+			<trim prefix="WHERE" prefixOverrides="AND |OR ">
+				<if test="null != searchData">
+					and FLIGHT_DATE like #{searchData}
+					or FLIGHT_NUMBER like #{searchData}
+					or AIRCRAFT_NUMBER like #{searchData}
+					or OPERATOR_NAME like #{searchData}
+				</if>
+			</trim>
+			order by FLIGHT_DATE desc
+		)
+		<trim prefix="WHERE" prefixOverrides="AND |OR ">
+			<if test="totalSize != 0">		
+			 	and NO BETWEEN #{begin} AND #{end} ORDER BY NO, FLIGHTDATE desc
+			</if>
+			<if test="null != searchId">
+				and id = #{searchId}
+			</if>
+			<if test="null != flightDate and null != flightNumber">
+				and FLIGHTDATE = #{flightDate} and FLIGHTNUMBER = #{flightNumber}
+			</if>
+		</trim>
+	</select>
+
+	<!-- 获取大件行李行李数据 -->
+	<select id="getBSGoods" resultType="hashmap">
+		select BAG_NUMBER BAGNUMBER, DEST from BILL_ZPDJXL_HD_GOODS where BILL_ID = #{searchId}
+	</select>
+	<select id="getCSGoods" resultType="hashmap">
+		select BAG_NUMBER BAGNUMBER, DEST from bill_zpxllx_hd_goods where BILL_ID = #{searchId}
+	</select>
+	<!-- 获取航空公司下拉选 -->
+	<select id="getAirFlightList" resultType="hashmap">
+		SELECT AIRLINE_CODE,DESCRIPTION_CN FROM DIM_AIRLINES 
+	</select>
+	<!-- 保存大件行李 -->
+	<insert id="save" useGeneratedKeys="true" keyProperty="id">
+		<selectKey resultType="String" keyProperty="id" order="BEFORE">
+			SELECT
+			<choose>
+				<when test="id!='null' and id!=''">
+					#{id}
+				</when>
+				<otherwise>
+					BILL_ZPDJXL_HD_S.NEXTVAL
+				</otherwise>
+			</choose>
+			from dual
+		</selectKey>
+		INSERT INTO 
+		BILL_ZPDJXL_HD 
+		( ID, FLTID, FLIGHT_NUMBER, ACT_TYPE, AIRCRAFT_NUMBER, OPERATOR, CREATE_DATE, ACTSTAND_CODE, FLIGHT_DATE, ETD, ETA, OPERATOR_NAME )
+		VALUES (#{id}, #{fltid}, #{flightNumber}, #{actType}, #{aircraftNumber}, #{operator}, to_date(#{createDate}, 'yyyy-mm-dd HH24:MI'), #{actstandCode},
+		#{flightDate}, #{etd}, #{eta}, #{operatorName})
+	</insert>
+	<insert id="saveCS" useGeneratedKeys="true" keyProperty="id">
+		<selectKey resultType="String" keyProperty="id" order="BEFORE">
+			SELECT
+			<choose>
+				<when test="id!='null' and id!=''">
+					#{id}
+				</when>
+				<otherwise>
+					bill_zpxllx_hd_s.NEXTVAL
+				</otherwise>
+			</choose>
+			from dual
+		</selectKey>
+		INSERT INTO 
+		bill_zpxllx_hd 
+		( ID, FLTID, FLIGHT_NUMBER, ACT_TYPE, AIRCRAFT_NUMBER, OPERATOR, CREATE_DATE, ACTSTAND_CODE, FLIGHT_DATE, ETD, ETA, OPERATOR_NAME )
+		VALUES (#{id}, #{fltid}, #{flightNumber}, #{actType}, #{aircraftNumber}, #{operator}, to_date(#{createDate}, 'yyyy-mm-dd HH24:MI'), #{actstandCode},
+		#{flightDate}, #{etd}, #{eta}, #{operatorName})
+	</insert>
+	<!-- 保存 -->
+	<insert id="saveGoodsBatch" parameterType="java.util.List">
+		INSERT INTO BILL_ZPDJXL_HD_GOODS (ID, BAG_NUMBER, DEST, BILL_ID)
+			select BILL_ZPDJXL_HD_GOODS_S.NEXTVAL, A.* from(
+		<foreach collection="list" item="tabdata" index="index" open="(" close=")" separator="union all">
+			select #{tabdata.bagNumber}, #{tabdata.dest}, #{tabdata.billId} from dual
+		</foreach>
+		) A
+		
+	</insert>
+	<insert id="saveGoodsCSBatch" parameterType="java.util.List">
+		INSERT INTO bill_zpxllx_hd_goods (ID, BAG_NUMBER, DEST, BILL_ID)
+			select bill_zpxllx_hd_goods_S.NEXTVAL, A.* from(
+		<foreach collection="list" item="tabdata" index="index" open="(" close=")" separator="union all">
+			select #{tabdata.bagNumber}, #{tabdata.dest}, #{tabdata.billId} from dual
+		</foreach>
+		) A
+	</insert>
+	<!-- 修改大件行李-->
+	<update id="updateBSData" parameterType="com.neusoft.prss.produce.entity.LargePieceOfPlum">
+		UPDATE BILL_ZPDJXL_HD SET
+			<if test="null != fltid">
+				FLTID = #{fltid}			
+			</if>
+			<if test="null != flightNumber">
+				,FLIGHT_NUMBER = #{flightNumber}		
+			</if>
+			<if test="null != actType">
+				,ACT_TYPE = #{actType}			
+			</if>
+			<if test="null != aircraftNumber">
+				,AIRCRAFT_NUMBER = #{aircraftNumber}		
+			</if>
+			<if test="null != operator">
+				,OPERATOR = #{operator}		
+			</if>
+			<if test="null != actstandCode">
+				,ACTSTAND_CODE = #{actstandCode}		
+			</if>
+			<if test="null != flightDate">
+				,FLIGHT_DATE = #{flightDate}		
+			</if>
+			<if test="null != etd">
+				,ETD = #{etd}		
+			</if>
+			<if test="null != eta">
+				,ETA = #{eta}		
+			</if>
+			<if test="null != operatorName">
+				,OPERATOR_NAME = #{operatorName}			
+			</if>
+			
+		WHERE
+		ID = #{id}
+	</update>
+	<update id="updateCSData" parameterType="com.neusoft.prss.produce.entity.LargePieceOfPlum">
+		UPDATE bill_zpxllx_hd SET
+			<if test="null != fltid">
+				FLTID = #{fltid}			
+			</if>
+			<if test="null != flightNumber">
+				,FLIGHT_NUMBER = #{flightNumber}		
+			</if>
+			<if test="null != actType">
+				,ACT_TYPE = #{actType}			
+			</if>
+			<if test="null != aircraftNumber">
+				,AIRCRAFT_NUMBER = #{aircraftNumber}		
+			</if>
+			<if test="null != operator">
+				,OPERATOR = #{operator}		
+			</if>
+			<if test="null != actstandCode">
+				,ACTSTAND_CODE = #{actstandCode}		
+			</if>
+			<if test="null != flightDate">
+				,FLIGHT_DATE = #{flightDate}		
+			</if>
+			<if test="null != etd">
+				,ETD = #{etd}		
+			</if>
+			<if test="null != eta">
+				,ETA = #{eta}		
+			</if>
+			<if test="null != operatorName">
+				,OPERATOR_NAME = #{operatorName}			
+			</if>
+			
+		WHERE
+		ID = #{id}
+	</update>
+	<!-- CDM判责信息录入 -->
+	<update id="aCDMContractorResponsible" parameterType="hashmap">
+		
+	</update>
+	
+	<!-- 删除goods列表-->
+	<delete id="delBSGoods" parameterType="hashmap">
+		DELETE FROM BILL_ZPDJXL_HD_GOODS WHERE BILL_ID = #{searchId}
+	</delete>
+	<delete id="delCSGoods" parameterType="hashmap">
+		DELETE FROM bill_zpxllx_hd_goods WHERE BILL_ID = #{searchId}
+	</delete>
+	<!-- 删除Bill数据 -->
+	<delete id="deleteBS" parameterType="hashmap">
+		DELETE FROM BILL_ZPDJXL_HD WHERE ID = #{searchId}
+	</delete>
+	<delete id="deleteCS" parameterType="hashmap">
+		DELETE FROM bill_zpxllx_hd WHERE ID = #{searchId}
+	</delete>
+</mapper>

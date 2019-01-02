@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.rule.dao.GisConfigDao">
+	<!-- 电子围栏配置信息 -->
+	<resultMap id="gisConfigInfoMap" type="com.alibaba.fastjson.JSONObject">
+		<result column="id" property="id" jdbcType="VARCHAR"/>
+		<result column="job_kind" property="jobKind" jdbcType="VARCHAR"/>
+		<result column="job_type" property="jobType" jdbcType="VARCHAR"/>
+		<result column="proc_id" property="procId" jdbcType="VARCHAR"/>
+		<result column="node_id" property="nodeId" jdbcType="VARCHAR"/>
+		<result column="target_type" property="targetType" jdbcType="VARCHAR"/>
+		<result column="target_area" property="targetArea" jdbcType="VARCHAR"/>
+		<result column="delay_second" property="delaySecond" jdbcType="VARCHAR"/>
+		<result column="creator_id" property="creatorId" jdbcType="VARCHAR"/>
+		<result column="creator_tm" property="creatorTm" jdbcType="VARCHAR"/>
+		<result column="in_use" property="inUse" jdbcType="VARCHAR"/>
+		<result column="operator" property="operator" jdbcType="VARCHAR"/>
+		<result column="update_tm" property="updateTm" jdbcType="VARCHAR"/>
+		
+		<result column="kind_name" property="kindName" jdbcType="VARCHAR"/>
+		<result column="type_name" property="typeName" jdbcType="VARCHAR"/>
+		<result column="process_name" property="procName" jdbcType="VARCHAR"/>
+		<result column="node_name" property="nodeName" jdbcType="VARCHAR"/>
+		<result column="target_type_name" property="targetTypeName" jdbcType="VARCHAR"/>
+		<result column="target_area_name" property="targetAreaName" jdbcType="VARCHAR"/>
+		<result column="area_code" property="areaCode" jdbcType="VARCHAR"/>
+		<result column="area_name" property="areaName" jdbcType="VARCHAR"/>
+		<result column="operator_name" property="operatorName" jdbcType="VARCHAR"/>
+	</resultMap>
+	
+	<select id="getDataList" resultMap="gisConfigInfoMap" parameterType="java.util.HashMap">
+		select t1.*,rownum rn from 
+		(
+			select t.*,rownum rn 
+			from (
+				select g.*,g1.area_code,g1.area_name from 
+				(select 
+				t.*,t1.kindname kind_name,t2.typename type_name,t3.display_name process_name,t4.label node_name,
+				(case when t.target_type = 0 then '机位' when t.target_type = 1 then '登机口' when t.target_type = 2 then '到达口' end) target_type_name,
+				(case when t.target_type = 0 then t5.description_cn when t.target_type = 1 then t6.description_cn when t.target_type = 2 then t7.description_cn end) target_area_name,
+				t8.name operator_name
+				from GIS_PROC_NODE_CONF t,dim_reskind t1,dim_restype t2,wf_process t3,wf_node t4,dim_bay t5,dim_gate t6,
+				(select '01' id,'国内到达口' description_cn from dual union select '02' id,'国国际到达口' description_cn from dual) t7,
+				sys_user t8
+				where t.job_kind = t1.reskind(+) and t.job_type = t2.restype(+) and t.proc_id = t3.id(+) and t.node_id = t4.id(+)
+				and t.target_area = t5.bay_code(+) and t.target_area = t6.gate_code(+) and t.target_area = t7.id(+)
+				and t.operator = t8.id(+)
+				<if test="jobKind != null and jobKind !=''">
+					and t.job_kind = ${jobKind}
+				</if>
+				<if test="jobType != null and jobType !=''">
+					and t.job_type = ${jobType}
+				</if>
+				<if test="ids != null and ids !=''">
+					and t.id in(${ids})
+				</if>
+				)g,
+				(select t.id,t1.area_code,t1.area_name from GIS_PROC_NODE_REL t,GIS_RAIL_INFO t1 where t.area_code = t1.area_code) g1
+        		where g.id = g1.id(+)
+			) t
+		) t1 
+		<if test="begin != null and begin !='' and end != null and end !=''">
+			where t1.rn &lt;= ${end} and rn &gt;= ${begin}
+		</if>
+	</select>
+	
+	<select id="getDataCount" resultType="java.lang.Integer" parameterType="java.util.HashMap">
+		select count(*) from GIS_PROC_NODE_CONF t
+		<where>
+			<if test="jobKind != null and jobKind !=''">
+				and t.job_kind = ${jobKind}
+			</if>
+			<if test="jobType != null and jobType !=''">
+				and t.job_type = ${jobType}
+			</if>
+		</where>
+	</select>
+	
+	<select id="getGisProcNodeRelId" resultType="java.lang.Integer">
+		select GIS_PROC_NODE_REL_S.NEXTVAL from dual
+	</select>
+	
+	<insert id="insertGisConfig" parameterType="java.util.List">
+		INSERT INTO GIS_PROC_NODE_CONF(id,job_kind,job_type,proc_id,node_id,target_type,target_area,delay_second,
+		creator_id,create_tm,in_use,operator,update_tm)
+		select t.* from(
+		<foreach collection="list" item="item" index="index" open="(" close=")" separator="union all">
+			select 
+				${item.id} id,
+				#{item.jobKind} job_kind,
+				#{item.jobType} job_type,
+				#{item.procId} proc_id,
+				#{item.nodeId} node_id,
+				#{item.targetType} target_type,
+				#{item.targetArea} target_area,
+				#{item.delaySecond} delay_second,
+				#{item.creatorId} creator_id,
+				#{item.createTm} create_tm,
+				#{item.inUse} in_use,
+				#{item.operator} operator,
+				#{item.updateTm} update_tm
+			from dual
+		</foreach>
+		) t
+	</insert>
+	
+	<update id="updateGisConfig" parameterType="com.alibaba.fastjson.JSONObject">
+		update GIS_PROC_NODE_CONF 
+	    <trim prefix="set" suffixOverrides=",">
+	    	<if test="jobKind != null">
+				job_kind = #{jobKind},
+			</if>
+			<if test="jobType != null">
+				job_type = #{jobType},
+			</if>
+			<if test="procId != null">
+				proc_id = #{procId},
+			</if>
+			<if test="nodeId != null">
+				node_id = #{nodeId},
+			</if>
+			<if test="targetType != null">
+				target_type = #{targetType},
+			</if>
+			<if test="targetArea != null">
+				target_area = #{targetArea},
+			</if>
+			<if test="delaySecond != null">
+				delay_second = #{delaySecond},
+			</if>
+			<if test="inUse != null">
+				in_use = #{inUse},
+			</if>
+			<if test="updateTm != null">
+				update_tm = #{updateTm},
+			</if>
+			<if test="operator != null">
+				operator = #{operator},
+			</if>
+	    </trim>
+	    where id = ${id}
+	</update>
+	
+	<insert id="insertGisProcNodeRel" parameterType="java.util.List">
+		INSERT INTO GIS_PROC_NODE_REL(id,area_code,update_tm,operator)
+		select t.* from(
+		<foreach collection="list" item="item" index="index" open="(" close=")" separator="union all">
+			select 
+				${item.id} id,
+				#{item.areaCode} area_code,
+				#{item.updateTm} update_tm,
+				#{item.operator} operator
+			from dual
+		</foreach>
+		) t
+	</insert>
+	
+	<delete id="delGisProcNodeRel" parameterType="java.lang.String">
+		delete from GIS_PROC_NODE_REL where id in (${ids})
+	</delete>
+	
+	<delete id="deleteGisConfig" parameterType="java.lang.String">
+		delete from GIS_PROC_NODE_CONF where id in (${ids})
+	</delete>
+	
+	<select id="getReskind" resultType="com.alibaba.fastjson.JSONObject">
+		select reskind "id",kindname "text" from dim_reskind
+	</select>
+	
+	<select id="getRestype" resultType="com.alibaba.fastjson.JSONObject" parameterType="java.util.HashMap">
+		select restype "id",typename "text" from dim_restype where reskind = #{reskind}
+	</select>
+	
+	<select id="getProcess" resultType="com.alibaba.fastjson.JSONObject" parameterType="java.util.HashMap">
+		select id "id",display_name "text" from wf_process where job_kind = #{reskind} and job_type = #{restype}
+	</select>
+	
+	<select id="getNode" resultType="com.alibaba.fastjson.JSONObject" parameterType="java.util.HashMap">
+		select t1.id "id",t1.label "text" from 
+		(select * from wf_process_node where process_id = #{processId}) t,
+		(select * from wf_node where job_kind = #{reskind} and job_type = #{restype}) t1
+		where t.node_id = t1.id(+)
+		order by t.node_order asc
+	</select>
+	
+	<select id="getGisRailInfo" resultType="com.alibaba.fastjson.JSONObject">
+		select area_code "areaCode",area_name "areaName",area_code||area_name "areaCodeName" from gis_rail_info
+	</select>
+	
+	<update id="updateGisConfigInUse" parameterType="com.alibaba.fastjson.JSONObject">
+		update GIS_PROC_NODE_CONF set in_use = #{inUse}
+	</update>
+</mapper>

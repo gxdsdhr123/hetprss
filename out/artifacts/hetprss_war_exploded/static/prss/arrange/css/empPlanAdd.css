@@ -1,0 +1,124 @@
+html, body {
+	min-height: 0;
+}
+
+#chooseField {
+	height: 100%;
+}
+
+#leftDiv, #rightDiv, #middleDiv, #leftDiv2, #rightDiv2, #leftDiv3,
+	#rightDiv3, #leftDiv4, #rightDiv4 {
+	float: left;
+	height: 100%;
+	padding-top:10px;
+}
+
+#leftTitle, #rightTitle {
+	height: 35px;
+	width: 100%;
+	line-height: 35px;
+}
+
+#leftTitle label, #rightTitle label {
+	padding: 0px;
+	margin: 0px;
+}
+
+#leftTitle>div, #rightTitle>div {
+	padding: 3px 0px;
+}
+
+.list-group {
+	height: calc(100% - 45px);
+	width: 240px;
+	overflow: auto;
+	border: 1px solid #ccc;
+	border-radius: 5px;
+	box-shadow: 0px 0px 10px -6px;
+	margin: 0px;
+}
+
+.choosedField {
+	position: relative;
+}
+
+#middleDiv {
+	width: 80px;
+	text-algin: center;
+	margin-top: 20px;
+}
+
+#middleDiv button {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	vertical-align: middle;
+	margin-top: 20px;
+	margin-bottom: 20px;
+}
+
+.container {
+	width: 800px;
+	height: 200px;
+}
+
+.list-group-item{
+	background-color: #092955
+}
+
+.bechoose {
+	background-color: #006DC0;
+}
+
+#rightDiv .hr {
+	width: 100%;
+}
+
+.list-group-item {
+	padding: 6px 10px;
+}
+
+.layui-form-item {
+	margin-bottom: 0px;
+}
+
+.layui-form-label {
+	padding: 5px 15px;
+}
+
+.form-control {
+	height: 30px;
+	padding: 3px 6px;
+}
+
+.btn2 {
+	padding: 3px 6px;
+}
+
+.editplan {
+	display: none;
+}
+
+.list-group-order {
+	height: calc(100% - 45px);
+	width: 100%;
+	overflow: auto;
+	border: 1px solid #ccc;
+	border-radius: 5px;
+	box-shadow: 0px 0px 10px -6px;
+	margin: 0px;
+}
+
+.unfixed-div {
+	padding: 5px 10px;
+}
+
+.unfixed-lable {
+	width: 100px;
+}
+
+.unfixedUL {
+	width: 300px;
+	height: 250px;
+	margin-top:5px;
+}

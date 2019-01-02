@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.scheduling.dao.SchedulingProgressDao">
+	<resultMap type="com.alibaba.fastjson.JSONObject" id="taskMap">
+		<id column="fltid" property="fltid"/>
+		<result column="flight_number" property="fltNo"/>
+		<result column="flight_date" property="fltDate"/>
+		<result column="aircraft_number" property="actNo"/>
+		<result column="acttype_code" property="actType"/>
+		<result column="gate" property="gate"/>
+		<result column="actstand_code" property="actStand"/>
+		<result column="std" property="std"/>
+		<result column="etd" property="etd"/>
+		<result column="atd" property="atd"/>
+		<result column="sta" property="sta"/>
+		<result column="eta" property="eta"/>
+		<result column="ata" property="ata"/>
+		<result column="in_out_flag" property="inOutFlag"/>
+		<result column="status" property="fltStatus"/>
+		<result column="status_code" property="fltStatusCode"/>
+		<result column="attr" property="attr"/>
+		<result column="flt_attr_code" property="attrCode"/>
+		<result column="vip_flag" property="vipFlag"/>
+		<collection property="tasks" javaType="com.alibaba.fastjson.JSONArray" ofType="com.alibaba.fastjson.JSONObject">
+			<id column="task_id" property="id"/>
+			<result column="task_name" property="name"/>
+			<result column="job_state" property="state"/>
+		</collection>
+	</resultMap>
+	<resultMap type="com.alibaba.fastjson.JSONObject" id="alarmMap">
+		<id column="fltid" property="fltid"/>
+		<collection property="alarms" javaType="com.alibaba.fastjson.JSONArray" ofType="com.alibaba.fastjson.JSONObject">
+			<id column="id" property="id"/>
+			<result column="alarm1" property="alarm1"/>
+			<result column="alarm2" property="alarm2"/>
+			<result column="alarm3" property="alarm3"/>
+		</collection>
+	</resultMap>
+	<resultMap type="com.alibaba.fastjson.JSONObject" id="taskInfoMap">
+		<id column="id" property="id"/>
+		<result column="name" property="name"/>
+		<result column="operator" property="operator"/>
+		<result column="node_state" property="nodeState"/>
+		<collection property="nodes" javaType="com.alibaba.fastjson.JSONArray" ofType="com.alibaba.fastjson.JSONObject">
+			<result column="display_name" property="nodeName"/>
+			<result column="expire_time" property="eTime"/>
+			<result column="finish_time" property="fTime"/>
+		</collection>
+	</resultMap>
+	<sql id="alnFilter">
+		select airline_code from dim_airlines where if_show=1
+	</sql>
+	<select id="getTaskList" resultMap="taskMap">
+			select a.fltid,
+		       nvl(a.flight_number,'--') flight_number,
+		       nvl(a.aircraft_number,'--') aircraft_number,
+		       nvl(a.acttype_code,'--') acttype_code,
+		       nvl(a.actstand_code,'--') actstand_code,
+		       nvl(a.gate,'--') gate,
+		       a.in_out_flag,
+		      (case 
+			      when a.mg_flag = '1' then '▲'
+			      when a.mg_flag = '2' then '▲▲'
+			      when a.vip_flag = '1' then '★'
+			      when a.vip_flag = '2' then '★★'       
+			      when a.ssg_flag is not null then '◆' 
+		     	end) vip_flag,
+		       a.flt_attr_code,
+		       nvl(d.text,a.flt_attr_code) attr,
+		       nvl(c.text,a.status) status,
+		       a.status status_code,
+		       nvl(to_daytime(a.sta),'--') sta,
+		       nvl(to_daytime(a.eta),'--') eta,
+		       nvl(to_daytime(a.ata),'--') ata,
+		       nvl(to_daytime(a.std),'--') std,
+		       nvl(to_daytime(a.etd),'--') etd,
+		       nvl(to_daytime(a.atd),'--') atd,
+		       b.id task_id,
+		       b.name task_name,
+		       b.job_state
+		  from fd_flt_info a, 
+		  		jm_task b,
+		  	   (select value,text from dim_common_dict where type='acfStatus') c,
+		  	   (select value,text from dim_common_dict where type='alntype') d
+		 where a.fltid = b.fltid
+		 and a.status = c.value(+)
+		 and a.flt_attr_code = d.value(+)
+		 and b.job_type in
+		 <foreach collection="jobTypeList" index="index" item="item" open="(" separator="," close=")">
+	           #{item}       
+	     </foreach>  
+		 and b.del_flag != 1
+		 and b.job_state != 5
+		 and substr(a.in_out_flag,0,1) = #{ioType}
+		 and a.aln_2code in(<include refid="alnFilter"/>)
+		 <!-- 
+		 <if test='ioType!=null and ioType=="D"'>
+		 	and ((to_date(a.atd,'yyyy-mm-dd hh24:mi') + interval '10' minute) > sysdate or a.atd is null)
+		 </if>
+		  -->
+		  <if test='fltNo!=null and fltNo!=""'>
+		 	and UPPER(a.flight_number) like UPPER('%'||#{fltNo}||'%')
+		 </if>
+		 <if test='airlineGroup!=null and airlineGroup!=""'>
+		 	and a.fltid in(select fltid from fd_flt_airline_ownership_v where union_code in(${airlineGroup}))
+		 </if>
+		 <choose>
+		 	<when test='ioType!=null and ioType=="A"'>
+		 		order by a.eta
+		 	</when>
+		 	<otherwise>
+		 		order by a.etd
+		 	</otherwise>
+		 </choose>
+	</select>
+	<select id="getTaskAlarms" resultMap="alarmMap">
+		select 
+		  id,
+		  fltid,
+		  round(finish_time-(expire_time+to_number(alarm_tm1))) alarm1,
+		  round(finish_time-(expire_time+to_number(alarm_tm2))) alarm2,
+		  round(finish_time-(expire_time+to_number(alarm_tm3))) alarm3
+		from
+		(select a.id,
+				a.fltid,
+		       (to_date(c.finish_time,'yyyy-mm-dd hh24:mi:ss')-to_date('1970-01-01 08:00:00','yyyy-mm-dd hh24:mi:ss'))* 24*60 finish_time,
+		       (to_date(c.expire_time,'yyyy-mm-dd hh24:mi:ss')-to_date('1970-01-01 08:00:00','yyyy-mm-dd hh24:mi:ss'))* 24*60 expire_time,
+		       c.alarm_tm1,
+		       c.alarm_tm2,
+		       c.alarm_tm3
+		      from jm_task a, jm_task_proc_inst b, wf_hist_task c
+		     where a.id = b.task_id
+		       and b.proc_inst_id = c.order_id
+		       and c.parent_task_id = 'start'
+		       and a.job_type in
+		       <foreach collection="jobTypeList" index="index" item="item" open="(" separator="," close=")">
+			        #{item}       
+			   </foreach>  
+		 	   and a.del_flag != 1
+		       and a.job_state != 5
+		       and a.fltid in<foreach collection="fltids" item="fltid" index="index" open="(" separator="," close=")">#{fltid}</foreach>
+		     )t
+		union   
+		 select 
+		  id,
+		  fltid,
+		  round(finish_time-(expire_time+to_number(alarm_tm1))) alarm1,
+		  round(finish_time-(expire_time+to_number(alarm_tm2))) alarm2,
+		  round(finish_time-(expire_time+to_number(alarm_tm3))) alarm3
+		from
+		(select a.id,
+				a.fltid,
+		       (sysdate-to_date('1970-01-01 08:00:00','yyyy-mm-dd hh24:mi:ss'))* 24*60 finish_time,
+		       (to_date(c.expire_time,'yyyy-mm-dd hh24:mi:ss')-to_date('1970-01-01 08:00:00','yyyy-mm-dd hh24:mi:ss'))* 24*60 expire_time,
+		       c.alarm_tm1,
+		       c.alarm_tm2,
+		       c.alarm_tm3
+		      from jm_task a, jm_task_proc_inst b, wf_task c
+		     where a.id = b.task_id
+		       and b.proc_inst_id = c.order_id
+		       and c.parent_task_id = 'start'
+		       and a.job_type in
+		       <foreach collection="jobTypeList" index="index" item="item" open="(" separator="," close=")">
+			        #{item}       
+			   </foreach>
+		 	   and a.del_flag != 1
+		       and a.job_state != 5
+		       and a.fltid in<foreach collection="fltids" item="fltid" index="index" open="(" separator="," close=")">#{fltid}</foreach>
+		     )t
+	</select>
+	<select id="getTaskByFlt" resultMap="taskInfoMap">
+		select a.id,
+		       a.name,
+		       a.node_state,
+		       to_char(d.name) operator,
+		       c.display_name,
+		       nvl(to_daytime(c.expire_time),'--') expire_time,
+		       nvl(to_daytime(c.finish_time),'--') finish_time
+		  from jm_task a, jm_task_proc_inst b, wf_hist_task c, sys_user d
+		 where a.id = b.task_id
+		   and b.proc_inst_id = c.order_id
+		   and a.operator = d.id(+)
+		   and a.del_flag != 1
+		   and a.job_state != 5
+		   and a.job_type in
+		   <foreach collection="jobTypeList" index="index" item="item" open="(" separator="," close=")">
+			    #{item}       
+		   </foreach>
+		   and a.fltid = #{fltid}
+		union
+		select a.id,
+		       a.name,
+		       a.node_state,
+		       to_char(d.name) operator,
+		       c.display_name,
+		       nvl(to_daytime(c.expire_time),'--') expire_time,
+		       nvl(to_daytime(c.finish_time),'--') finish_time
+		  from jm_task a, jm_task_proc_inst b, wf_task c, sys_user d
+		 where a.id = b.task_id
+		   and b.proc_inst_id = c.order_id
+		   and a.operator = d.id
+		   and a.del_flag != 1
+		   and a.job_state != 5
+		   and a.job_type in
+		   <foreach collection="jobTypeList" index="index" item="item" open="(" separator="," close=")">
+			    #{item}       
+		   </foreach>
+		   and a.fltid = #{fltid}
+		union
+		select a.id,
+		       a.name,
+		       a.node_state,
+		       '' operator,
+		       '' display_name,
+		       '' expire_time,
+		       '' finish_time
+		  from jm_task a
+		 where a.job_type in
+		   <foreach collection="jobTypeList" index="index" item="item" open="(" separator="," close=")">
+			    #{item}       
+		   </foreach>
+		   and a.fltid = #{fltid}
+		   and a.operator is null
+		   and a.del_flag != 1
+		   and a.job_state != 5
+		   order by name,expire_time,finish_time
+	</select>
+	<select id="getFltPlusAttrId" resultType="String">
+		select attr_id
+		  from fd_flt_plus_conf
+		 where job_kind = #{jobKind}
+		   and attr_name = #{attrName}
+	</select>
+	<select id="getFltRemark" resultType="com.alibaba.fastjson.JSONObject">
+		select id "id", attr_val "value"
+		  from fd_flt_plus
+		 where fltid = #{fltid}
+		   and attr_id = #{attrId}
+	</select>
+	<update id="saveFltRemark" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.Map">
+		<selectKey resultType="String" keyProperty="id" order="BEFORE">
+			select
+			<choose>
+				<when test="id!=null and id!=''">
+			 		${id}
+			 	</when>
+			 	<otherwise>
+		    	 fd_flt_plus_s.nextval
+			 	</otherwise>
+			</choose>
+			from dual
+		</selectKey>
+		merge into fd_flt_plus t1
+		using (select 
+					#{id} id, 
+					#{fltid} fltid, 
+					#{attrId} attrId, 
+					#{attrValue} attrValue 
+				from dual) t2
+		on (t1.id = t2.id)
+		when matched then
+		  update set t1.attr_val = t2.attrValue
+		when not matched then
+		  insert
+		    (t1.id, t1.fltid, t1.attr_id, t1.attr_val)
+		  values
+		    (t2.id, t2.fltid, t2.attrId, t2.attrValue)
+	</update>
+</mapper>

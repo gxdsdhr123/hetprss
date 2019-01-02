@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.grid.dao.GridMetaDataDao">
+	<select id="getSchemas" resultType="com.alibaba.fastjson.JSONObject">
+		select null "pId",-1 "id", '模块名称' "name"
+		  from dual
+		union
+		select -1 "pId",id "id", schema_name "name" from sys_grid_schema
+	</select>
+	<select id="getTables" resultType="com.alibaba.fastjson.JSONObject">
+		select id         "id",
+		       tab_name   "name",
+		       tab_cnname "cnname",
+		       tab_alias  "alias",
+		       remark     "remark"
+		  from sys_grid_table where schema_id=#{schemaId}
+	</select>
+</mapper>

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.statisticalanalysis.dao.JWCBJCStatisticsDao">
+
+	<select id="getDataList" parameterType="hashMap" resultType="hashMap" >
+		SELECT * FROM (
+		SELECT b.*, rownum NUM
+		FROM (
+		SELECT a.FLIGHT_DATE,
+		a.FLIGHT_NUMBER,
+		a.AIRCRAFT_NUMBER,
+		a.ACTTYPE_CODE,
+		a.ROUTE_NAME,
+		a.ROUTE_TYPE,
+		a.ALN_2CODE,
+		a.LEG_NAME,
+		a.LEG_TYPE,
+		a.AIRPORT_NAME,
+		a.START_TM,
+		a.END_TM,
+		a.DEP_ARR_TM,
+		a.IN_OUT_FLAG,
+		a.PROPERTY_CODE,
+		a.FLT_TYPE,
+		a.FEE_NAME,
+		a.NUMBERS,
+		DECODE(a.FEE_NAME, 'DEICING-FLUID', NVL(c.CBY_FEE,0), 'ANTI-ICING', NVL(c.FBY_FEE,0), 0) AS SINGAL_FEE,
+		DECODE(a.FEE_NAME, 'DEICING-FLUID', a.NUMBERS*NVL(c.CBY_FEE,0), 'ANTI-ICING', a.NUMBERS*NVL(c.FBY_FEE,0), 0) AS
+		ALL_FEE,
+		a.OPERATOR
+		FROM SA_JWGSHETJW_CB_DAY@Prss2prssp a
+		LEFT JOIN BILL_JWGSHETJW_CB_CONF c
+		ON c.ALN_2CODE = a.ALN_2CODE
+		WHERE 1=1
+		<if test='dateStart !="" '>
+			AND to_date(a.START_TM,'yyyyMMdd') >= to_date('${dateStart}','yyyyMMdd')
+		</if>
+		<if test='dateEnd !="" '>
+			AND to_date('${dateEnd}','yyyyMMdd') >= to_date(a.END_TM,'yyyyMMdd')
+		</if>
+		<if test='searchText !="" '>
+			AND (
+			a.FLIGHT_NUMBER like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.AIRCRAFT_NUMBER like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.ACTTYPE_CODE like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.ROUTE_NAME like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.ROUTE_TYPE like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.AIRPORT_NAME like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.DEP_ARR_TM like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.IN_OUT_FLAG like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.PROPERTY_CODE like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.FLT_TYPE like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.FEE_NAME like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.NUMBERS like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.SINGAL_FEE like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.ALL_FEE like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.OPERATOR like CONCAT(CONCAT('%', #{searchText}), '%')
+			)
+		</if>
+		ORDER BY a.FLIGHT_DATE DESC, a.FLIGHT_NUMBER
+		) b
+		)
+		WHERE NUM > #{begin}
+		AND #{end} >= NUM
+
+	</select>
+
+	<select id="getDataListCount" parameterType="hashMap" resultType="int" >
+		SELECT count(*) as CNT
+		FROM SA_JWGSHETJW_CB_DAY@Prss2prssp a
+		LEFT JOIN BILL_JWGSHETJW_CB_CONF c
+		ON c.ALN_2CODE = a.ALN_2CODE
+		WHERE 1=1
+		<if test='dateStart !="" '>
+			AND to_date(a.START_TM,'yyyyMMdd') >= to_date('${dateStart}','yyyyMMdd')
+		</if>
+		<if test='dateEnd !="" '>
+			AND to_date('${dateEnd}','yyyyMMdd') >= to_date(a.END_TM,'yyyyMMdd')
+		</if>
+		<if test='searchText !="" '>
+			AND (
+			a.FLIGHT_NUMBER like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.AIRCRAFT_NUMBER like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.ACTTYPE_CODE like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.ROUTE_NAME like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.ROUTE_TYPE like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.AIRPORT_NAME like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.DEP_ARR_TM like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.IN_OUT_FLAG like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.PROPERTY_CODE like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.FLT_TYPE like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.FEE_NAME like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.NUMBERS like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.SINGAL_FEE like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.ALL_FEE like CONCAT(CONCAT('%', #{searchText}), '%')
+			OR a.OPERATOR like CONCAT(CONCAT('%', #{searchText}), '%')
+			)
+		</if>
+
+	</select>
+
+	<select id="getCBPriceConf" parameterType="hashMap" resultType="hashMap" >
+		SELECT * FROM (
+		SELECT b.*, rownum NUM
+		FROM (
+		SELECT a.*
+		FROM BILL_JWGSHETJW_CB_CONF a
+		WHERE 1=1
+		<if test='ID !=null and ID !=""'>
+			AND ID = #{ID}
+		</if>
+		<if test='ALN_2CODE !=null and ALN_2CODE !=""'>
+			AND ALN_2CODE = #{ALN_2CODE}
+		</if>
+		ORDER BY ID DESC
+		) b
+		)
+		WHERE NUM > #{begin}
+		AND #{end} >= NUM
+	</select>
+
+	<select id="getCBPriceConfCount" parameterType="hashMap" resultType="int" >
+		SELECT count(*) as CNT
+		FROM BILL_JWGSHETJW_CB_CONF a
+		WHERE 1=1
+		<if test='ID !=null '>
+			AND ID = #{ID}
+		</if>
+		<if test='ALN_2CODE !=null '>
+			AND ALN_2CODE = #{ALN_2CODE}
+		</if>
+	</select>
+
+	<insert id="addCBPriceConf" parameterType="hashMap">
+		INSERT INTO BILL_JWGSHETJW_CB_CONF(ID, ALN_2CODE, CBY_FEE, FBY_FEE)
+		VALUES(BILL_JWGSHETJW_CB_CONF_S.NEXTVAL, #{ALN_2CODE}, ${CBY_FEE}, ${FBY_FEE})
+	</insert>
+
+	<update id="updateCBPriceConf" parameterType="hashMap">
+		UPDATE BILL_JWGSHETJW_CB_CONF
+		SET ALN_2CODE = #{ALN_2CODE},
+		CBY_FEE = ${CBY_FEE},
+		FBY_FEE = ${FBY_FEE}
+		WHERE ID = #{ID}
+	</update>
+
+	<delete id="deleteCBPriceConf" parameterType="hashMap">
+		DELETE FROM BILL_JWGSHETJW_CB_CONF
+		WHERE ID = #{ID}
+	</delete>
+
+	<select id="getAirLines" resultType="hashMap" >
+        SELECT AIRLINE_CODE, ICAO_CODE, DESCRIPTION_EN, DESCRIPTION_CN, AIRLINE_SHORTNAME
+        FROM DIM_AIRLINES
+        ORDER BY AIRLINE_SHORTNAME
+    </select>
+</mapper>

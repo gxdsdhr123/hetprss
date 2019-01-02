@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.message.dao.HistoryMessageDao">
+
+	<resultMap type="com.neusoft.prss.message.entity.HistoryMessageVO"
+		id="seachHistory">
+		<result property="id" column="id" />
+		<result property="mtype" column="mtype" />
+		<result property="mtitle" column="mtitle" />
+		<result property="mtime" column="mtime" />
+		<result property="sendtime" column="sendtime" />
+		<result property="mflightdate" column="mflightdate" />
+		<result property="mtext" column="mtext" />
+		<result property="sender" column="sender" />
+		<result property="senderdep" column="senderdep" />
+		<result property="senduid" column="senduid" />
+		<result property="ifflight" column="ifflight" />
+		<result property="rfid" column="rfid" />
+		<result property="flightnumber" column="flightnumber" />
+		<result property="ifautosend" column="ifautosend" />
+		<result property="autosendtime" column="autosendtime" />
+		<result property="issended" column="issended" />
+		<result property="ifproc" column="ifproc" />
+		<result property="procparam" column="procparam" />
+		<result property="mtemplid" column="mtemplid" />
+		<result property="ifreply" column="ifreply" />
+		<result property="ifsound" column="ifsound" />
+		<result property="soundtxt" column="tsoundtxt" />
+		<result property="isallreplyed" column="isallreplyed" />
+		<result property="sendtime" column="sendtime" />
+		<result property="isproced" column="isproced" />
+		<result property="sendercn" column="sendercn" />
+		<result property="realtime" column="realtime" />
+		<result property="mfromtype" column="mfromtype" />
+		<result property="mfromer" column="mfromer" />
+		<result property="extact" column="extact" />
+		<result property="transsubid" column="transsubid" />
+		<result property="procecls" column="procecls" />
+		<result property="pushflag" column="pushflag" />
+		<result property="message" column="message" />
+		<result property="mtempid" column="mtempid" />
+		<result property="r" column="r" />
+	</resultMap>
+
+	<sql id="receive">
+		SELECT A.MFLIGHTDATE,
+		       A.FLIGHTNUMBER,
+		       A.MTITLE,
+		       A.MTEXT,
+		       A.SENDERCN,
+		       TO_CHAR(A.SENDTIME, 'yyyy-MM-dd hh24:mi:ss') SENDTIME,
+		       A.ID ||'' ID,
+		       '已收消息' TYPE,
+		       DECODE(C.MID,NULL,0,1) ISFAVORITE,
+		       1 FAVORITETYPE,
+		       'receive' MMTYPE,
+		       H.TEMPNAME
+		  FROM MM_INFO A LEFT JOIN MM_TEMPLATE H ON A.MTEMPLID = H.ID LEFT JOIN  MM_INFO_FAVORITE C ON a.id = c.mid AND c.type =1, MM_INFO_TO B
+		 WHERE 1 = 1
+		   AND A.ID = B.MID
+		   <if test="rs == null">
+		   AND B.ISREPLED = 1
+		   </if>
+		   AND (
+		   <if test="rs == null">
+		   (B.MTOTYPE = 0 AND B.MTOER = '${userId}') OR
+		   </if>
+		       (B.MTOTYPE = 1 AND B.MTOER IN ('${roleIds}')) OR
+		       (B.MTOTYPE = 2 AND B.MTOER = '${officeId}') OR
+		       (B.MTOTYPE = 8 AND B.MTOER = '${userId}'))
+		       <if test="fltid!=null and fltid!=''">and A.RFID=#{fltid}</if>
+	</sql>
+	
+	<sql id="favorite">
+		SELECT A.MFLIGHTDATE,
+		       A.FLIGHTNUMBER,
+		       A.MTITLE,
+		       A.MTEXT,
+		       A.SENDERCN,
+		       TO_CHAR(A.SENDTIME, 'yyyy-MM-dd hh24:mi:ss') SENDTIME,
+		       A.ID || '' ID,
+		       '已收消息' TYPE,
+		       1 ISFAVORITE,
+		       C.TYPE FAVORITETYPE,
+		       'favorite' MMTYPE,
+		       H.TEMPNAME
+		  FROM MM_INFO A, MM_INFO_TO B, MM_INFO_FAVORITE C,MM_TEMPLATE H
+		 WHERE 1 = 1
+		   AND A.ID = B.MID
+		   AND A.ID = C.MID
+		   AND B.MID = C.MID
+		   AND C.TYPE = 1
+		   AND A.MTEMPLID = H.ID(+)
+		   AND ((B.MTOTYPE = 0 AND B.MTOER = '${userId}') OR
+		       (B.MTOTYPE = 1 AND B.MTOER IN ('${roleIds}')) OR
+		       (B.MTOTYPE = 2 AND B.MTOER = '${officeId}') OR
+		       (B.MTOTYPE = 8 AND B.MTOER = '${userId}'))
+		UNION 
+		SELECT B.MFLIGHTDATE,
+		       B.FLIGHTNUMBER,
+		       B.MTITLE,
+		       B.MTEXT,
+		       B.SENDERCN,
+		       TO_CHAR(B.SENDTIME, 'yyyy-MM-dd hh24:mi:ss') SENDTIME,
+		       B.ID ||'' ID,
+		       '已发消息' TYPE,
+		       1 ISFAVORITE,
+		       C.TYPE FAVORITETYPE,
+		       'favorite' MMTYPE,
+		       H.TEMPNAME
+		  FROM MM_INFO B, MM_INFO_FAVORITE C,MM_TEMPLATE H
+		 WHERE 1 = 1
+		   AND SENDUID = '${userId}'
+		   AND B.ISSENDED=1
+		   AND B.ID = C.MID
+		   AND C.TYPE = 2
+		   AND B.MTEMPLID = H.ID(+)
+			<if test="fltid!=null and fltid!=''">and b.RFID=#{fltid}</if>
+	</sql>
+	<sql id="send">
+		SELECT B.MFLIGHTDATE,
+		       B.FLIGHTNUMBER,
+		       B.MTITLE,
+		       B.MTEXT,
+		       B.SENDERCN,
+		       TO_CHAR(B.SENDTIME, 'yyyy-MM-dd hh24:mi:ss') SENDTIME,
+		       B.ID ||'' ID,
+		       '已发消息' TYPE,
+		       DECODE(C.MID,NULL,0,1) ISFAVORITE,
+		       2 FAVORITETYPE,
+		       'send' MMTYPE,
+		       H.TEMPNAME
+		  FROM MM_INFO B 
+		  LEFT JOIN MM_TEMPLATE H ON B.MTEMPLID = H.ID 
+		  left join MM_INFO_FAVORITE C on B.ID = C.MID  AND C.TYPE = 2
+		 WHERE 1 = 1
+		   and ((B.MFROMTYPE = 1 AND B.MFROMER IN ('${roleIds}')) OR
+               (B.MFROMTYPE = 2 AND B.MFROMER = '${officeId}') OR
+               (B.MFROMTYPE = 0 AND B.MFROMER = '${userId}'))
+		   AND B.ISSENDED=1
+			<if test="fltid!=null and fltid!=''">and b.RFID=#{fltid}</if>
+	</sql>
+
+	<select id="getList" parameterType="Map" resultType="Map">
+		SELECT * FROM (SELECT B.*, rownum || ''  R FROM ( select * from (
+		<if test="send != null ">
+			<include refid="send"></include>
+		</if>
+		<if test="favorite != null">
+			<include refid="favorite"></include>
+		</if>
+		<if test="receive != null">
+			<include refid="receive"></include>
+		</if>
+		<if test="rs != null">
+			<include refid="send"></include>
+			union
+			<include refid="receive"></include>
+		</if>
+		)a  where 1=1 
+		<if test="mflightdate!=null and mflightdate!=''"> <![CDATA[ and a.mflightdate = '${mflightdate}' ]]>
+		</if>
+		<if test="flightnumber!=null and flightnumber!=''"> <![CDATA[ and a.flightnumber like '%${flightnumber}%' ]]>
+		</if>
+		<if test="mtitle!=null and mtitle!=''"> <![CDATA[ and a.mtitle like '%${mtitle}%' ]]>
+		</if>
+		<if test="mtext!=null and mtext!=''">  <![CDATA[ and a.mtext like '%${mtext}%' ]]>
+		</if>
+		<if test="sortName !=null and sortName !=''">ORDER BY ${sortName} ${sortOrder}</if>
+		 ) B WHERE 1=1
+		<if test="end !=null and end !=''"> and rownum &lt;= ${end}   </if>
+		) B WHERE 1=1
+		<if test="begin !=null and begin !=''"> and r &gt; ${begin}   </if>
+	</select>
+	
+	
+	<select id="getCount" resultType="int" parameterType="Map">
+		select count(*) from(
+			select * from (
+			<if test="send != null ">
+			<include refid="send"></include>
+			</if>
+			<if test="favorite != null">
+				<include refid="favorite"></include>
+			</if>
+			<if test="receive != null">
+				<include refid="receive"></include>
+			</if>
+			<if test="rs != null">
+				<include refid="send"></include>
+				union
+				<include refid="receive"></include>
+			</if>
+			) a  where 1=1 
+			<if test="mflightdate!=null and mflightdate!=''"> <![CDATA[ and a.mflightdate = '${mflightdate}' ]]>
+			</if>
+			<if test="flightnumber!=null and flightnumber!=''"> <![CDATA[ and a.flightnumber like '%${flightnumber}%' ]]>
+			</if>
+			<if test="mtitle!=null and mtitle!=''"> <![CDATA[ and a.mtitle like '%${mtitle}%' ]]>
+			</if>
+			<if test="mtext!=null and mtext!=''">  <![CDATA[ and a.mtext like '%${mtext}%' ]]>
+			</if>
+		) a 
+	</select>
+
+	<select id="getFileIds" parameterType="hashmap" resultType="hashmap">
+		select t.FILEID as id,t.FILENAME as name from mm_fileinfo t where
+		t.mid = #{mainId}
+
+	</select>
+
+	<select id="searchHisDetail" parameterType="HashMap" resultMap="seachHistory">
+		SELECT *
+		  FROM (SELECT A.ID,
+		                NVL(C.TNAME, '') MTYPE,
+		                NVL(E.MTEXT, '') MTEMPID,
+		                A.FLIGHTNUMBER,
+		                DECODE(A.IFAUTOSEND, '0', '否', '1', '是', '') IFAUTOSEND,
+		                A.MTITLE,
+		                A.MTEXT,
+		                A.SENDERCN,
+		                TO_CHAR(A.SENDTIME, 'hh24:mi:ss') SENDTIME
+		           FROM MM_INFO A
+		           LEFT JOIN MM_TYPE C
+		             ON A.MTYPE = C.ID
+		           LEFT JOIN MM_TEMPLATE E
+		             ON A.MTEMPLID = E.ID
+				WHERE A.ID = #{id})
+	</select>
+
+	<select id="reciverDetail" parameterType="HashMap" resultMap="seachHistory">
+		SELECT ID,
+		       CASE
+		         WHEN M.ISREPLED = 1 THEN
+		          NAME || '【' || RECEIVTIME || '】' || REPLYTEXT
+		         ELSE
+		          NAME || '【】待收'
+		       END MESSAGE
+		
+		  FROM (SELECT T.ID,
+		               T.ISREPLED,
+		               T.REPLYTEXT,
+		               T.MTOER,
+		               T.RECEIVERUID,
+		               TO_CHAR(T.RECEIVTIME, 'hh24:mi:ss') RECEIVTIME,
+		               E.NAME REPLYNAME,
+		               DECODE(T.MTOTYPE, 0, A.NAME, 1, C.NAME, 2, B.NAME, 8, A.NAME) NAME
+		          FROM (
+		               SELECT * FROM MM_INFO_TO WHERE MID = ${id}
+		                ) T
+		          LEFT JOIN SYS_USER A
+		            ON T.MTOER = A.ID
+		          LEFT JOIN SYS_OFFICE B
+		            ON T.MTOER = B.ID
+		          LEFT JOIN SYS_ROLE C
+		            ON T.MTOER = C.ID
+		          LEFT JOIN SYS_USER E
+		            ON T.RECEIVERUID = E.ID) M
+
+	</select>
+
+	<select id="queryFlow" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT T.*,
+		       CASE
+		         WHEN T.MTOTYPE = 0 THEN
+		          A.NAME
+		         WHEN T.MTOTYPE = 1 THEN
+		          B.NAME
+		         WHEN T.MTOTYPE = 2 THEN
+		          E.NAME
+		         WHEN T.MTOTYPE = 8 THEN
+		          A.NAME
+		       END NAME
+		  FROM (SELECT T1.SENDERCN,
+		               TO_CHAR(T1.SENDTIME, 'hh24:mi') SENDTIME,
+		               T.ID MTOID,
+		               T1.ID MID,
+		               T.MTOER,
+		               T.MTOTYPE,
+		               TO_CHAR(T.RECEIVTIME, 'hh24:mi') RECEIVTIME,
+		               ROWNUM
+		          FROM MM_INFO T1, MM_INFO_TO T
+				WHERE T1.ID = ${MID} AND T1.ID = T.MID) T
+		  LEFT JOIN SYS_USER A
+		    ON T.MTOER = A.ID
+		  LEFT JOIN SYS_ROLE B
+		    ON T.MTOER = B.ID
+		  LEFT JOIN SYS_OFFICE E
+		    ON T.MTOER = E.ID
+	</select>
+	<select id="queryFlowTrans" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT COUNT(A.ID) NUM, A.ID, TRANSSUBID,TO_CHAR(a.SENDTIME, 'hh24:mi') SENDTIME
+		  FROM MM_INFO A, MM_INFO_TO B
+		 WHERE A.TRANSSUBID = B.ID
+		   AND B.MID = ${MID}
+		   AND B.ID = ${MTOID}
+		 GROUP BY A.ID, TRANSSUBID,TO_CHAR(a.SENDTIME, 'hh24:mi')
+
+	</select>
+	
+	<select id="queryParentTrans" resultType="string">
+		SELECT MID
+		  FROM MM_INFO_TO
+		 WHERE ID IN (SELECT TRANSSUBID
+		                FROM MM_INFO T
+		               WHERE T.ID = ${MID}
+		                 AND T.TRANSSUBID IS NOT NULL)
+	</select>
+	
+	<select id="queryFlowTransNum" resultType="int">
+		SELECT COUNT(ID) NUM
+		  FROM MM_INFO_TO T
+		 WHERE T.MID IN (SELECT ID FROM MM_INFO A WHERE a.transsubid = ${MTOID})
+	
+	</select>
+</mapper>

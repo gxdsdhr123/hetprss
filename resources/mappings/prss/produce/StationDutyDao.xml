@@ -1,0 +1,544 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.produce.dao.StationDutyDao">
+
+	<resultMap type="com.neusoft.prss.produce.entity.BillZpqwbg" id="billZpqwbgMap">
+		<id property="id" column="id" javaType="integer" jdbcType="NUMERIC"/>
+		<result property="fltid" column="fltid" javaType="integer" jdbcType="NUMERIC"/>
+		<result property="flightNumber" column="flight_number" javaType="String" jdbcType="VARCHAR"/>
+		<result property="actType" column="act_type" javaType="String" jdbcType="VARCHAR"/>
+		<result property="aircraftNumber" column="aircraft_number" javaType="String" jdbcType="VARCHAR"/>
+		<result property="operator" column="operator" javaType="String" jdbcType="VARCHAR"/>
+		<result property="signatory" column="signatory" javaType="String" jdbcType="VARCHAR"/>
+		<result property="createDate" column="create_date" javaType="String" jdbcType="DATE"/>
+		<result property="actstandCode" column="actstand_code" javaType="String" jdbcType="VARCHAR"/>
+		<result property="flightDate" column="flight_date" javaType="String" jdbcType="VARCHAR"/>
+		<result property="etd" column="etd" javaType="String" jdbcType="VARCHAR"/>
+		<result property="eta" column="eta" javaType="String" jdbcType="VARCHAR"/>
+		<result property="ata" column="ata" javaType="String" jdbcType="VARCHAR"/>
+		<result property="atd" column="atd" javaType="String" jdbcType="VARCHAR"/>
+		<result property="inFlightNumber" column="in_flight_number" javaType="String" jdbcType="VARCHAR"/>
+		<result property="outFlightNumber" column="out_flight_number" javaType="String" jdbcType="VARCHAR"/>
+		<result property="departApt4code" column="depart_apt4code" javaType="String" jdbcType="VARCHAR"/>
+		<result property="arrivalApt4code" column="arrival_apt4code" javaType="String" jdbcType="VARCHAR"/>
+		<result property="cmsf" column="cmsf" javaType="String" jdbcType="VARCHAR"/>
+		<result property="cnbsf" column="cnbsf" javaType="String" jdbcType="VARCHAR"/>
+		<result property="jgzzsf" column="jgzzsf" javaType="String" jdbcType="VARCHAR"/>
+		<result property="lqdkTime" column="lqdk_time" javaType="String" jdbcType="VARCHAR"/>
+		<result property="hcmkqTime" column="hcmkq_time" javaType="String" jdbcType="VARCHAR"/>
+		<result property="zcwcTime" column="zcwc_time" javaType="String" jdbcType="VARCHAR"/>
+		<result property="xcwcTime" column="xcwc_time" javaType="String" jdbcType="VARCHAR"/>
+		<result property="zhhcmgbTime" column="zhhcmgb_time" javaType="String" jdbcType="VARCHAR"/>
+		<result property="zczsqdTime" column="zczsqd_time" javaType="String" jdbcType="VARCHAR"/>
+		<result property="scmgbTime" column="scmgb_time" javaType="String" jdbcType="VARCHAR"/>
+		<result property="kszcTime" column="kszc_time" javaType="String" jdbcType="VARCHAR"/>
+		<result property="wgcmReason" column="wgcm_reason" javaType="String" jdbcType="VARCHAR"/>
+		<result property="jgxljjTime" column="jgxljj_time" javaType="String" jdbcType="VARCHAR"/>
+		<result property="jghyjjTime" column="jghyjj_time" javaType="String" jdbcType="VARCHAR"/>
+		<result property="cgxljjTime" column="cgxljj_time" javaType="String" jdbcType="VARCHAR"/>
+		<result property="cghyjjTime" column="cghyjj_time" javaType="String" jdbcType="VARCHAR"/>
+		<result property="hcjjTime" column="hcjj_time" javaType="String" jdbcType="VARCHAR"/>
+		<result property="members" column="members" javaType="String" jdbcType="VARCHAR"/>
+		<result property="remark" column="remark" javaType="String" jdbcType="VARCHAR"/>
+		<result property="inFltid" column="in_fltid" javaType="String" jdbcType="VARCHAR"/>
+		<result property="outFltid" column="out_fltid" javaType="String" jdbcType="VARCHAR"/>
+		<result property="operatorName" column="operator_name" javaType="String" jdbcType="VARCHAR"/>
+	</resultMap>
+	
+	<resultMap type="com.neusoft.prss.produce.entity.BillZpqwbgGoods" id="billZpqwbgGoodsMap">
+		<id property="id" column="id" javaType="integer" jdbcType="NUMERIC"/>
+		<result property="billId" column="bill_id" javaType="String" jdbcType="VARCHAR"/>
+		<result property="jcxmId" column="jcxm_id" javaType="String" jdbcType="VARCHAR"/>
+		<result property="jcxmVal" column="jcxm_val" javaType="String" jdbcType="VARCHAR"/>
+		<result property="jcxmName" column="jcxm_name" javaType="String" jdbcType="VARCHAR"/>
+		<result property="deviceId" column="device_id" javaType="String" jdbcType="VARCHAR"/>
+		<result property="deviceNo" column="device_no" javaType="String" jdbcType="VARCHAR"/>
+	</resultMap>
+	
+	<select id="getDataCount" resultType="integer">
+		<![CDATA[
+			select count(1) from BILL_ZPQWBG_HD b,dim_actype a
+										where b.act_type = a.ICAO_CODE(+)
+										 and a.acfttype_shape = #{nwType} 
+		]]>
+	</select>
+	
+	<select id="getData" resultMap="billZpqwbgMap">
+		<![CDATA[
+			select *
+			  from (select b.*, rownum rn2
+			          from (select a.*, rownum as rn
+			                  from (select b.* from BILL_ZPQWBG_HD b,dim_actype a
+										where b.act_type = a.ICAO_CODE(+)
+										 and a.acfttype_shape = #{nwType} 
+										 order by b.create_date desc) a) b
+			         where rn > #{offset})
+			 where rn2 <= #{limit}
+		]]>
+	</select>
+	
+	<select id="getBillById" resultMap="billZpqwbgMap">
+		<![CDATA[
+			select * from bill_zpqwbg_hd where id = #{id}
+		]]>
+	</select>
+	
+	<select id="getBillZpqwbgGoodsByBillId" resultMap="billZpqwbgGoodsMap">
+		<![CDATA[
+			select * from BILL_ZPQWBG_HD_GOODS where bill_id = #{id}
+			order by DEVICE_NO
+		]]>
+	</select>
+	
+	<select id="getFlightInfo" resultType="com.neusoft.prss.flightdynamic.entity.FltInfo">
+			select
+				<if test='inout == "A" '>
+				  i.flight_number as flightNumber,
+				  i.aircraft_number as aircraftNumber,
+				  i.acttype_code as acttypeCode,
+				  i.actstand_code as actstandCode,
+				  i.depart_apt4code as departApt4code,
+				  i.arrival_apt4code as arrivalApt4code,
+				</if>
+			  	<if test='inout == "D" '>
+			  	  o.flight_number as flightNumber,
+				  o.aircraft_number as aircraftNumber,
+				  o.acttype_code as acttypeCode,
+				  o.actstand_code as actstandCode,
+				  o.depart_apt4code as departApt4code,
+				  o.arrival_apt4code as arrivalApt4code,
+			  	</if>
+				  i.eta,
+				  i.ata,
+				  o.etd,
+				  o.atd
+			from fd_flt_iorel gl left join fd_flt_info i on gl.in_fltid = i.fltid
+			left join fd_flt_info o on gl.out_fltid = o.fltid
+			<where>
+				<if test='inout == "A" '>
+					i.flight_number = #{flightNumber}
+					and i.flight_date = #{flightDate}
+					and i.status not in ('1','2')
+				</if>
+				<if test='inout == "D" '>
+					o.flight_number = #{flightNumber}
+					and o.flight_date = #{flightDate}
+					and o.status not in ('1','2')
+				</if>
+			</where>
+	</select>
+	
+	<select id="getTimeInfo" resultType="com.neusoft.prss.produce.entity.TimeInfo">
+		<![CDATA[
+			select t1.fltid,
+		       nvl(t2.on_bridge_tm, ZPktckj_complete_t) as dockingTime, --廊桥/客梯车对靠时间
+		       nvl(ZPjczx_goodopen_t, nvl(ZPcgzx_goodopen_t, ZPjgzx_goodopen_t)) as doorOpenTime, --货舱开门时间
+		       nvl(ZPjczx_hyload_t, ZPcgzx_hyload_t) as finishLodingTime, --装舱完成时间
+		       nvl(ZPjczx_hyxunload_t, nvl(ZPjgzx_hyxunload_t, ZPhjzx_hyunload_t)) as finishOffTime, --卸舱完毕时间
+		       nvl(ZPjczx_goodclose_t, nvl(ZPcgzx_goodclose_t, ZPjgzx_goodclose_t)) as lastCloseTime, --最后舱门关闭时间
+		       null as orderGetTime, --装舱指令取得时间(不知从哪取)
+		       ZPktzx_bulkclose_t as doorClosedTime, --散舱门关闭时间
+		       nvl(ZPjgzx_arrive_t, nvl(ZPjczx_arrive_t, ZPcgzx_arrive_t)) as startLodingTime --开始装舱时间
+		  from fd_flt_info t1
+		  left join fd_flt_cla_safeguards t2
+		    on (t1.fltid = t2.fltid)
+		  left join wf_tasknode_finish_time_v t3
+		    on (t1.fltid = t3.fltid)
+		  where t1.flight_number = #{flightNumber}
+					and t1.flight_date = #{flightDate}
+					and t1.in_out_flag like '${inout}%'
+					and t1.status not in ('1','2')
+	  ]]>
+	</select>
+	
+	
+	<resultMap type="hashmap" id="operatorMap">
+		<result property="id" column="id"/>
+		<result property="name" column="name"/>
+	</resultMap>
+	<select id="getOperatorList" resultMap="operatorMap">
+		<![CDATA[
+			SELECT id,name FROM sys_user WHERE office_id=#{officeId}
+		]]>
+	</select>
+	
+	<insert id="saveBill" parameterType="com.neusoft.prss.produce.entity.BillZpqwbg" >
+		<selectKey keyColumn="id" keyProperty="id" resultType="integer" order="BEFORE">
+			select bill_zpqwbg_hd_s.nextval from dual
+		</selectKey>
+		insert into BILL_ZPQWBG_HD
+		(
+			ID
+			<if test="fltid != null and fltid != '' ">
+				,FLTID
+			</if>
+			<if test="flightNumber != null and flightNumber != '' ">
+				,FLIGHT_NUMBER
+			</if>
+			<if test="actType != null and actType != '' ">
+				,ACT_TYPE
+			</if>
+			<if test="aircraftNumber != null and aircraftNumber != '' ">
+				,AIRCRAFT_NUMBER
+			</if>
+			<if test="operator != null and operator != '' ">
+				,OPERATOR
+			</if>
+			<if test="signatory != null and signatory != '' ">
+				,SIGNATORY
+			</if>
+			<if test="createDate != null and createDate != '' ">
+				,CREATE_DATE
+			</if>
+			<if test="actstandCode != null and actstandCode != '' ">
+				,ACTSTAND_CODE
+			</if>
+			<if test="flightDate != null and flightDate != '' ">
+				,FLIGHT_DATE
+			</if>
+			<if test="etd != null and etd != '' ">
+				,ETD
+			</if>
+			<if test="eta != null and eta != '' ">
+				,ETA
+			</if>
+			<if test="ata != null and ata != '' ">
+				,ATA
+			</if>
+			<if test="atd != null and atd != '' ">
+				,ATD
+			</if>
+			<if test="inFlightNumber != null and inFlightNumber != '' ">
+				,IN_FLIGHT_NUMBER
+			</if>
+			<if test="outFlightNumber != null and outFlightNumber != '' ">
+				,OUT_FLIGHT_NUMBER
+			</if>
+			<if test="departApt4code != null and departApt4code != '' ">
+				,DEPART_APT4CODE
+			</if>
+			<if test="arrivalApt4code != null and arrivalApt4code != '' ">
+				,ARRIVAL_APT4CODE
+			</if>
+			<if test="cmsf != null and cmsf != '' ">
+				,CMSF
+			</if>
+			<if test="cnbsf != null and cnbsf != '' ">
+				,CNBSF
+			</if>
+			<if test="jgzzsf != null and jgzzsf != '' ">
+				,JGZZSF
+			</if>
+			<if test="lqdkTime != null and lqdkTime != '' ">
+				,LQDK_TIME
+			</if>
+			<if test="hcmkqTime != null and hcmkqTime != '' ">
+				,HCMKQ_TIME
+			</if>
+			<if test="zcwcTime != null and zcwcTime != '' ">
+				,ZCWC_TIME
+			</if>
+			<if test="xcwcTime != null and xcwcTime != '' ">
+				,XCWC_TIME
+			</if>
+			<if test="zhhcmgbTime != null and zhhcmgbTime != '' ">
+				,ZHHCMGB_TIME
+			</if>
+			<if test="zczsqdTime != null and zczsqdTime != '' ">
+				,ZCZSQD_TIME
+			</if>
+			<if test="scmgbTime != null and scmgbTime != '' ">
+				,SCMGB_TIME
+			</if>
+			<if test="kszcTime != null and kszcTime != '' ">
+				,KSZC_TIME
+			</if>
+			<if test="wgcmReason != null and wgcmReason != '' ">
+				,WGCM_REASON
+			</if>
+			<if test="jgxljjTime != null and jgxljjTime != '' ">
+				,JGXLJJ_TIME
+			</if>
+			<if test="jghyjjTime != null and jghyjjTime != '' ">
+				,JGHYJJ_TIME
+			</if>
+			<if test="cgxljjTime != null and cgxljjTime != '' ">
+				,CGXLJJ_TIME
+			</if>
+			<if test="cghyjjTime != null and cghyjjTime != '' ">
+				,CGHYJJ_TIME
+			</if>
+			<if test="hcjjTime != null and hcjjTime != '' ">
+				,HCJJ_TIME
+			</if>
+			<if test="members != null and members != '' ">
+				,MEMBERS
+			</if>
+			<if test="remark != null and remark != '' ">
+				,REMARK
+			</if>
+			<if test="inFltid != null and inFltid != '' ">
+				,IN_FLTID
+			</if>
+			<if test="outFltid != null and outFltid != '' ">
+				,OUT_FLTID
+			</if>
+			<if test="operatorName != null and operatorName != '' ">
+				,OPERATOR_NAME
+			</if>
+		)
+		values
+		(
+			#{id}
+			<if test="fltid != null and fltid != '' ">
+				,#{fltid}
+			</if>
+			<if test="flightNumber != null and flightNumber != '' ">
+				,#{flightNumber}
+			</if>
+			<if test="actType != null and actType != '' ">
+				,#{actType}
+			</if>
+			<if test="aircraftNumber != null and aircraftNumber != '' ">
+				,#{aircraftNumber}
+			</if>
+			<if test="operator != null and operator != '' ">
+				,#{operator}
+			</if>
+			<if test="signatory != null and signatory != '' ">
+				,#{signatory}
+			</if>
+			<if test="createDate != null and createDate != '' ">
+				,to_date(#{createDate},'yyyy-MM-dd HH24:mi:ss')
+			</if>
+			<if test="actstandCode != null and actstandCode != '' ">
+				,#{actstandCode}
+			</if>
+			<if test="flightDate != null and flightDate != '' ">
+				,#{flightDate}
+			</if>
+			<if test="etd != null and etd != '' ">
+				,#{etd}
+			</if>
+			<if test="eta != null and eta != '' ">
+				,#{eta}
+			</if>
+			<if test="ata != null and ata != '' ">
+				,#{ata}
+			</if>
+			<if test="atd != null and atd != '' ">
+				,#{atd}
+			</if>
+			<if test="inFlightNumber != null and inFlightNumber != '' ">
+				,#{inFlightNumber}
+			</if>
+			<if test="outFlightNumber != null and outFlightNumber != '' ">
+				,#{outFlightNumber}
+			</if>
+			<if test="departApt4code != null and departApt4code != '' ">
+				,#{departApt4code}
+			</if>
+			<if test="arrivalApt4code != null and arrivalApt4code != '' ">
+				,#{arrivalApt4code}
+			</if>
+			<if test="cmsf != null and cmsf != '' ">
+				,#{cmsf}
+			</if>
+			<if test="cnbsf != null and cnbsf != '' ">
+				,#{cnbsf}
+			</if>
+			<if test="jgzzsf != null and jgzzsf != '' ">
+				,#{jgzzsf}
+			</if>
+			<if test="lqdkTime != null and lqdkTime != '' ">
+				,#{lqdkTime}
+			</if>
+			<if test="hcmkqTime != null and hcmkqTime != '' ">
+				,#{hcmkqTime}
+			</if>
+			<if test="zcwcTime != null and zcwcTime != '' ">
+				,#{zcwcTime}
+			</if>
+			<if test="xcwcTime != null and xcwcTime != '' ">
+				,#{xcwcTime}
+			</if>
+			<if test="zhhcmgbTime != null and zhhcmgbTime != '' ">
+				,#{zhhcmgbTime}
+			</if>
+			<if test="zczsqdTime != null and zczsqdTime != '' ">
+				,#{zczsqdTime}
+			</if>
+			<if test="scmgbTime != null and scmgbTime != '' ">
+				,#{scmgbTime}
+			</if>
+			<if test="kszcTime != null and kszcTime != '' ">
+				,#{kszcTime}
+			</if>
+			<if test="wgcmReason != null and wgcmReason != '' ">
+				,#{wgcmReason}
+			</if>
+			<if test="jgxljjTime != null and jgxljjTime != '' ">
+				,#{jgxljjTime}
+			</if>
+			<if test="jghyjjTime != null and jghyjjTime != '' ">
+				,#{jghyjjTime}
+			</if>
+			<if test="cgxljjTime != null and cgxljjTime != '' ">
+				,#{cgxljjTime}
+			</if>
+			<if test="cghyjjTime != null and cghyjjTime != '' ">
+				,#{cghyjjTime}
+			</if>
+			<if test="hcjjTime != null and hcjjTime != '' ">
+				,#{hcjjTime}
+			</if>
+			<if test="members != null and members != '' ">
+				,#{members}
+			</if>
+			<if test="remark != null and remark != '' ">
+				,#{remark}
+			</if>
+			<if test="inFltid != null and inFltid != '' ">
+				,#{inFltid}
+			</if>
+			<if test="outFltid != null and outFltid != '' ">
+				,#{outFltid}
+			</if>
+			<if test="operatorName != null and operatorName != '' ">
+				,#{operatorName}
+			</if>
+		)
+	</insert>
+	
+	<insert id="saveBillZpqwbgGoods" parameterType="com.neusoft.prss.produce.entity.BillZpqwbgGoods">
+		insert into BILL_ZPQWBG_HD_GOODS
+			(
+				ID
+				,BILL_ID
+				,JCXM_ID
+				,JCXM_VAL
+				,JCXM_NAME
+				,DEVICE_ID
+				,DEVICE_NO
+			)values
+			(
+				bill_zpqwbg_hd_goods_s.nextval
+				,#{billId}
+				,#{jcxmId}
+				,#{jcxmVal}
+				,#{jcxmName}
+				,null
+				,#{deviceNo}
+			)
+	</insert>
+	
+	
+	<select id="getBillFlightInfo"  resultMap="billZpqwbgMap">
+			select
+				<if test='inout == "A" '>
+				  i.fltid as fltid,
+				  i.aircraft_number as aircraftNumber,
+				  i.acttype_code as actType,
+				  i.actstand_code as actstandCode,
+				  i.depart_apt4code as departApt4code,
+				  i.arrival_apt4code as arrivalApt4code,
+				</if>
+			  	<if test='inout == "D" '>
+			  	  o.fltid as fltid,
+				  o.aircraft_number as aircraftNumber,
+				  o.acttype_code as actType,
+				  o.actstand_code as actstandCode,
+				  o.depart_apt4code as departApt4code,
+				  o.arrival_apt4code as arrivalApt4code,
+			  	</if>
+				  i.eta,
+				  i.ata,
+				  o.etd,
+				  o.atd,
+				  i.flight_number as inFlightNumber,
+				  o.flight_number as outFlightNumber,
+				  i.fltid as inFltid,
+				  o.fltid as outFltid
+			from fd_flt_iorel gl left join fd_flt_info i on gl.in_fltid = i.fltid
+			left join fd_flt_info o on gl.out_fltid = o.fltid
+			<where>
+				<if test='inout == "A" '>
+					i.flight_number = #{flightNumber}
+					and i.flight_date = #{flightDate}
+					and i.status not in ('1','2')
+				</if>
+				<if test='inout == "D" '>
+					o.flight_number = #{flightNumber}
+					and o.flight_date = #{flightDate}
+					and o.status not in ('1','2')
+				</if>
+			</where>
+	</select>
+	
+	<update id="updateBill" parameterType="com.neusoft.prss.produce.entity.BillZpqwbg">
+		update BILL_ZPQWBG_HD
+		<set>
+			<if test="cmsf != null and cmsf != '' ">
+				cmsf = #{cmsf},
+			</if>
+			<if test="cnbsf != null and cnbsf != '' ">
+				cnbsf = #{cnbsf},
+			</if>
+			<if test="jgzzsf != null and jgzzsf != '' ">
+				jgzzsf = #{jgzzsf},
+			</if>
+			<if test="zczsqdTime != null and zczsqdTime != '' ">
+				zczsqd_time = #{zczsqdTime},
+			</if>
+			<if test="kszcTime != null and kszcTime != '' ">
+				kszc_time = #{kszcTime},
+			</if>
+			<if test="jgxljjTime != null and jgxljjTime != '' ">
+				jgxljj_time = #{jgxljjTime},
+			</if>
+			<if test="jghyjjTime != null and jghyjjTime != '' ">
+				jghyjj_time = #{jghyjjTime},
+			</if>
+			<if test="cgxljjTime != null and cgxljjTime != '' ">
+				cgxljj_time = #{cgxljjTime},
+			</if>
+			<if test="cghyjjTime != null and cghyjjTime != '' ">
+				cghyjj_time = #{cghyjjTime},
+			</if>
+			<if test="hcjjTime != null and hcjjTime != '' ">
+				hcjj_time = #{hcjjTime},
+			</if>
+			<if test="members != null and members != '' ">
+				members = #{members},
+			</if>
+			<if test="remark != null and remark != '' ">
+				remark = #{remark},
+			</if>
+		</set>
+		where id = #{id}
+	</update>
+	
+	<update id="updateBillZpqwbgGood" parameterType="com.neusoft.prss.produce.entity.BillZpqwbgGoods">
+		update BILL_ZPQWBG_HD_GOODS
+		set JCXM_VAL = #{jcxmVal}
+		where ID = #{id}
+	</update>
+	
+	<delete id="delBill">
+		delete from BILL_ZPQWBG_HD where id = #{id}
+	</delete>
+	<delete id="delBillZpqwbgGood">
+		delete from BILL_ZPQWBG_HD_GOODS where BILL_ID = #{id}
+	</delete>
+	<select id="getMembersByLeaderId" resultType="string">
+		select distinct name
+		  from AM_TASK_TEAM g
+		  left join AM_TEAM_WORKER_REL r
+		    on g.TEAM_ID = r.TEAM_ID
+		  left join sys_user u
+		    on r.worker_id = u.id
+		 where g.leader_id = #{id}
+		   and u.id is not null
+		   and u.id != #{id}
+	</select>
+</mapper>

@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.scheduling.dao.WorkerDivisionDao">
+
+	<select id="getTemplateList" parameterType="string" resultType="hashmap">
+  		select distinct TEMP_ID id,TEMP_NAME name 
+  		from AM_TEMPLATE_CONF where OFFICE_ID =#{officeId}
+  		order by TEMP_NAME,TEMP_ID
+  	</select>
+ 	
+	<select id="getTableHeader" resultType="hashmap" parameterType="hashmap">
+	<!-- 20180319 by huanglj 1868修改排序 -->
+		SELECT distinct B2.RESTYPE field,B2.TYPENAME title , B2.Sort_Num
+		FROM DIM_RESKIND A2,DIM_RESTYPE B2
+		WHERE A2.RESKIND = B2.RESKIND AND A2.DEPID =#{officeId}
+		ORDER BY B2.Sort_Num
+	</select>
+  	
+  	<select id="getDimLimit" resultType="string" parameterType="hashmap">
+		SELECT JW_LIMIT||','||JX_LIMIT||','||HS_LIMIT 
+		FROM AM_OFFICE_LIMIT_CONF 
+		WHERE OFFICE_ID =#{officeId}
+	</select>
+	
+  	<select id="getAreaInfoByLimit" resultType="hashmap" parameterType="hashmap">
+   		select distinct d.ID "value", d.AREA_NAME "text"
+		from am_division_info c,am_aptitude_info a,am_aptitude_limits b,DIM_AREA_CONF d
+		where a.id = b.id and b.limit_type = #{type}
+			and c.id = #{id} and c.parent_aptitude_id = a.id
+			and d.parent_id = b.elements and d.OFFICE_ID = #{officeId} AND d.LIMIT_LEVEL = 1
+		ORDER BY d.ID
+	</select>
+	
+	<select id="getAreaInfoByTempLimit" resultType="hashmap" parameterType="hashmap">
+   		select distinct d.ID "value", d.AREA_NAME "text"
+		from AM_DIVISION_TEMP c,am_aptitude_info a,am_aptitude_limits b,DIM_AREA_CONF d
+		where a.id = b.id and b.limit_type = #{type}
+			and c.id = #{id} and c.parent_aptitude_id = a.id
+			and d.parent_id = b.elements and d.OFFICE_ID = #{officeId} AND d.LIMIT_LEVEL = 1
+		ORDER BY d.ID
+	</select>
+	
+	<select id="getGridDataCount"  resultType="int" parameterType="hashmap">
+		select count(*) from(
+			${sqlStr}
+	   	)
+	</select>
+	
+	<select id="getGridData" parameterType="hashmap" resultType="hashmap" >
+		SELECT * FROM (SELECT ROWNUM RM,b.* FROM (
+			${sqlStr}
+		) B )
+	</select>
+	
+	<select id="getId" resultType="string">
+		SELECT am_division_info_s.nextval from dual
+	</select>
+	
+  	<delete id="deleteInfo" parameterType="hashmap">
+		delete from am_division_info where office_id =#{officeId} and id=#{id}
+	</delete>
+	<delete id="deleteLimitInfo" parameterType="hashmap">
+		delete from am_division_limits where office_id =#{officeId} and id=#{id}
+	</delete>
+	
+	<insert id="addLimitInfo"  parameterType="hashmap">
+		insert into am_division_limits(id,elements,limit_level,limit_type,office_id,update_time)
+		SELECT #{id},#{id2},1,#{id3},#{officeId},sysdate from dual
+	</insert>
+	
+	<insert id="addDivisionInfo" parameterType="hashmap">
+		${divisionSql}
+	</insert>
+	
+	<select id="getAptiGridData"  resultType="hashmap" parameterType="hashmap">
+		${sqlStr}
+	</select>
+	
+	<select id="getAreaInfoByParent" resultType="hashmap" parameterType="hashmap">
+   		select distinct ID "value", AREA_NAME "text"
+		from DIM_AREA_CONF 
+		where limit_type = #{type} and OFFICE_ID = #{officeId} 
+			AND LIMIT_LEVEL = 1 AND PARENT_ID = #{limitId}
+		ORDER BY ID
+	</select>
+	
+	<insert id="insertDivisionInfoHis" parameterType="hashmap">
+		INSERT INTO AM_DIVISION_INFO_HIS(ID,WORKER_ID,APTITUDE_ID,PRIMARY_FLAG,CREATE_TIME,
+       		CREATOR_ID,OFFICE_ID,PARENT_APTITUDE_ID,EXPIRY_DATE)
+			SELECT ID,WORKER_ID,APTITUDE_ID,PRIMARY_FLAG,CREATE_TIME,
+	       		CREATOR_ID,OFFICE_ID,PARENT_APTITUDE_ID,SYSDATE 
+	       	FROM AM_DIVISION_INFO 
+	       	WHERE OFFICE_ID = #{officeId} 
+	       	<if test="workerId != null and workerId != '' ">
+	       		AND WORKER_ID = #{workerId}
+	       	</if>
+	</insert>
+	<insert id="insertElementsHis" parameterType="hashmap">
+		INSERT INTO AM_DIVISION_ELEMENT_DETAIL_HIS (ID, ELEMENT_CODE, LIMIT_TYPE, OFFICE_ID,CREATE_TIME)
+			SELECT * FROM AM_DIVISION_ELEMENT_DETAIL 
+	       	WHERE OFFICE_ID = #{officeId} 
+	       	<if test="workerId != null and workerId != '' ">
+	       		AND ID IN (select ID from AM_DIVISION_INFO where WORKER_ID = #{workerId} and OFFICE_ID = #{officeId})
+	       	</if>
+	</insert>
+	
+	<insert id="addElementDetail" parameterType="hashmap">
+		INSERT INTO AM_DIVISION_ELEMENT_DETAIL (ID,LIMIT_TYPE,OFFICE_ID,ELEMENT_CODE)
+			SELECT #{id},#{id3},#{officeId},nvl(t.ELEMENT_CODE,' ') FROM DIM_AREA_ELEMENTS T WHERE ID=#{id2}
+	</insert>
+	
+	<delete id="deleteDivisionInfo" parameterType="hashmap">
+		delete from am_division_info where office_id =#{officeId}
+		<if test="workerId != null and workerId != '' ">
+       		AND WORKER_ID = #{workerId}
+       	</if>
+	</delete>
+	<delete id="deleteElements" parameterType="hashmap">
+		delete from am_division_element_detail where office_id =#{officeId}
+		<if test="workerId != null and workerId != '' ">
+       		AND ID IN (select ID from AM_DIVISION_INFO where WORKER_ID = #{workerId} and OFFICE_ID = #{officeId})
+       	</if>
+	</delete>
+	<delete id="deleteDivisionLimit" parameterType="hashmap">
+		delete from am_division_limits where office_id =#{officeId}
+		<if test="workerId != null and workerId != '' ">
+       		AND ID IN (select ID from AM_DIVISION_INFO where WORKER_ID = #{workerId} and OFFICE_ID = #{officeId})
+       	</if>
+	</delete>
+	
+	<insert id="addTempName" parameterType="hashmap">
+		INSERT INTO AM_TEMPLATE_CONF (temp_id,temp_name,creator_id,create_tm,office_id)
+			SELECT #{tempConfId},#{tempName},#{userId},
+				to_char(sysdate,'yyyy-MM-dd hh24:mi:ss'),#{officeId} FROM dual
+	</insert>
+	
+	<select id="getTempId" resultType="string">
+		SELECT am_division_temp_s.nextval from dual
+	</select>
+	
+	<select id="getTempConfId" resultType="string">
+		SELECT am_template_conf_s.nextval from dual
+	</select>
+	
+	<insert id="addTempLimitInfo"  parameterType="hashmap">
+		insert into AM_DIVISION_TEMP_LIMITS(id,elements,limit_level,limit_type,office_id,update_time)
+		SELECT #{id},#{id2},1,#{id3},#{officeId},sysdate from dual
+	</insert>
+	
+	<delete id="deleteLimitTemp" parameterType="hashmap">
+		delete from AM_DIVISION_TEMP_LIMITS where office_id =#{officeId} 
+			and id in (select distinct id from AM_DIVISION_TEMP where office_id =#{officeId} and TEMP_ID=#{tempId})
+	</delete>
+	
+	<delete id="deleteTemp" parameterType="hashmap">
+		delete from AM_DIVISION_TEMP where office_id =#{officeId} and TEMP_ID=#{tempId}
+	</delete>
+	
+	<delete id="deleteTempConf" parameterType="hashmap">
+		delete from AM_TEMPLATE_CONF where office_id =#{officeId} and TEMP_ID=#{tempId}
+	</delete>
+	<select id="getLimitList"  resultType="hashmap" parameterType="hashmap">
+		${sqlStr}
+	</select>
+	
+	<update id="updateTempName"  parameterType="hashmap">
+		update AM_TEMPLATE_CONF set temp_name = #{tempName}
+		where  office_id =#{officeId} and TEMP_ID=#{tempId}
+	</update>
+	
+	<select id="getGroups" resultType="com.alibaba.fastjson.JSONObject">
+		select group_name "groupName" from AM_GROUP_INFO where office_id = #{officeId} order by group_name
+	</select>
+	
+	<!-- 根据人员资质的修改，同步人员分工的信息 -->
+	<insert id="updateDivisionInfo"  parameterType="hashmap">
+		delete from AM_DIVISION_INFO where office_id =#{officeId} and worker_id=#{workId} and parent_aptitude_id=#{id}
+		<foreach collection="aptitude_id" item="item" open="and aptitude_id in(" close=")" separator=",">
+    		#{item}
+    	</foreach>
+	</insert>
+</mapper>

@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.produce.dao.FltGuardianshipDao">
+	<resultMap id="resultInfo" type="com.alibaba.fastjson.JSONObject">
+		<id column="id" property="id" jdbcType="INTEGER"/>
+		<result column="fltid" property="fltId" jdbcType="INTEGER" />
+		<result column="flight_date" property="flightDate" jdbcType="VARCHAR"/>
+		<result column="flight_number" property="flightNumber" jdbcType="VARCHAR"/>
+        <result column="aln_2code" property="aln2code" jdbcType="VARCHAR"/>
+        <result column="acttype_code" property="acttypeCode" jdbcType="VARCHAR"/>
+        <result column="aircraft_number" property="aircraftNumber" jdbcType="VARCHAR"/>
+        <result column="actstand_code" property="actstandCode" jdbcType="VARCHAR"/>
+        <result column="dmfw_num" property="dmfwNum" jdbcType="INTEGER" />
+        <result column="jw_num" property="jwNum" jdbcType="INTEGER" />
+        <result column="qj_num" property="qjNum" jdbcType="INTEGER" />
+        <result column="hwbz_num" property="hwbzNum" jdbcType="INTEGER" />
+        <result column="hy_num" property="hyNum" jdbcType="INTEGER" />
+        <result column="jz_num" property="jzNum" jdbcType="INTEGER" />
+        <result column="other_num" property="otherNum" jdbcType="INTEGER" />
+        <result column="operator" property="operator" jdbcType="VARCHAR"/>
+        <result column="del_flag" property="delFlag" jdbcType="VARCHAR"/>
+        <result column="operator_name" property="operatorName" jdbcType="VARCHAR"/>
+        <result column="aln_3code" property="aln3code" jdbcType="VARCHAR"/>
+        <result column="in_out_flag" property="inOutFlag" jdbcType="VARCHAR"/>
+	</resultMap>
+	
+	<resultMap id="fltDetail" type="com.alibaba.fastjson.JSONObject">
+		<result column="fltid" property="fltId" jdbcType="INTEGER" />
+		<result column="flight_date" property="flightDate" jdbcType="VARCHAR"/>
+		<result column="flight_number" property="flightNumber" jdbcType="VARCHAR"/>
+        <result column="aln_2code" property="aln2code" jdbcType="VARCHAR"/>
+        <result column="aircraft_number" property="aircraftNumber" jdbcType="VARCHAR"/>
+        <result column="acttype_code" property="acttypeCode" jdbcType="VARCHAR"/>
+        <result column="actstand_code" property="actstandCode" jdbcType="VARCHAR"/>
+        <result column="aln_3code" property="aln3code" jdbcType="VARCHAR"/>
+        <result column="in_out_flag" property="inOutFlag" jdbcType="VARCHAR"/>
+        <result column="depart_apt3code" property="departApt3code" jdbcType="VARCHAR"/>
+	</resultMap>
+	
+	<select id="getDataCount" resultType="java.lang.Integer" parameterType="java.util.HashMap">
+		select count(*) from BILL_FLT_LOG 
+		where to_date(flight_date,'yyyymmdd') between to_date(#{startDate},'yyyymmdd') and to_date(#{endDate},'yyyymmdd')
+		and del_flag = '0'
+	</select>
+	
+	<select id="getDataList" resultMap="resultInfo" parameterType="java.util.HashMap">
+		select t1.*,rownum rn from 
+		(
+			select t.*,rownum rn 
+			from (select * from BILL_FLT_LOG 
+				where to_date(flight_date,'yyyymmdd') between to_date(#{startDate},'yyyymmdd') and to_date(#{endDate},'yyyymmdd')
+				and del_flag = '0'
+				order by flight_date,flight_number
+			) t
+		) t1 
+		where t1.rn &lt;= ${end} and rn &gt;= ${begin}
+	</select>
+	
+	<select id="getDownDataList" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+		select FLIGHT_DATE,FLIGHT_NUMBER,AIRCRAFT_NUMBER,ACTSTAND_CODE,
+		to_char(DMFW_NUM,'fm99999990') DMFW_NUM,
+		to_char(JW_NUM,'fm99999990') JW_NUM,
+		to_char(QJ_NUM,'fm99999990') QJ_NUM,
+		to_char(HWBZ_NUM,'fm99999990') HWBZ_NUM,
+		to_char(HY_NUM,'fm99999990') HY_NUM,
+		to_char(JZ_NUM,'fm99999990') JZ_NUM,
+		to_char(OTHER_NUM,'fm99999990') OTHER_NUM,
+		OPERATOR_NAME from BILL_FLT_LOG 
+		where to_date(flight_date,'yyyymmdd') between to_date(#{startDate},'yyyymmdd') and to_date(#{endDate},'yyyymmdd')
+		and del_flag = '0'
+		order by flight_date,flight_number
+	</select>
+	
+	<select id="getDataById" resultMap="resultInfo" parameterType="java.lang.String">
+		select * from BILL_FLT_LOG where id = ${id} and del_flag = '0'
+	</select>
+	
+	<select id="getFlightDetail" resultMap="fltDetail" parameterType="java.util.HashMap">
+		select fltid,flight_date,flight_number,aircraft_number,acttype_code,
+		actstand_code,aln_3code,aln_2code,in_out_flag from fd_flt_info 
+		where flight_date = #{flightDate} 
+		and flight_number = #{flightNumber}
+		<bind name="pattern" value="'%' + inOutFlag + '%'" />
+		and in_out_flag like #{pattern}
+	</select>
+	
+	<select id="getFlightDetailHis" resultMap="fltDetail" parameterType="java.util.HashMap">
+		select fltid,flight_date,flight_number,aircraft_number,acttype_code,
+		actstand_code,aln_3code,aln_2code,in_out_flag from fd_flt_info_his@prss2prssp 
+		where flight_date = #{flightDate} 
+		and flight_number = #{flightNumber}
+		<bind name="pattern" value="'%' + inOutFlag + '%'" />
+		and in_out_flag like #{pattern}
+		and PART_DAY = #{flightDate}
+	</select>
+
+	<insert id="save" parameterType="java.util.List">
+		INSERT INTO BILL_FLT_LOG (id,fltid,flight_date,flight_number,aln_2code,acttype_code,aircraft_number,
+		actstand_code,dmfw_num,jw_num,qj_num,hwbz_num,hy_num,jz_num,other_num,operator,del_flag,update_tm,operator_name,
+		create_user,aln_3code,in_out_flag)
+		select bill_flt_log_s.NEXTVAL, t.* from(
+		<foreach collection="list" item="item" index="index" open="(" close=")" separator="union all">
+			select 
+				${item.fltId} fltid,
+				#{item.flightDate} flight_date,
+				#{item.flightNumber} flight_number,
+				#{item.aln2code} aln_2code,
+				#{item.acttypeCode} acttype_code,
+				#{item.aircraftNumber} aircraft_number,
+				#{item.actstandCode} actstand_code,
+				nvl(#{item.dmfwNum},0) dmfw_num,
+				nvl(#{item.jwNum},0) jw_num,
+				nvl(#{item.qjNum},0) qj_num,
+				nvl(#{item.hwbzNum},0) hwbz_num,
+				nvl(#{item.hyNum},0) hy_num,
+				nvl(#{item.jzNum},0) jz_num,
+				nvl(#{item.otherNum},0) other_num,
+				#{item.operator} operator,
+				'0' del_flag,
+				sysdate update_tm,
+				#{item.operatorName} operator_name,
+				#{item.createUser} create_user,
+				#{item.aln3code} aln_3code,
+				#{item.inOutFlag} in_out_flag
+			from dual
+		</foreach>
+		) t
+	</insert >
+	
+	<update id="delete" parameterType="java.lang.String">
+		update BILL_FLT_LOG set del_flag = '1' where id = ${id}
+	</update>
+	
+	<update id="update" parameterType="com.neusoft.prss.produce.entity.FltGuardianshipEntity">
+		update BILL_FLT_LOG
+	    <trim prefix="set" suffixOverrides=",">
+	    	update_tm = sysdate,
+	    	<if test="fltId != null">
+				fltid = ${fltId},
+			</if>
+			<if test="flightDate != null">
+				flight_date = #{flightDate},
+			</if>
+			<if test="flightNumber != null">
+				flight_number = #{flightNumber},
+			</if>
+			<if test="aln2code != null">
+				aln_2code = #{aln2code},
+			</if>
+			<if test="acttypeCode != null">
+				acttype_code = #{acttypeCode},
+			</if>
+			<if test="aircraftNumber != null">
+				aircraft_number = #{aircraftNumber},
+			</if>
+			<if test="actstandCode != null">
+				actstand_code = #{actstandCode},
+			</if>
+			<if test="dmfwNum != null">
+				dmfw_num = ${dmfwNum},
+			</if>
+			<if test="jwNum != null">
+				jw_num = ${jwNum},
+			</if>
+			<if test="qjNum != null">
+				qj_num = ${qjNum},
+			</if>
+			<if test="hwbzNum != null">
+				hwbz_num = ${hwbzNum},
+			</if>
+			<if test="hyNum != null">
+				hy_num = ${hyNum},
+			</if>
+			<if test="jzNum != null">
+				jz_num = ${jzNum},
+			</if>
+			<if test="otherNum != null">
+				other_num = ${otherNum},
+			</if>
+			<if test="operator != null">
+				operator = #{operator},
+			</if>
+			<if test="delFlag != null">
+				del_flag = #{delFlag},
+			</if>
+			<if test="operatorName != null">
+				operator_name = #{operatorName},
+			</if>
+			<if test="createUser != null">
+				create_user = #{createUser},
+			</if>
+			<if test="aln3code != null">
+				aln_3code = #{aln3code},
+			</if>
+			<if test="inOutFlag != null">
+				in_out_flag = #{inOutFlag},
+			</if>
+	    </trim>
+	    where id = ${id}
+	</update>
+	
+	<select id="getSysUser" resultType="com.alibaba.fastjson.JSONObject">
+	 	SELECT ID "id",NAME "text" FROM SYS_USER
+	 </select>
+</mapper>

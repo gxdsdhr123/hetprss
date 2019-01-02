@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.produce.appearPortLuggage.dao.AppearPortLuggageDao">
+
+	<select id="listDouCount" resultType="int" parameterType="java.util.Map">
+		select
+			count(*)
+		from bill_cgxljjd_hd
+	</select>
+	
+	<select id="listDou" resultType="com.alibaba.fastjson.JSONObject" parameterType="java.util.Map">
+	SELECT * FROM (SELECT B.*, rownum r FROM (select * from (
+	
+		select
+	      mainI.ID,
+	      mainI.FLIGHT_DATE,
+	      mainI.FLIGHT_NUMBER,
+	      mainI.AIRCRAFT_NUMBER,
+	      mainI.OPERATOR,
+	      users.NAME as CHALI,
+	      mainI.CREATE_DATE
+		from bill_cgxljjd_hd mainI
+		left join sys_user users on mainI.OPERATOR = users.id
+		
+	<![CDATA[) order by ${sortName} ${sortOrder}) B WHERE rownum <= #{end} ) B WHERE r > #{begin}]]>
+	</select>
+	
+	
+	<insert id="saveMain" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id">
+		<selectKey keyProperty="id" resultType="string" order="BEFORE">
+			select bill_cgxljjd_hd_s.NEXTVAL as id from dual
+		</selectKey>
+		insert into bill_cgxljjd_hd(Id,FLIGHT_DATE,FLIGHT_NUMBER,AIRCRAFT_NUMBER,ACTSTAND_CODE,CREATE_DATE,OPERATOR)
+		values(bill_cgxljjd_hd_s.nextval,#{flightDate},#{flightNumber},#{aircraftNumber},#{actstandCode},sysDate,#{chali})
+	</insert>
+	
+	
+	
+	<insert id="saveB" parameterType="java.util.Map">
+		insert into bill_cgxljjd_hd_goods(ID,BOOT_CODE,BOOT_NUMBER,DEST,STATUS,NUM_PACK,RECEIVER,OPERATOR_DATE,RECEIVE_TIME,BILL_ID) 
+		values(bill_cgxljjd_hd_goods_s.nextval,#{bootCode},#{bootNumber},#{dest},#{status},#{numPack},#{receiver},#{operatorDate},#{receiveTime},#{billId})
+	</insert>
+	
+	
+	<delete id="delMian" parameterType="string">
+		delete from bill_cgxljjd_hd where ID=#{id}
+	</delete>
+	
+	<delete id="delB" parameterType="string">
+		delete from bill_cgxljjd_hd_goods where BILL_ID=#{id}
+	</delete>
+	
+	<select id="selMain" parameterType="string" resultType="map">
+		select 
+			ID,
+			FLIGHT_DATE,
+			FLIGHT_NUMBER,
+			AIRCRAFT_NUMBER,
+			ACTSTAND_CODE,
+			OPERATOR 
+		from bill_cgxljjd_hd 
+		where ID=#{id}
+	</select>
+	
+	<select id="selB" parameterType="string" resultType="map">
+		select 
+			ID,
+			BOOT_CODE,
+			BOOT_NUMBER,
+			DEST,
+			STATUS,
+			NUM_PACK,
+			RECEIVER,
+			OPERATOR_DATE,
+			RECEIVE_TIME 
+		from bill_cgxljjd_hd_goods 
+		WHERE BILL_ID=#{id}
+	</select>
+	
+	<update id="revampMain" parameterType="java.util.Map">
+		update bill_cgxljjd_hd
+		<set>
+			<if test='flightDate !="" and flightDate !=null'>
+				FLIGHT_DATE = #{flightDate},
+			</if>
+			
+			<if test='flightNumber !="" and flightNumber !=null'>
+				FLIGHT_NUMBER = #{flightNumber},
+			</if>
+			
+			<if test='aircraftNumber !="" and aircraftNumber !=null'>
+				AIRCRAFT_NUMBER = #{aircraftNumber},
+			</if>
+			
+			<if test='actstandCode !="" and actstandCode !=null'>
+				ACTSTAND_CODE = #{actstandCode},
+			</if>
+			
+			<if test='chali !="" and chali !=null'>
+				OPERATOR = #{chali},
+			</if>
+		</set>
+		<where>
+			ID=#{id}
+		</where>
+	</update>
+	
+	
+	<update id="revampB">
+		update bill_cgxljjd_hd_goods 
+		<set>
+			<if test='bootCode !="" and bootCode !=null'>
+				BOOT_CODE = #{bootCode},
+			</if>
+			
+			<if test='bootNumber !="" and bootNumber !=null'>
+				BOOT_NUMBER = #{bootNumber},
+			</if>
+			
+			<if test='dest !="" and dest !=null'>
+				DEST = #{dest},
+			</if>
+			
+			<if test='status !="" and status !=null'>
+				STATUS = #{status},
+			</if>
+			
+			<if test='numPack !="" and numPack !=null'>
+				NUM_PACK = #{numPack},
+			</if>
+			
+			<if test='receiver !="" and receiver !=null'>
+				RECEIVER = #{receiver},
+			</if>
+			
+			<if test='operatorDate !="" and operatorDate !=null'>
+				OPERATOR_DATE = #{operatorDate},
+			</if>
+			
+			<if test='receiveTime !="" and receiveTime !=null'>
+				RECEIVE_TIME = #{receiveTime},
+			</if>
+		</set>
+		<where>
+			ID=#{id}
+		</where>
+	</update>
+	
+	
+	<delete id="delBGufl" parameterType="string">
+		delete from bill_cgxljjd_hd_goods where ID=#{id}
+	</delete>
+	
+	
+	<select id="countAppGufl" parameterType="java.util.Map" resultType="string">
+		select count(*) from bill_cgxljjd_hd where FLIGHT_DATE=#{flightDate} and FLIGHT_NUMBER=#{flightNumber}
+	</select>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+</mapper>

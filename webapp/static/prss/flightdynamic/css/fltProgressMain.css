@@ -1,0 +1,15 @@
+.label, .badge {
+	font-size: 85%;
+}
+
+.layui-table tbody tr td, .layui-table thead tr th {
+	white-space: nowrap;
+	text-align: center;
+}
+.layui-table tbody tr:hover{
+	
+}
+
+.cellHover{
+	cursor: pointer;
+}

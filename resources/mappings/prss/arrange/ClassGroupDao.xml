@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.arrange.dao.ClassGroupDao">
+	<select id="getListData" resultType="com.alibaba.fastjson.JSONObject">
+		select GROUP_ID as id,
+		GROUP_NAME as name, b.name as pm, c.name
+		as
+		sm, d.name
+		as
+		creator,to_char(a.create_time,'yyyy-mm-dd hh24:mi') as createTime
+		from
+		am_group_info a, sys_user b, sys_user c,sys_user d
+		where
+		a.pri_master_id = b.id(+)
+		and
+		a.sec_master_id = c.id(+)
+		and
+		a.creator_id = d.id
+		and a.office_id=#{officeId}
+	</select>
+	<select id="getMembersByDeptid" resultType="com.alibaba.fastjson.JSONObject">
+		select id,
+		name
+		from
+		sys_user A where  office_id=#{deptid} and DEL_FLAG='0' and not exists (
+		select B.worker_id from AM_GROUP_WORKER_REL B where A.id = B.worker_id
+		union
+		select C.PRI_MASTER_ID from AM_GROUP_INFO C where A.id = C.PRI_MASTER_ID
+		union
+		select C.SEC_MASTER_ID from AM_GROUP_INFO C where A.id = C.SEC_MASTER_ID
+		)
+	</select>
+	
+	<select id="getMembersByDeptidCgid" resultType="com.alibaba.fastjson.JSONObject">
+		select id, name
+		  from sys_user A
+		 where office_id = #{deptid} and DEL_FLAG='0'
+	</select>
+	
+	<select id="getUnselectedByDeptid" resultType="com.alibaba.fastjson.JSONObject">
+		select id,
+		name
+		from
+		sys_user where office_id=#{deptid} and DEL_FLAG='0' and id not in(
+		select distinct
+		worker_id from AM_GROUP_WORKER_REL where worker_id is not
+		null
+		union
+		select distinct PRI_MASTER_ID from am_group_info where PRI_MASTER_ID
+		is not
+		null
+		union
+		select distinct SEC_MASTER_ID from am_group_info where
+		SEC_MASTER_ID
+		is not
+		null
+		) order by create_date desc
+	</select>
+	
+	<select id="getMembersBycgid" resultType="com.alibaba.fastjson.JSONObject">
+		select u.id,u.name
+		from
+		AM_GROUP_INFO g
+		left join AM_GROUP_WORKER_REL r on
+		g.group_id
+		=
+		r.group_id
+		left join sys_user u on r.worker_id = u.id
+		where
+		g.group_id
+		=#{teamid} and u.id is not null
+	</select>
+
+	<select id="getGroupInfoByid" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		GROUP_ID as id,
+		GROUP_NAME as name,
+		PRI_MASTER_ID as pm,
+		SEC_MASTER_ID as sm,
+		CREATOR_ID
+		creator,
+		CREATE_TIME createTime
+		from
+		AM_GROUP_INFO where
+		group_id
+		=#{teamid} and rownum=1
+	</select>
+
+	<insert id="insertGroupInfo">
+		insert INTO AM_GROUP_INFO
+		(GROUP_ID,
+		GROUP_NAME,
+		OFFICE_ID,
+		PRI_MASTER_ID,
+		SEC_MASTER_ID,
+		CREATOR_ID)
+		values
+		(#{id},
+		#{name}, #{officeid},
+		#{pmID},
+		#{smID},
+		#{creator})
+	</insert>
+
+	<insert id="insertWorkerRel">
+		insert INTO AM_GROUP_WORKER_REL
+		(group_id,
+		worker_id,
+		worker_level,
+		createor_id)
+		SELECT T.*
+		FROM (
+		<foreach collection="list" item="item" index="index"
+			separator=" union all ">
+			SELECT
+			#{item.groupid},
+			#{item.workerid},
+			#{item.level},
+			#{item.creator}
+			FROM DUAL
+		</foreach>
+		) T
+	</insert>
+	
+	<select id="getCgNameCount" resultType="java.lang.String">
+		select count(GROUP_NAME) from AM_GROUP_INFO where 
+		GROUP_NAME=#{cgname}
+	</select>
+	<select id="getCgId">
+		select AM_GROUP_INFO_s.nextval from dual
+	</select>
+	<delete id="delGroupInfo">
+		delete from AM_GROUP_INFO where
+		GROUP_ID=#{groupid}
+	</delete>
+	<delete id="delGroupWorkerRel">
+		delete from AM_GROUP_WORKER_REL where
+		GROUP_ID=#{groupid}
+	</delete>
+
+</mapper>

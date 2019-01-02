@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.framework.modules.maintain.dao.RunningTimeDAO">
+
+	<!-- 获取一条数据 -->
+	<select id="getOneData" parameterType="string" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT ID,JOB_TYPE_CODE,SPOS,STYPE,EPOS,ETYPE,FTIME,RTIME FROM DIM_PARAM_TIME_CONF WHERE ID=${id}
+	</select>
+	<!-- 更新操作 -->
+	<update id="updateSql" parameterType="string" >
+		${sql}
+	</update>
+	<!-- 获取数据 -->
+	<select id="getDataList" parameterType="hashmap" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT
+		T.ID,
+		T.JOB_TYPE_CODE,
+		T.TYPENAME,
+		T.SPOS,
+		T.STYPE,
+		T.STYPE_NAME,
+		T.EPOS,
+		T.ETYPE,
+		T.ETYPE_NAME,
+		T.FTIME,
+		T.RTIME,
+		T.CREATE_TIME,
+		T.UPDATE_TIME,
+		T.OPERATOR
+		FROM (
+		SELECT
+		T1.ID,
+		T1.JOB_TYPE_CODE,
+		T2.TYPENAME,
+		T1.SPOS,
+		T1.STYPE,
+		DECODE(T1.STYPE,'1','登机口','2','机坪','') STYPE_NAME,
+		T1.EPOS,
+		T1.ETYPE,
+		DECODE(T1.ETYPE,'1','登机口','2','机坪','') ETYPE_NAME,
+		T1.FTIME,
+		T1.RTIME,
+		T1.CREATE_TIME,
+		T1.UPDATE_TIME,
+		T1.OPERATOR,
+		ROW_NUMBER() OVER(ORDER BY T1.ID) ORDER_NUM
+		FROM
+		DIM_PARAM_TIME_CONF T1 ,DIM_RESTYPE T2,DIM_RESKIND T3,SYS_USER T4
+		WHERE T1.JOB_TYPE_CODE=T2.RESTYPE AND T2.RESKIND=T3.RESKIND AND
+		T4.OFFICE_ID=T3.DEPID
+		<if
+			test="_parameter.containsKey('id') and id!=null and id!=''">
+			AND T4.ID=#{id}
+		</if>
+		<if
+			test="_parameter.containsKey('jobtypecode') and jobtypecode!=null and jobtypecode!=''">
+			AND T1.JOB_TYPE_CODE=#{jobtypecode}
+		</if>
+		<if test="_parameter.containsKey('stype') and stype!=null and stype!=''">
+			AND T1.STYPE=#{stype}
+		</if>
+		<if test="_parameter.containsKey('etype') and etype!=null and etype!=''">
+			AND T1.ETYPE=#{etype}
+		</if>
+		<if test="_parameter.containsKey('pos') and pos!=null and pos.size!=0">
+			AND (
+			T1.SPOS IN
+			<foreach item="pos_s" index="index" collection="pos" open="("
+				separator="," close=")">
+				#{pos_s}
+			</foreach>
+			OR T1.EPOS IN
+			<foreach item="pos_s" index="index" collection="pos" open="("
+				separator="," close=")">
+				#{pos_s}
+			</foreach>
+			)
+		</if>
+		) T
+		WHERE T.ORDER_NUM <![CDATA[>]]>
+		#{start} AND T.ORDER_NUM <![CDATA[<=]]>
+		#{end}
+	</select>
+	<!-- 获取总条数 -->
+	<select id="getTotalRows" parameterType="hashmap" resultType="java.lang.Integer">
+		SELECT
+		COUNT(*)
+		FROM DIM_PARAM_TIME_CONF T1 ,DIM_RESTYPE T2,DIM_RESKIND
+		T3,SYS_USER T4
+		WHERE T1.JOB_TYPE_CODE=T2.RESTYPE AND
+		T2.RESKIND=T3.RESKIND AND
+		T4.OFFICE_ID=T3.DEPID
+		AND T4.ID=#{id}
+		<if
+			test="_parameter.containsKey('jobtypecode') and jobtypecode!=null and jobtypecode!=''">
+			AND T1.JOB_TYPE_CODE=#{jobtypecode}
+		</if>
+		<if test="_parameter.containsKey('stype') and stype!=null and stype!=''">
+			AND T1.STYPE=#{stype}
+		</if>
+		<if test="_parameter.containsKey('etype') and etype!=null and etype!=''">
+			AND T1.ETYPE=#{etype}
+		</if>
+		<if test="_parameter.containsKey('pos') and pos!=null and pos.size!=0">
+			AND (
+			T1.SPOS IN
+			<foreach item="pos_s" index="index" collection="pos" open="("
+				separator="," close=")">
+				#{pos_s}
+			</foreach>
+			OR T1.EPOS IN
+			<foreach item="pos_s" index="index" collection="pos" open="("
+				separator="," close=")">
+				#{pos_s}
+			</foreach>
+			)
+		</if>
+	</select>
+	<!-- 获取作业类型 -->
+	<select id="getJobKindDataList" parameterType="string"
+		resultType="com.alibaba.fastjson.JSONObject">
+		SELECT DISTINCT RESTYPE,TYPENAME FROM DIM_RESTYPE
+		T1,DIM_RESKIND T2,SYS_USER
+		T3
+		WHERE T1.RESKIND=T2.RESKIND AND
+		T3.OFFICE_ID=T2.DEPID
+		AND T3.ID=#{id}
+	</select>
+	<!-- 登机口 -->
+	<select id="getGateDataList" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT DISTINCT GATE_CODE FROM DIM_GATE
+	</select>
+	<!-- 插入数据 -->
+	<select id="insertData" parameterType="hashmap">
+		INSERT INTO DIM_PARAM_TIME_CONF (ID,JOB_TYPE_CODE,SPOS,STYPE,EPOS,ETYPE,FTIME,RTIME,CREATE_TIME,UPDATE_TIME,OPERATOR)
+		VAlUES(DIM_PARAM_TIME_CONF_S.NEXTVAL,#{jobKind},#{spos},#{stype},#{epos},#{etype},#{stime},#{etime},SYSDATE,SYSDATE,#{user})
+	</select>
+	<!-- 相同作业类型 起点 终点 -->
+	<select id="checkData" parameterType="hashmap" resultType="java.lang.Integer">
+		SELECT COUNT(*) NUM FROM DIM_PARAM_TIME_CONF WHERE JOB_TYPE_CODE=#{jobKind} AND ((SPOS=#{spos} AND EPOS=#{epos} AND STYPE=#{stype} AND ETYPE=#{etype}) OR (SPOS=#{epos} AND EPOS=#{spos} AND STYPE=#{etype} AND ETYPE=#{stype}))
+	</select>
+	<!-- 删除一条数据 -->
+	<delete id="deleteOneData" parameterType="string">
+		DELETE FROM DIM_PARAM_TIME_CONF WHERE ID=${id}
+	</delete>
+	<!-- 批量删除 -->
+	<delete id="deleteMultiData" parameterType="string">
+		DELETE FROM DIM_PARAM_TIME_CONF WHERE ID IN
+		<foreach item="idsArr" index="index" collection="array" open="("
+			separator="," close=")">
+			${idsArr}
+		</foreach>
+	</delete>
+</mapper>

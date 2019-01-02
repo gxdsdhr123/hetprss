@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.common.dao.VideoCommonDAO">
+	<select id="getServerName" resultType="String">
+		select
+			  value
+		from dim_common_dict
+		where type = 'videoIp'
+	</select>
+
+	<select id="getServerPort" resultType="String">
+		select
+			  value
+		from dim_common_dict
+		where type = 'videoPort'
+	</select>
+
+	<select id="getServerPassword" resultType="String">
+		select
+			  value
+		from dim_common_dict
+		where type = 'videoPassword'
+	</select>
+
+	<select id="getServerUser" resultType="String">
+		select
+			  value
+		from dim_common_dict
+		where type = 'videoUser'
+	</select>
+
+	<select id="getFilePath" resultType="String">
+		select
+			  VIDEOURL
+		from dim_fixt_fixtures_v
+		where FTYPE = #{fType}
+		and CODE = #{code}
+	</select>
+</mapper>

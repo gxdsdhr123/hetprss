@@ -1,0 +1,107 @@
+html,body{
+	height:100% !important;
+}
+#chooseField{
+	height:100%;
+}
+#leftDiv,#rightDiv,#middleDiv{
+	float:left;
+	height:100%;
+}
+#leftTitle,#rightTitle{
+	height:40px;
+	width:100%;
+	line-height:40px;
+}
+#leftTitle label,#rightTitle label{
+	padding: 0px;
+	margin: 0px;
+}
+#leftTitle > div,#rightTitle > div {
+	padding: 3px 0px;
+}
+#leftDiv ul,#rightDiv .sortable{
+	height: calc(100% - 45px);
+	width: 300px;
+	overflow:auto;
+	border: 1px solid #006DC0;
+	border-radius: 5px;
+	box-shadow: 0px 0px 10px -6px;
+	margin:0px;
+}
+.choosedField{
+	position:relative;
+}
+#middleDiv{
+	width:200px;
+	padding:15px;
+	text-algin:center;
+	padding-top:40px;
+}
+#middleDiv button{
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	vertical-align: middle;
+	margin-top: 50px;
+	margin-bottom: 40px;
+}
+.container{
+	width:840px;
+	height:100%;
+}
+.bechoose{
+	background-color:#f4f4f4;
+}
+#rightDiv .hr{
+	width:100%;
+}
+#tableBox {
+	height:calc(100% - 34px);
+}
+.tab-box,.tab-content > .tab-pane{
+	height:100%;
+}
+#myTabContent {
+	height:calc(100% - 42px);
+}
+.layui-form-switch {
+	position: relative;
+	height: 18px;
+	line-height: 18px;
+	width: 42px;
+	padding: 0 5px;
+	margin-top: 0px;
+	border: 1px solid #d2d2d2;
+	border-radius: 20px;
+	cursor: pointer;
+	background-color: #fff;
+	-webkit-transition: .1s linear;
+	transition: .1s linear;
+}
+.layui-form-switch i {
+	top: 1px;
+	width: 14px;
+	height: 14px;
+}
+.layui-elem-field legend {
+	margin-left: 0px;
+	padding: 0 10px;
+	font-size: 20px;
+	font-weight: 300;
+}
+.list-group{
+	margin-bottom:0px;
+}
+.box-body{
+	font-size:12px!important;
+}
+ul.list-group li {
+	background-color: #092955;
+	border-color: #08254C;
+	border-width:2px;
+	border-left: 0;
+	border-right: 0;
+	color: #ffffff;
+	cursor: move;
+}

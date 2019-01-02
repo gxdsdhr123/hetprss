@@ -1,0 +1,439 @@
+:root {
+	--title-red:#ff0202;
+	
+	--flight-title-green:#0b3e17;
+	--flight-title-yellow:#b5a300;
+	--flight-title-blue:#2C3E6C;
+	--flight-title-gray:#6d6d6d;
+	
+	--person-title-yellow:#ffff17;
+	--person-title-stop:#79000C;
+	
+	--drag-status-conflict:#EACF02;
+	
+	--drag-status-1:#3333FF;
+	--drag-status-2:#008000;
+	--drag-status-3:#FFC000;
+	--drag-status-4:#C00000;
+	--drag-status-5:#ab6dba;
+	
+	--drag-jobState-0:#a2e8ff;
+	--drag-jobState-1:#DBEEF4;
+	--drag-jobState-4:#ff3131;
+	--drag-jobState-6:#FFFF00;
+}
+
+.clear{
+	clear:both;
+}
+.yFlight,.nFlight,.airport,.terminal,.vehicles {
+	clear:both;
+	position: absolute;
+	background: #1D5296;
+}
+
+.yFlight,.nFlight {
+	z-index : 20;
+}
+.airport,.terminal {
+	z-index : 10;
+}
+.yFlight{
+	background: #010C1E;
+}
+.nFlight{
+	background: #2C3E6C;
+}
+.yFlight .item-container, .nFlight .item-container
+{
+	background: #041540;
+	margin:5px 15px;
+/* 	border:2px solid; */
+	border-radius:5px;
+}
+.yFlight .item-container.to-more-pax, .nFlight .item-container.to-more-pax
+{
+	border:2px solid var(--flight-title-red);
+}
+.yFlight .item-container.to-more-pax .container-title, 
+.nFlight .item-container.to-more-pax .container-title
+{
+	margin-left: -12px;
+}
+.yFlight .item-container .title-time, 
+.nFlight .item-container .title-time
+{
+	font-size:12px;
+}
+.yFlight .top-container .container-title .title-red{
+	color:var(--title-red);
+}
+.airport .item-container, .terminal .item-container
+	{
+	background:#173C76;
+	margin:0 5px;
+}
+
+.airport-dragging .item-container:hover, 
+.terminal-dragging .item-container:hover
+	{
+	/* 	background: #738195; */
+	background: #041540;
+}
+
+.item-container.bottom-container.tuijian-1{
+	background-image: url(img/star3.png);
+	background-repeat: no-repeat;
+}
+.item-container.bottom-container.tuijian-2{
+	background-image: url(img/star2.png);
+	background-repeat: no-repeat;
+}
+.item-container.bottom-container.tuijian-3{
+	background-image: url(img/star1.png);
+	background-repeat: no-repeat;
+}
+
+.item-container.top-container.tuijian-1{
+	background-image: url(img/star3.png);
+	background-repeat: no-repeat;
+	background-position: bottom;
+}
+.item-container.top-container.tuijian-2{
+	background-image: url(img/star2.png);
+	background-repeat: no-repeat;
+	background-position: bottom;
+}
+.item-container.top-container.tuijian-3{
+	background-image: url(img/star1.png);
+	background-repeat: no-repeat;
+	background-position: bottom;
+}
+
+.item-container.dragging:hover
+{
+	/* 	background: #738195; */
+	background: #041540;
+}
+
+.top-container {
+	float: left;
+	background-color: inherit;
+	z-index:20;
+}
+.bottom-container{
+	float: left;
+	background-color: inherit;
+}
+.container-title{
+	margin: 5px auto;
+	text-align: center;
+	cursor:pointer;
+	word-break:keep-all;           /* 不换行 */
+	white-space:nowrap;          /* 不换行 */
+}
+.container-title .title_left{
+	float:left;
+}
+.container-title .title_right{
+	float:right;
+}
+.yFlight .container-title
+ {
+	background-color: #2C3E6C;
+	margin-left:-10px;
+	border-radius:5px;
+}
+.nFlight .container-title {
+	
+	background-color: #010C20;
+	margin-left:-10px;
+	border-radius:5px;
+}
+.yFlight .container-title .pax,
+.nFlight .container-title .pax
+{
+	font-size:10px;
+	color:#ffffff;
+}
+.yFlight .task-body,
+.airport .task-body
+{
+	position: relative;
+	overflow:auto;
+	margin:0;
+	padding:0;
+}
+.container-title h4{
+	font-size:16px;
+	font-weight: bold;
+	margin:0;
+	padding-top:5px;
+}
+.container-title span.car-id{
+	font-size:12px;
+	color:#889797;
+}
+.container-title span.under-line{
+	text-decoration: underline;
+}
+
+.container-title.title-green{
+	background-color: var(--flight-title-green);
+}
+
+.container-title.title-yellow{
+	background-color: var(--flight-title-yellow);
+}
+
+.container-title.title-blue{
+	background-color: var(--flight-title-blue);
+}
+
+.container-title.title-gray{
+	background-color: var(--flight-title-gray);
+}
+
+.container-title.selected{
+	background: #ffffff;
+	color:#0000a0;
+}
+.container-title.selected .pax{
+	color:#0000a0;
+}
+.container-title.title-status-0{
+	color:#ffffff;
+}
+.container-title.title-status-1{
+	color:var(--person-title-yellow);
+}
+.container-title.is_stop{
+	color:var(--person-title-stop);
+}
+
+.container-title.title-underline h4{
+	text-decoration: underline;
+}
+
+
+.drag-item {
+	margin: 6px auto;
+	padding: 3px 0;
+	text-align: center;
+	background: #004080;
+	box-shadow:4px 4px 4px rgba(0, 0, 0, 0.4);
+	cursor: pointer;
+	
+	-moz-user-select: -moz-none;
+   	-khtml-user-select: none;
+   	-webkit-user-select: none;
+   	-ms-user-select: none;
+   	user-select: none;
+}
+.drag-item.item-status-1{
+	background: var(--drag-status-1);
+	color:#ffffff;
+}
+.drag-item.item-status-2{
+	background: var(--drag-status-2);
+	color:#ffffff;
+}
+.drag-item.item-status-3{
+	background: var(--drag-status-3);
+	color:#ffffff;
+}
+.drag-item.item-status-4{
+	background: var(--drag-status-4);
+	color:#ffffff;
+}
+.drag-item.item-status-5{
+	background: var(--drag-status-5);
+	color:#ffffff;
+}
+.drag-item.item-jobState-0{
+	background: var(--drag-jobState-0);
+	color:#6d6d6d;
+}
+.drag-item.item-jobState-1{
+	background: var(--drag-jobState-1);
+	color:#6d6d6d;
+}
+.drag-item.item-jobState-4{
+	background: var(--drag-jobState-4);
+	color:#0000a0;
+}
+.drag-item.item-jobState-6{
+	background: var(--drag-jobState-6);
+	color:#6d6d6d;
+}
+.drag-item.item-status-conflict{
+	background: var(--drag-status-conflict);
+	color:#0000a0;
+}
+.drag-item.high{
+	background: #37ffff;
+	color:#0000a0;
+}
+
+.airport-item,.terminal-item{
+	float:left;
+	z-index:10;
+}
+.airport-title {
+	font-weight:bold;
+	float:left;
+	word-wrap: break-word;
+	padding-left:5px;
+	letter-spacing: 10px;
+}
+.terminal-title {
+	font-weight:bold;
+	float:left;
+	word-wrap: break-word;
+	padding-left:5px;
+	letter-spacing: 10px;
+}
+.airport-content{
+	float:left;
+	overflow: auto;
+	position: relative;
+	background: #173C76;
+}
+.airport-content .drag-item{
+	float:left;
+	margin:6px 10px;
+	padding:3px 0;
+	word-break:keep-all;           /* 不换行 */
+	white-space:nowrap;          /* 不换行 */
+}
+.airport-content .drag-item .drag-red{
+	color : var(--flight-title-red);
+}
+.airport-content .drag-item.item-status-0{
+	background: #ffffff;
+	color:#000000;
+	line-height:40px;
+}
+.airport-content .drag-item.item-status-4{
+	background: var(--flight-title-red);
+	color:#ffffff;
+	line-height:40px;
+}
+.airport-content .drag-item.item-status-1{
+	background: var(--drag-status-1);
+	color:#ffffff;
+}
+.airport-content .drag-item.item-status-2{
+	background: var(--drag-status-2);
+	color:#ffffff;
+}
+
+.bottom-container .container-title,.bottom-container .drag-item{
+	
+}
+
+.sBar{
+	position: absolute;
+	background-color: #052954;
+	width:100%;
+}
+.sBar span {
+	position: absolute;
+	display:inline-block;
+	min-width:50px;
+	background-color:#2D55BA;
+	top: 0;
+	left: 0;
+	cursor: pointer;
+	border-radius:30px;
+}
+.item-space{
+	float:left;
+}
+#planRangeDate {
+	padding: 20px 20px 0px 20px;
+}
+
+#trajectory{
+	padding: 20px 20px 0px 20px;
+}
+
+.planRangeDate {
+	display: inline-block !important;
+	width: 45% !important;
+}
+
+.planRangeDiv {
+	width: 140px;
+}
+
+.planRangeLable {
+	width: 110px;
+}
+
+.yFlight .item-container.search-result, 
+.nFlight .item-container.search-result
+{
+	background: #d7feff;
+}
+.yFlight .item-container.search-result .container-title, 
+.nFlight .item-container.search-result .container-title
+{
+	background: #d7feff;
+	color:#0000a0;
+}
+.yFlight .item-container.search-result .container-title .pax, 
+.nFlight .item-container.search-result .container-title .pax
+{
+	color:#0000a0;
+}
+.airport .item-container.search-result, .terminal .item-container.search-result
+{
+	background:#02c4ba;
+}
+#context-menu .dropdown a b {
+    position: absolute;
+    right: 0px;
+    top: 7px;
+}
+#workDiv{
+	height : 100%;
+}
+#workDiv .leftDiv{
+	width:300px;
+	height:100%;
+	float:left;
+	padding: 10px;
+}
+#workDiv .rightDiv{
+	height: 100%;
+	margin-left: 300px;
+	padding: 10px;
+}
+#workDiv ul{
+	position : relative;
+	max-height: calc(100% - 34px);
+}
+#workDiv li{
+	-moz-user-select: -moz-none;
+   	-khtml-user-select: none;
+   	-webkit-user-select: none;
+   	-ms-user-select: none;
+   	user-select: none;
+}
+#workDiv li:hover{
+	background-color:#002F63;
+}
+#workDiv .choosed{
+	background-color: #0C4C7D;
+}
+
+.layui-form-switch{
+	width:55px;
+	height:25px;
+	margin-top:5px;
+}
+.legend{
+	font-size:20px;
+	vertical-align: middle;
+}

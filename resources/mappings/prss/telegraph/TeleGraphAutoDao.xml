@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.telegraph.dao.TeleGraphAutoDao">
+
+	<select id="getAutoListCount" resultType="int"
+		parameterType="com.alibaba.fastjson.JSONObject">
+		SELECT COUNT(*) NUM
+		FROM TM_SEND_AUTO T
+		LEFT JOIN TM_TEMPLATE H
+		ON
+		T.TG_TEMPL_ID = H.ID
+		WHERE 1 = 1
+		<if test="tg_name != null and tg_name != ''">AND H.TG_NAME LIKE '%${tg_name}%'</if>
+		<if test="crtime != null and crtime != ''">AND TO_CHAR(T.CREATETIME, 'yyyyMMdd') = '${crtime}'</if>
+
+	</select>
+
+	<select id="getAutoList" resultType="com.alibaba.fastjson.JSONObject"
+		parameterType="com.alibaba.fastjson.JSONObject">
+		SELECT *
+		FROM (SELECT T.*, ROWNUM NUM
+		FROM (select *
+		FROM ( SELECT T.ID,
+		POCE_TYPE,
+		B.EVENT_NAME,
+		CRUSERID,
+		A.NAME,
+		TO_CHAR(T.CREATETIME,
+		'yyyy-MM-dd hh24:mi:ss') CREATETIME,
+		T.TG_TEXT,
+		RULE_ID,
+		E.RULE,
+		T.ALN_2CODE,
+		C.DESCRIPTION_CN,
+		TG_TEMPL_ID,
+		H.TG_NAME,
+		TG_SEND_TYPE,
+		DECODE(SUBSTR(H.FIO_TYPE,0,1), 'A', '进港', '出港') FIO_TYPE,
+		DECODE(t.tg_send_type,1,'手动发送','自动发送') SEND_TYPE_NAME
+		FROM TM_SEND_AUTO
+		T
+		LEFT JOIN SYS_USER A
+		ON T.CRUSERID = A.ID
+		LEFT JOIN SYS_EVENT B
+		ON
+		T.POCE_TYPE = B.EVENT_ID
+		LEFT JOIN DIM_AIRLINE C
+		ON T.ALN_2CODE =
+		C.AIRLINE_CODE
+		LEFT JOIN RM_RULE_INFO E
+		ON T.RULE_ID = E.ID
+		LEFT JOIN
+		TM_TEMPLATE H
+		ON T.TG_TEMPL_ID = H.ID
+		WHERE 1 = 1
+		<if test="tg_name != null and tg_name != ''">AND H.TG_NAME LIKE '%${tg_name}%'</if>
+		<if test="crtime != null and crtime != ''">AND TO_CHAR(T.CREATETIME, 'yyyyMMdd') = '${crtime}'</if>
+		) T order by ${sortName} ${sortOrder}
+		) t
+		WHERE 1=1 
+		          	<![CDATA[AND ROWNUM <= ${end} ]]>
+		)
+				 <![CDATA[ WHERE NUM >${begin}]]>
+	</select>
+
+	<select id="getEventList" resultType="com.alibaba.fastjson.JSONObject">
+		select * from SYS_EVENT
+<!-- 		where EVENT_TYPE = 'TM' -->
+	</select>
+
+	<select id="getAirlineList" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		AIRLINE_CODE,AIRLINE_CODE||'/'||DESCRIPTION_CN DESCRIPTION_CN from DIM_AIRLINES 
+		where D_OR_I = 'I'
+    	ORDER BY airline_code
+	</select>
+
+	<select id="queryAutoById" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT T.ID,
+		POCE_TYPE,
+		CRUSERID,
+		A.NAME,
+		TO_CHAR(T.CREATETIME, 'yyyy-MM-dd hh24:mi:ss')
+		CREATETIME,
+		T.TG_TEXT,
+		RULE_ID,
+		E.RULE,
+		E.COLIDS,
+		T.ALN_2CODE,
+		TG_TEMPL_ID,
+		H.TG_NAME,
+		H.TG_TEXT,
+		T.VARCOLS,
+		TG_SEND_TYPE,
+		E.DRL_STR,
+		E.TEXT,
+		DECODE(T.TG_SEND_TYPE, 1,
+		'手动发送', '自动发送') SEND_TYPE_NAME
+		FROM TM_SEND_AUTO T
+		LEFT JOIN SYS_USER A
+		ON T.CRUSERID = A.ID
+		LEFT JOIN RM_RULE_INFO E
+		ON T.RULE_ID = E.ID
+		LEFT
+		JOIN TM_TEMPLATE H
+		ON T.TG_TEMPL_ID = H.ID
+		WHERE 1 = 1
+		AND T.ID = ${id}
+	</select>
+
+	<select id="getTelegraphTempl" resultType="com.alibaba.fastjson.JSONObject"
+		parameterType="com.alibaba.fastjson.JSONObject">
+		SELECT T.ID,
+		       T.TG_NAME,
+		       T.TG_TEXT,
+		       Y.TG_NAME AS TYPENAME,
+		       T.ALN_2CODE,
+		       A.DESCRIPTION_CN,
+		       T.VARCOLS
+		  FROM TM_TEMPLATE T
+		  LEFT JOIN TM_TYPE Y
+		    ON T.TG_TYPE_ID = Y.ID
+		  LEFT JOIN DIM_AIRLINE A
+		    ON T.ALN_2CODE = A.AIRLINE_CODE
+		 WHERE 1 = 1
+		<if test="airline_code != null and airline_code != ''">and t.aln_2code = '${airline_code}'</if>
+		<if test="flag != null and flag == 'send'">and t.ifanalysis =  0 </if>
+<!-- 		<if test="eventId != null and eventId != ''">AND t.event_id = ${eventId}</if> -->
+ 		ORDER BY t.createtime DESC
+	</select>
+
+	<select id="getTelegraphAutoId" resultType="string">
+		select
+		TM_SEND_AUTO_S.nextval from dual
+	</select>
+
+	<select id="getAutoRuleId" resultType="string">
+		select
+		RM_RULE_INFO_S.nextval from dual
+	</select>
+	
+	<select id="getSendAuto" resultType="com.alibaba.fastjson.JSONObject">
+		 SELECT T.*, ROWNUM NUM
+		  FROM (SELECT A.CREATE_TIME,
+		               A.TG_TEMPL_ID,
+		               A.ID,
+		               A.TG_TEXT,
+		               A.TG_SEND_TYPE,
+<!-- 		               C.TG_CODE || '【' || C.TG_NAME || '】' TG_CODE, -->
+		               C.TG_CODE TG_CODE,
+		               A.WHILE_TIME,
+		               A.ALN_2CODE,
+		               TO_CHAR(A.SEND_TIME, 'yyyy-mm-dd hh24:mi:ss') SEND_TIME,
+		               TO_CHAR(A.STOP_TIME, 'yyyy-mm-dd hh24:mi:ss') STOP_TIME,
+		               A.STOP_CONDITION,
+		               A.SEND_STATUS,
+		               A.FLIGHTNUMBER,
+		               A.FLIGHT_DATE,
+		               A.FLTID,
+		               A. TG_TYPE_ID,
+		               A.VARCOLS,
+		               E.TG_SITE_TYPE,
+		               A.AUTOID,
+		               A.ADDRESS
+		          FROM TM_SEND_MANUAL A
+		          LEFT JOIN TM_TEMPLATE B
+		            ON A.TG_TEMPL_ID = B.ID
+		          LEFT JOIN TM_TEMPLATE_FROM E
+            		ON A.TG_TEMPL_ID = E.TG_TEMPL_ID
+		          LEFT JOIN TM_TYPE C
+		            ON B.TG_TYPE_ID = C.ID
+		         WHERE A.FLTID =#{0}
+		         ORDER BY A.CREATE_TIME DESC) T
+		 WHERE 1 = 1
+		   AND ROWNUM = 1
+
+	</select>
+
+	<insert id="insertAuto" parameterType="com.alibaba.fastjson.JSONObject">
+		insert into TM_SEND_AUTO
+		(ID,POCE_TYPE,CRUSERID,CREATETIME,TG_TEXT,ALN_2CODE,TG_TEMPL_ID,TG_SEND_TYPE,RULE_ID,VARCOLS)
+		values
+		(#{vo.id},#{vo.eventId},#{vo.userId},sysdate,#{vo.mtext},#{vo.airline_code},#{vo.mtemplid},#{vo.sendType},#{vo.ruleId},
+		#{vo.varcols})
+	</insert>
+
+	<insert id="insertAutoRule" parameterType="com.alibaba.fastjson.JSONObject">
+		insert into
+		RM_RULE_INFO (ID,COLIDS,RULE,IF_MANUAL,IF_VALID,CREATE_TIME,CREATE_USER,TEXT,DRL_STR)
+		values
+		(#{vo.ruleId},#{vo.colids},#{vo.drools},0,1,sysdate,${vo.userId},#{vo.condition},#{vo.expression})
+	</insert>
+
+	<update id="updateAuto" parameterType="com.alibaba.fastjson.JSONObject">
+		update TM_SEND_AUTO set
+		POCE_TYPE = #{vo.eventId},TG_TEXT= #{vo.mtext},ALN_2CODE=#{vo.airline_code},
+		TG_TEMPL_ID= #{vo.mtemplid},TG_SEND_TYPE= #{vo.sendType},VARCOLS= #{vo.varcols}
+		,RULE_ID=#{vo.ruleId}
+		where ID = #{vo.id}
+	</update>
+
+	<update id="updateAutoRule" parameterType="com.alibaba.fastjson.JSONObject">
+		update RM_RULE_INFO
+		set COLIDS = #{vo.colids},RULE = #{vo.drools},UPDATE_TIME= sysdate,
+		UPDATE_USER=#{vo.userId},TEXT=#{vo.condition},DRL_STR = #{vo.expression}
+		where ID =
+		#{vo.ruleId}
+	</update>
+
+	<delete id="deleteAutoList" parameterType="string">
+		delete from TM_SEND_AUTO where id in
+		<foreach item="id" index="index" collection="array" open="("
+			separator="," close=")">
+			#{id}
+		</foreach>
+	</delete>
+
+	<delete id="deleteAutoRuleList" parameterType="string">
+		DELETE FROM RM_RULE_INFO
+		WHERE ID IN (SELECT RULE_ID FROM TM_SEND_AUTO
+		WHERE ID IN
+		<foreach item="id" index="index" collection="array" open="("
+			separator="," close=")">
+			#{id}
+		</foreach>
+		)
+	</delete>
+
+	<select id="getColumn" resultType="com.alibaba.fastjson.JSONObject">
+		select * from sys_grid_column
+		where id in(${colids})
+	</select>
+	
+	<!-- 根据MAP插入TM_SEND_MANUAL信息 -->
+	<insert id="insertManualInfo"  >
+		INSERT INTO TM_SEND_MANUAL 
+		(ID,USERID,CREATE_TIME,TG_TEXT,VARCOLS,TG_TEMPL_ID,TG_SEND_TYPE,SEND_TIME,WHILE_TIME,
+		STOP_TIME,STOP_CONDITION,SEND_STATUS,FLIGHTNUMBER,FLIGHT_DATE,FLTID,ALN_2CODE,AUTOID,ADDRESS) VALUES
+		(TM_SEND_MANUAL_S.NEXTVAL,#{userId},SYSDATE,#{mtext},#{varcols},#{mtemplid},#{sendType},
+		TO_DATE(#{sendtime},'yyyy-mm-dd hh24:mi:ss'),#{whiletime},TO_DATE(#{stoptime},'yyyy-mm-dd hh24:mi:ss'),
+		#{stopcondition},#{sendstatus},#{flightnumber},#{flightdate},#{fltid},#{aln2code},#{autoid},#{address})
+	</insert>
+	
+	<update id="updateManualInfo">
+		update TM_SEND_MANUAL
+		set
+		USERID=#{userId},
+		TG_TEXT = #{mtext},
+		VARCOLS = #{varcols},
+		TG_TEMPL_ID = #{mtemplid},
+		TG_SEND_TYPE = #{sendType},
+		SEND_TIME = TO_DATE(#{sendtime},'yyyy-mm-dd hh24:mi:ss'),
+		WHILE_TIME = #{whiletime},
+		STOP_TIME = TO_DATE(#{stoptime},'yyyy-mm-dd hh24:mi:ss'),
+		STOP_CONDITION = #{stopcondition},
+		FLIGHTNUMBER = #{flightnumber},
+		FLIGHT_DATE = #{flightdate},
+		FLTID = #{fltid},
+		SEND_STATUS=1,
+		ADDRESS = #{address},
+		ALN_2CODE = #{aln2code}
+		where id = ${manualId}
+	</update>
+	
+	<update id="updateManualStop">
+		update TM_SEND_MANUAL
+		set SEND_STATUS = 2
+		where id = ${manualId}
+	</update>
+	
+	
+	<select id="getFltInfo" resultType="com.alibaba.fastjson.JSONObject">
+		select fltId ,flight_number from fd_flt_info where fltid = #{0}
+	</select>
+	
+</mapper>

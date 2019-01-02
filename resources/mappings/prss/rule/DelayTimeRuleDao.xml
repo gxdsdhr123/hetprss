@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.rule.dao.DelayTimeRuleDao">
+	<insert id="insertDelayTimeInfo" parameterType="com.alibaba.fastjson.JSONObject" useGeneratedKeys="true" keyProperty="id">
+		<selectKey keyProperty="id" resultType="String" order="BEFORE" >
+        	select JM_DELAY_TIME_RULE_S.NEXTVAL as id from dual
+		</selectKey>
+		INSERT INTO JM_DELAY_TIME_RULE (id,en_name,cn_name,if_valid,creator) 
+		VALUES (
+			#{id},
+			#{en_name, jdbcType=VARCHAR},
+			#{cn_name, jdbcType=VARCHAR},
+			#{if_valid, jdbcType=INTEGER},
+			#{creator, jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<update id="updateDelayTimeInfo" parameterType="com.alibaba.fastjson.JSONObject">
+		UPDATE JM_DELAY_TIME_RULE SET 
+			cn_name=#{cn_name, jdbcType=VARCHAR}, 
+			if_valid=#{if_valid, jdbcType=INTEGER}
+		where id = #{id}
+	</update>
+	
+	<insert id="insertRuleInfo" parameterType="com.alibaba.fastjson.JSONObject" useGeneratedKeys="true" keyProperty="id">
+        <selectKey keyProperty="id" resultType="String" order="BEFORE" >
+            select RM_RULE_INFO_S.NEXTVAL as id from dual
+        </selectKey>
+        INSERT INTO RM_RULE_INFO (ID, COLIDS, RULE,  IF_VALID, CREATE_TIME, CREATE_USER, TEXT, DRL_STR) 
+        <if test="type != null and type =='extend'">
+	        VALUES (
+	            #{id},
+	            #{extend_colids, jdbcType=VARCHAR},
+	            #{extend_drools, jdbcType=VARCHAR},
+	            #{1, jdbcType=INTEGER},
+	            sysdate, 
+	            #{creator, jdbcType=VARCHAR},
+	            #{extend_condition, jdbcType=VARCHAR},
+	            #{extend_expression, jdbcType=VARCHAR}
+	        )
+        </if>
+    </insert>
+    
+	<insert id="insertDelayTimeDetail" parameterType="com.alibaba.fastjson.JSONObject" useGeneratedKeys="true" keyProperty="id">
+        <selectKey keyProperty="id" resultType="String" order="BEFORE" >
+            select JM_DELAY_TIME_DETAIL_S.NEXTVAL as id from dual
+        </selectKey>
+        INSERT INTO JM_DELAY_TIME_DETAIL (id,delay_time_id,priority,acttype_code,aln_code,extend_rule_id,in_out, colids, rule, text, drl_str) 
+        VALUES (
+            #{id},
+            #{delay_time_id, jdbcType=INTEGER},
+            #{priority, jdbcType=INTEGER},
+            #{acttypeCode, jdbcType=VARCHAR},
+            #{alnCode, jdbcType=VARCHAR},
+            #{extend_rule_id, jdbcType=INTEGER},
+            #{ruleExtInOutPort, jdbcType=VARCHAR},
+            #{time_colids, jdbcType=VARCHAR},
+            #{time_condition, jdbcType=VARCHAR},
+            #{time_text, jdbcType=VARCHAR},
+            #{time_expression, jdbcType=VARCHAR}
+        )
+    </insert>
+    
+    <delete id="deleteDelayTimeInfo" parameterType="String">
+        delete from jm_delay_time_rule where id = #{ruleId}
+    </delete>
+	
+    <delete id="deleteRuleInfo" parameterType="String">
+        delete from RM_RULE_INFO where id in(
+            select extend_rule_id from jm_delay_time_detail where delay_time_id= #{ruleId}
+            )
+    </delete>
+	
+    <delete id="deleteDelayTimeDetail" parameterType="String">
+        delete from jm_delay_time_detail where delay_time_id = #{ruleId}
+    </delete>
+	<select id="getRuleListCount" resultType="int" parameterType="Map">
+        SELECT COUNT(9) NUM
+          FROM jm_delay_time_rule T
+        WHERE 1=1 
+        <if test="name!=null and name!=''">and cn_name like '%'||#{name}||'%' </if>
+    </select>
+    
+    <select id="getRuleList" resultType="Map" parameterType="Map">
+        SELECT * FROM (
+            SELECT t.id,
+                   t.cn_name,
+                   t.en_name,
+                   decode(t.if_valid, 1, '是', '否') if_valid,
+                   a.name creator,
+                   to_char(t.create_time, 'yyyy/mm/dd hh24:mi:ss') create_time,
+                   ROW_NUMBER() OVER(ORDER BY T.ID DESC) NUM
+              FROM jm_delay_time_rule T
+              join sys_user a
+                on t.creator = a.id
+            WHERE 1=1 
+            <if test="name!=null and name!=''"> and t.cn_name like '%'||#{name}||'%' </if>
+         ORDER BY NUM )
+         WHERE <![CDATA[NUM>#{begin} AND NUM<=#{end}]]>
+    </select>
+    
+    <select id="getDelayTimeInfo" resultType="com.alibaba.fastjson.JSONObject"  parameterType="string">
+        SELECT id,en_name,cn_name,if_valid
+          FROM jm_delay_time_rule T
+         WHERE T.id =#{0}
+    </select>
+    
+    <select id="getDetailList" parameterType="map" resultType="map">
+        select t.id            "id",
+		       t.delay_time_id "delay_time_id",
+		       t.priority      "priority",
+		       t.acttype_code  "acttypeCode",
+		       t.aln_code      "alnCode",
+		       a.text          "extend_condition",
+		       a.colids        "extend_colids",
+		       a.rule          "extend_drools",
+		       a.drl_str       "extend_expression",
+		       t.text          "time_drools",
+		       t.colids        "time_colids",
+		       t.rule          "time_condition",
+		       t.drl_str       "time_expression",
+               t.in_out        "ruleExtInOutPort",
+		       (SELECT to_char(wm_concat(description_en))
+		          FROM dim_actype act
+		         WHERE t.acttype_code like '%' || act.actype_code || '%') "acttypeText",
+		       (SELECT to_char(wm_concat(description_cn))
+		          FROM dim_airlines aln
+                WHERE t.aln_code like '%' || aln.airline_code || '%') "alnText"
+		  from jm_delay_time_detail t
+		  left join rm_rule_info a
+		    on t.extend_rule_id = a.id
+         WHERE t.delay_time_id = #{id}
+         order by priority desc
+    </select>
+    
+    <select id="loadActtypeCode" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT actype_code code,description_en description FROM dim_actype 
+        WHERE 1=1 
+        <if test="q != null and q !=''">
+            and description_en LIKE '%${q}%'
+        </if>
+        <![CDATA[ AND rownum >= ${start} AND rownum <= ${end}  ]]> 
+          ORDER BY CODE       
+    </select>
+    
+    <select id="loadAlnCode" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT airline_code code,description_cn description FROM dim_airlines 
+        WHERE 1=1
+        <if test="q != null and q !=''">
+            and description_cn LIKE '%${q}%'
+        </if>
+        <![CDATA[ AND rownum >= ${start} AND rownum <= ${end}  ]]> 
+          ORDER BY CODE       
+    </select>
+    
+    <select id="filterInfo" parameterType="com.alibaba.fastjson.JSONObject" resultType="int">
+        SELECT count(id) num FROM JM_DELAY_TIME_RULE 
+        WHERE 1=1
+        and en_name <![CDATA[ <> ]]> #{en_name}
+        <if test="id != null and id !=''">
+            and id <![CDATA[ <> ]]> #{id}
+        </if>
+    </select>
+    
+    <select id="getVarList" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT COL_DESC AS "name", COL_ALIAS AS "en", ID AS "no"
+          FROM SYS_GRID_COLUMN
+         WHERE TAB_ID IN (SELECT ID FROM SYS_GRID_TABLE WHERE SCHEMA_ID = 23)
+         ORDER BY ID
+    </select>
+    
+    <select id="getColumn" resultType="com.alibaba.fastjson.JSONObject">
+        select * from sys_grid_column where id in(${colids})
+    </select>
+    
+    <insert id="updateFdPlus" parameterType="com.alibaba.fastjson.JSONObject">
+     MERGE INTO fd_flt_plus_conf P
+        USING (SELECT #{en_name} ENNAME FROM dual) N
+        ON ( n.ENNAME = P.ATTR_NAME)
+        WHEN MATCHED THEN
+            UPDATE SET ATTR_DISPLAY_NAME = #{cn_name}
+            WHERE P.ATTR_NAME = #{en_name}
+        WHEN NOT MATCHED THEN
+            INSERT (ATTR_ID,ATTR_NAME,ATTR_DISPLAY_NAME) 
+            VALUES ((select max(ATTR_ID) + 1 from fd_flt_plus_conf),#{en_name},#{cn_name})
+    </insert>
+    
+    <delete id="deleteFdPlus" parameterType="com.alibaba.fastjson.JSONObject">
+        delete from fd_flt_plus_conf where ATTR_NAME in(select en_name from JM_DELAY_TIME_RULE where id= #{ruleId})
+    </delete>
+</mapper>

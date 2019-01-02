@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.workflow.dao.NodeDao">
+	<resultMap id="BaseResultMap" type="com.neusoft.prss.workflow.entity.Node">
+		<id column="ID" jdbcType="DECIMAL" property="id" />
+		<result column="NAME" jdbcType="VARCHAR" property="name" />
+		<result column="LABEL" jdbcType="VARCHAR" property="label" />
+		<result column="JOB_KIND" jdbcType="VARCHAR" property="jobKind" />
+		<result column="JOB_TYPE" jdbcType="VARCHAR" property="jobType" />
+		<result column="JOB_KIND_ID" jdbcType="VARCHAR" property="jobKindId" />
+		<result column="JOB_TYPE_ID" jdbcType="VARCHAR" property="jobTypeId" />
+		<result column="AFT_MSG1" jdbcType="DECIMAL" property="aftMsg1" />
+		<result column="AFT_MSG2" jdbcType="DECIMAL" property="aftMsg2" />
+		<result column="NOTIFY_MSG" jdbcType="DECIMAL" property="notifyMsg" />
+		<result column="ALARM_MSG_LV1" jdbcType="DECIMAL" property="alarmMsgLv1" />
+		<result column="ALARM_MSG_LV2" jdbcType="DECIMAL" property="alarmMsgLv2" />
+		<result column="ALARM_MSG_LV3" jdbcType="DECIMAL" property="alarmMsgLv3" />
+		<result column="ALARM_MSG_LV4" jdbcType="DECIMAL" property="alarmMsgLv4" />
+		<result column="ALARM_MSG_LV5" jdbcType="DECIMAL" property="alarmMsgLv5" />
+		<result column="NOTIFY_TM" jdbcType="VARCHAR" property="notifyTm" />
+		<result column="ALARM_TM1" jdbcType="VARCHAR" property="alarmTm1" />
+		<result column="ALARM_TM2" jdbcType="VARCHAR" property="alarmTm2" />
+		<result column="ALARM_TM3" jdbcType="VARCHAR" property="alarmTm3" />
+		<result column="ALARM_TM4" jdbcType="VARCHAR" property="alarmTm4" />
+		<result column="ALARM_TM5" jdbcType="VARCHAR" property="alarmTm5" />
+		<result column="ICON" jdbcType="VARCHAR" property="icon" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		ID, NAME, LABEL, JOB_KIND, JOB_TYPE, AFT_MSG1, AFT_MSG2,
+		NOTIFY_MSG,
+		ALARM_MSG_LV1,
+		ALARM_MSG_LV2, ALARM_MSG_LV3, ALARM_MSG_LV4,
+		ALARM_MSG_LV5, NOTIFY_TM, ALARM_TM1,
+		ALARM_TM2, ALARM_TM3, ALARM_TM4,
+		ALARM_TM5, ICON
+	</sql>
+	<select id="getNodeList" resultMap="BaseResultMap">
+		select 
+			a.ID, 
+			NAME, 
+			LABEL, 
+			b.kindname JOB_KIND, 
+			c.typename JOB_TYPE,
+			a.job_kind  job_kind_id,
+			a.job_type job_type_id
+		  from WF_NODE a, dim_reskind b, dim_restype c
+		 where a.job_kind = b.reskind
+		   and c.restype = a.job_type
+			<if test="jobKind!=null and jobKind!=''">
+				and b.reskind=#{jobKind}
+			</if>
+			<if test="jobType!=null and jobType!=''">
+				and c.restype = #{jobType}
+			</if>
+		  order by a.job_kind,a.job_type,a.id desc
+	</select>
+	<select id="getNodeById" resultMap="BaseResultMap">
+		select
+		<include refid="Base_Column_List" />
+		from WF_NODE
+		where ID = #{id}
+	</select>
+	<insert id="doInsertNode" parameterType="com.neusoft.prss.workflow.entity.Node" useGeneratedKeys="true" keyProperty="id">
+		<selectKey resultType="String" keyProperty="id" order="BEFORE">
+			SELECT
+			<choose>
+				<when test="id!='null' and id!=''">
+					#{id}
+				</when>
+				<otherwise>
+					WF_NODE_S.nextval
+				</otherwise>
+			</choose>
+			from dual
+		</selectKey>
+		insert into WF_NODE
+		(ID,
+		NAME,
+		LABEL,
+		JOB_KIND,
+		JOB_TYPE,
+		AFT_MSG1,
+		AFT_MSG2,
+		NOTIFY_MSG,
+		ALARM_MSG_LV1,
+		ALARM_MSG_LV2,
+		ALARM_MSG_LV3,
+		ALARM_MSG_LV4,
+		ALARM_MSG_LV5,
+		NOTIFY_TM,
+		ALARM_TM1,
+		ALARM_TM2,
+		ALARM_TM3,
+		ALARM_TM4,
+		ALARM_TM5,
+		ICON)
+		values 
+		(#{id},
+		#{name},
+		#{label},
+		#{jobKind},
+		#{jobType},
+		#{aftMsg1},
+		#{aftMsg2},
+		#{notifyMsg},
+		#{alarmMsgLv1},
+		#{alarmMsgLv2},
+		#{alarmMsgLv3},
+		#{alarmMsgLv4},
+		#{alarmMsgLv5},
+		#{notifyTm},
+		#{alarmTm1},
+		#{alarmTm2},
+		#{alarmTm3},
+		#{alarmTm4},
+		#{alarmTm5},
+		#{icon})
+	</insert>
+	<update id="doUpdateNode" >
+		update WF_NODE
+		set NAME = #{name},
+		LABEL = #{label},
+		JOB_KIND = #{jobKind},
+		JOB_TYPE = #{jobType},
+		AFT_MSG1 = #{aftMsg1},
+		AFT_MSG2 = #{aftMsg2},
+		NOTIFY_MSG = #{notifyMsg},
+		ALARM_MSG_LV1 = #{alarmMsgLv1},
+		ALARM_MSG_LV2 = #{alarmMsgLv2},
+		ALARM_MSG_LV3 = #{alarmMsgLv3},
+		ALARM_MSG_LV4 = #{alarmMsgLv4},
+		ALARM_MSG_LV5 = #{alarmMsgLv5},
+		NOTIFY_TM = #{notifyTm},
+		ALARM_TM1 = #{alarmTm1},
+		ALARM_TM2 = #{alarmTm2},
+		ALARM_TM3 = #{alarmTm3},
+		ALARM_TM4 = #{alarmTm4},
+		ALARM_TM5 = #{alarmTm5},
+		ICON = #{icon},
+		UPDATE_DATE = sysdate
+		WHERE ID = #{id}
+	</update>
+	<select id="getNodeKindList" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		reskind, kindname
+		from
+		dim_reskind
+	</select>
+	<select id="getNodeTypeByKind" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		restype,
+		typename
+		from
+		dim_restype
+		where
+		reskind =
+		#{resKind}
+	</select>
+	<delete id="delNode" >
+		delete from WF_NODE
+		where ID = #{id}
+	</delete>
+	<select id="getNodeByType" resultMap="BaseResultMap">
+		select
+		<include refid="Base_Column_List" />
+		from WF_NODE
+		where job_type = #{resType}
+		order by name
+	</select>
+	<select id="getTemplateList" resultType="com.alibaba.fastjson.JSONObject">
+		select id, tempname, mtitle from mm_template
+	</select>
+</mapper>

@@ -1,0 +1,24 @@
+#topDiv{
+	margin:10px 0px;
+	color:#c7c5c0;
+	padding-left:20px;
+}
+#searchBut{
+	border-color:#0C4C7D;
+}
+.layui-input{
+	width:8%;
+	margin-right:30px;
+	display:inline;
+}
+.layui-table{
+	text-align:center;
+	margin:5px 0px;
+}
+.run_container{
+	background-color:#002034 !important;
+}
+.box{
+	border-top:none !important;
+	
+}

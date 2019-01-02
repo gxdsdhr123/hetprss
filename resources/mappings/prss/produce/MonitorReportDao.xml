@@ -1,0 +1,513 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.produce.dao.MonitorReportDao">
+
+	<resultMap id="SaFltcrOscarDayResultMap" type="com.neusoft.prss.produce.entity.MonitorReportEntity">
+		<id property="id" column="ID"/>
+		<result property="statDay" column="STAT_DAY"/>
+		<result property="inFltid" column="IN_FLTID"/>
+		<result property="outFltid" column="OUT_FLTID"/>
+		<result property="inFlightNumber" column="IN_FLIGHT_NUMBER"/>
+		<result property="outFlightNumber" column="OUT_FLIGHT_NUMBER"/>
+		<result property="aln2code" column="ALN_2CODE"/>
+		<result property="inAircraftNumber" column="IN_AIRCRAFT_NUMBER"/>
+		<result property="outAircraftNumber" column="OUT_AIRCRAFT_NUMBER"/>
+		<result property="inActtypeCode" column="IN_ACTTYPE_CODE"/>
+		<result property="outActtypeCode" column="OUT_ACTTYPE_CODE"/>
+		<result property="actstandCode" column="ACTSTAND_CODE"/>
+		<result property="routeName" column="ROUTE_NAME"/>
+		<result property="inJobLevel" column="IN_JOB_LEVEL"/>
+		<result property="outJobLevel" column="OUT_JOB_LEVEL"/>
+		<result property="sta" column="STA"/>
+		<result property="eta" column="ETA"/>
+		<result property="ata" column="ATA"/>
+		<result property="standTm" column="STAND_TM"/>
+		<result property="std" column="STD"/>
+		<result property="etd" column="ETD"/>
+		<result property="pushOffTm" column="PUSH_OFF_TM"/>
+		<result property="atd" column="ATD"/>
+		<result property="beginTm" column="BEGIN_TM"/>
+		<result property="echeckinTm" column="ECHECKIN_TM"/>
+		<result property="brdBtm" column="BRD_BTM"/>
+		<result property="brdEtm" column="BRD_ETM"/>
+		<result property="inPaxNum" column="IN_PAX_NUM"/>
+		<result property="outPaxNum" column="OUT_PAX_NUM"/>
+		<result property="goodOpenTm" column="GOOD_OPEN_TM"/>
+		<result property="goodCloseTm" column="GOOD_CLOSE_TM"/>
+		<result property="ftsatTm" column="FTSAT_TM"/>
+		<result property="tsat" column="TSAT"/>
+		<result property="procRecord" column="PROC_RECORD"/>
+		<result property="eventRecord" column="EVENT_RECORD"/>
+		<result property="type" column="TYPE"/>
+		<result property="updateDate" column="UPDATE_DATE"/>
+		<result property="operator" column="OPERATOR"/>
+		<result property="operatorName" column="OPERATOR_NAME"/>
+	</resultMap>
+	
+	<select id="getDataCount" resultType="integer">
+		<![CDATA[
+			select count(1) from SA_FLTCR_OSCAR_DAY
+			where  (IN_FLIGHT_NUMBER like '%${searchText}%' or 
+						OUT_FLIGHT_NUMBER like '%${searchText}%' or 
+						OPERATOR_NAME like '%${searchText}%')
+		]]>
+		<if test="startDate!=null and startDate!='' ">
+			<![CDATA[
+				and to_date(STAT_DAY,'yyyy-mm-dd') >= to_date(#{startDate},'yyyy-mm-dd')
+			]]>
+		</if>
+		<if test="endDate!=null and endDate!='' ">
+			<![CDATA[
+				and to_date(STAT_DAY,'yyyy-mm-dd') <= to_date(#{endDate},'yyyy-mm-dd')
+			]]>
+		</if>
+	</select>
+	
+	<select id="getData" resultMap="SaFltcrOscarDayResultMap">
+		<![CDATA[
+			select *
+			  from (select b.*, rownum rn2
+			          from (select a.*, rownum as rn
+			                  from (
+				                  select * from SA_FLTCR_OSCAR_DAY
+									where 
+									(IN_FLIGHT_NUMBER like '%${searchText}%' or 
+												OUT_FLIGHT_NUMBER like '%${searchText}%' or 
+												OPERATOR_NAME like '%${searchText}%')
+		]]>
+							<if test="startDate!=null and startDate!='' ">
+								<![CDATA[
+									and to_date(STAT_DAY,'yyyy-mm-dd') >= to_date(#{startDate},'yyyy-mm-dd')
+								]]>
+							</if>
+							<if test="endDate!=null and endDate!='' ">
+								<![CDATA[
+									and to_date(STAT_DAY,'yyyy-mm-dd') <= to_date(#{endDate},'yyyy-mm-dd')
+								]]>
+							</if>
+		<![CDATA[			
+									order by UPDATE_DATE	 desc
+			                  ) a) b
+			         where rn > #{offset})
+			 where rn2 <= #{limit}
+			
+		]]>
+	</select>
+	
+	<select id="getDataById" resultMap="SaFltcrOscarDayResultMap">
+		<![CDATA[
+			select * from SA_FLTCR_OSCAR_DAY where ID = #{id}
+		]]>
+	</select>
+	
+	<insert id="saveData" parameterType="com.neusoft.prss.produce.entity.MonitorReportEntity">
+		<selectKey keyColumn="id" keyProperty="id" resultType="integer" order="BEFORE">
+			select SA_FLTCR_OSCAR_DAY_S.nextval from dual
+		</selectKey>
+		insert into SA_FLTCR_OSCAR_DAY(
+			ID
+			<if test="statDay != null and statDay != '' ">
+				,STAT_DAY
+			</if>
+			<if test="inFltid != null and inFltid != '' ">
+				,IN_FLTID
+			</if>
+			<if test="outFltid != null and outFltid != '' ">
+				,OUT_FLTID
+			</if>
+			<if test="inFlightNumber != null and inFlightNumber != '' ">
+				,IN_FLIGHT_NUMBER
+			</if>
+			<if test="outFlightNumber != null and outFlightNumber != '' ">
+				,OUT_FLIGHT_NUMBER
+			</if>
+			<if test="aln2code != null and aln2code != '' ">
+				,ALN_2CODE
+			</if>
+			<if test="inAircraftNumber != null and inAircraftNumber != '' ">
+				,IN_AIRCRAFT_NUMBER
+			</if>
+			<if test="outAircraftNumber != null and outAircraftNumber != '' ">
+				,OUT_AIRCRAFT_NUMBER
+			</if>
+			<if test="inActtypeCode != null and inActtypeCode != '' ">
+				,IN_ACTTYPE_CODE
+			</if>
+			<if test="outActtypeCode != null and outActtypeCode != '' ">
+				,OUT_ACTTYPE_CODE
+			</if>
+			<if test="actstandCode != null and actstandCode != '' ">
+				,ACTSTAND_CODE
+			</if>
+			<if test="routeName != null and routeName != '' ">
+				,ROUTE_NAME
+			</if>
+			<if test="inJobLevel != null and inJobLevel != '' ">
+				,IN_JOB_LEVEL
+			</if>
+			<if test="outJobLevel != null and outJobLevel != '' ">
+				,OUT_JOB_LEVEL
+			</if>
+			<if test="sta != null and sta != '' ">
+				,STA
+			</if>
+			<if test="eta != null and eta != '' ">
+				,ETA
+			</if>
+			<if test="ata != null and ata != '' ">
+				,ATA
+			</if>
+			<if test="standTm != null and standTm != '' ">
+				,STAND_TM
+			</if>
+			<if test="std != null and std != '' ">
+				,STD
+			</if>
+			<if test="etd != null and etd != '' ">
+				,ETD
+			</if>
+			<if test="pushOffTm != null and pushOffTm != '' ">
+				,PUSH_OFF_TM
+			</if>
+			<if test="atd != null and atd != '' ">
+				,ATD
+			</if>
+			<if test="beginTm != null and beginTm != '' ">
+				,BEGIN_TM
+			</if>
+			<if test="echeckinTm != null and echeckinTm != '' ">
+				,ECHECKIN_TM
+			</if>
+			<if test="brdBtm != null and brdBtm != '' ">
+				,BRD_BTM
+			</if>
+			<if test="brdEtm != null and brdEtm != '' ">
+				,BRD_ETM
+			</if>
+			<if test="inPaxNum != null and inPaxNum != '' ">
+				,IN_PAX_NUM
+			</if>
+			<if test="outPaxNum != null and outPaxNum != '' ">
+				,OUT_PAX_NUM
+			</if>
+			<if test="goodOpenTm != null and goodOpenTm != '' ">
+				,GOOD_OPEN_TM
+			</if>
+			<if test="goodCloseTm != null and goodCloseTm != '' ">
+				,GOOD_CLOSE_TM
+			</if>
+			<if test="ftsatTm != null and ftsatTm != '' ">
+				,FTSAT_TM
+			</if>
+			<if test="tsat != null and tsat != '' ">
+				,TSAT
+			</if>
+			<if test="procRecord != null and procRecord != '' ">
+				,PROC_RECORD
+			</if>
+			<if test="eventRecord != null and eventRecord != '' ">
+				,EVENT_RECORD
+			</if>
+			<if test="type != null and type != '' ">
+				,TYPE
+			</if>
+			,UPDATE_DATE
+			<if test="operator != null and operator != '' ">
+				,OPERATOR
+			</if>
+			<if test="operatorName != null and operatorName != '' ">
+				,OPERATOR_NAME
+			</if>
+		)values(
+			#{id}
+			<if test="statDay != null and statDay != '' ">
+				,#{statDay}
+			</if>
+			<if test="inFltid != null and inFltid != '' ">
+				,#{inFltid}
+			</if>
+			<if test="outFltid != null and outFltid != '' ">
+				,#{outFltid}
+			</if>
+			<if test="inFlightNumber != null and inFlightNumber != '' ">
+				,#{inFlightNumber}
+			</if>
+			<if test="outFlightNumber != null and outFlightNumber != '' ">
+				,#{outFlightNumber}
+			</if>
+			<if test="aln2code != null and aln2code != '' ">
+				,#{aln2code}
+			</if>
+			<if test="inAircraftNumber != null and inAircraftNumber != '' ">
+				,#{inAircraftNumber}
+			</if>
+			<if test="outAircraftNumber != null and outAircraftNumber != '' ">
+				,#{outAircraftNumber}
+			</if>
+			<if test="inActtypeCode != null and inActtypeCode != '' ">
+				,#{inActtypeCode}
+			</if>
+			<if test="outActtypeCode != null and outActtypeCode != '' ">
+				,#{outActtypeCode}
+			</if>
+			<if test="actstandCode != null and actstandCode != '' ">
+				,#{actstandCode}
+			</if>
+			<if test="routeName != null and routeName != '' ">
+				,#{routeName}
+			</if>
+			<if test="inJobLevel != null and inJobLevel != '' ">
+				,#{inJobLevel}
+			</if>
+			<if test="outJobLevel != null and outJobLevel != '' ">
+				,#{outJobLevel}
+			</if>
+			<if test="sta != null and sta != '' ">
+				,#{sta}
+			</if>
+			<if test="eta != null and eta != '' ">
+				,#{eta}
+			</if>
+			<if test="ata != null and ata != '' ">
+				,#{ata}
+			</if>
+			<if test="standTm != null and standTm != '' ">
+				,#{standTm}
+			</if>
+			<if test="std != null and std != '' ">
+				,#{std}
+			</if>
+			<if test="etd != null and etd != '' ">
+				,#{etd}
+			</if>
+			<if test="pushOffTm != null and pushOffTm != '' ">
+				,#{pushOffTm}
+			</if>
+			<if test="atd != null and atd != '' ">
+				,#{atd}
+			</if>
+			<if test="beginTm != null and beginTm != '' ">
+				,#{beginTm}
+			</if>
+			<if test="echeckinTm != null and echeckinTm != '' ">
+				,#{echeckinTm}
+			</if>
+			<if test="brdBtm != null and brdBtm != '' ">
+				,#{brdBtm}
+			</if>
+			<if test="brdEtm != null and brdEtm != '' ">
+				,#{brdEtm}
+			</if>
+			<if test="inPaxNum != null and inPaxNum != '' ">
+				,#{inPaxNum}
+			</if>
+			<if test="outPaxNum != null and outPaxNum != '' ">
+				,#{outPaxNum}
+			</if>
+			<if test="goodOpenTm != null and goodOpenTm != '' ">
+				,#{goodOpenTm}
+			</if>
+			<if test="goodCloseTm != null and goodCloseTm != '' ">
+				,#{goodCloseTm}
+			</if>
+			<if test="ftsatTm != null and ftsatTm != '' ">
+				,#{ftsatTm}
+			</if>
+			<if test="tsat != null and tsat != '' ">
+				,#{tsat}
+			</if>
+			<if test="procRecord != null and procRecord != '' ">
+				,#{procRecord}
+			</if>
+			<if test="eventRecord != null and eventRecord != '' ">
+				,#{eventRecord}
+			</if>
+			<if test="type != null and type != '' ">
+				,#{type}
+			</if>
+			,sysdate
+			<if test="operator != null and operator != '' ">
+				,#{operator}
+			</if>
+			<if test="operatorName != null and operatorName != '' ">
+				,#{operatorName}
+			</if>
+		)
+	</insert>
+	<update id="updateData" parameterType="com.neusoft.prss.produce.entity.MonitorReportEntity">
+		update SA_FLTCR_OSCAR_DAY
+		<set>
+			UPDATE_DATE = sysdate
+			<if test="statDay != null and statDay != '' ">
+				,STAT_DAY = #{statDay}
+			</if>
+			<if test="inFlightNumber != null and inFlightNumber != '' ">
+				,IN_FLIGHT_NUMBER = #{inFlightNumber}
+			</if>
+			<if test="outFlightNumber != null and outFlightNumber != '' ">
+				,OUT_FLIGHT_NUMBER = #{outFlightNumber}
+			</if>
+			<if test="aln2code != null and aln2code != '' ">
+				,ALN_2CODE = #{aln2code}
+			</if>
+			<if test="inAircraftNumber != null and inAircraftNumber != '' ">
+				,IN_AIRCRAFT_NUMBER = #{inAircraftNumber}
+			</if>
+			<if test="outAircraftNumber != null and outAircraftNumber != '' ">
+				,OUT_AIRCRAFT_NUMBER = #{outAircraftNumber}
+			</if>
+			<if test="inActtypeCode != null and inActtypeCode != '' ">
+				,IN_ACTTYPE_CODE = #{inActtypeCode}
+			</if>
+			<if test="outActtypeCode != null and outActtypeCode != '' ">
+				,OUT_ACTTYPE_CODE = #{outActtypeCode}
+			</if>
+			<if test="actstandCode != null and actstandCode != '' ">
+				,ACTSTAND_CODE = #{actstandCode}
+			</if>
+			<if test="routeName != null and routeName != '' ">
+				,ROUTE_NAME = #{routeName}
+			</if>
+			<if test="inJobLevel != null and inJobLevel != '' ">
+				,IN_JOB_LEVEL = #{inJobLevel}
+			</if>
+			<if test="outJobLevel != null and outJobLevel != '' ">
+				,OUT_JOB_LEVEL = #{outJobLevel}
+			</if>
+			<if test="sta != null and sta != '' ">
+				,STA = #{sta}
+			</if>
+			<if test="eta != null and eta != '' ">
+				,ETA = #{eta}
+			</if>
+			<if test="ata != null and ata != '' ">
+				,ATA = #{ata}
+			</if>
+			<if test="standTm != null and standTm != '' ">
+				,STAND_TM = #{standTm}
+			</if>
+			<if test="std != null and std != '' ">
+				,STD = #{std}
+			</if>
+			<if test="etd != null and etd != '' ">
+				,ETD = #{etd}
+			</if>
+			<if test="pushOffTm != null and pushOffTm != '' ">
+				,PUSH_OFF_TM = #{pushOffTm}
+			</if>
+			<if test="atd != null and atd != '' ">
+				,ATD = #{atd}
+			</if>
+			<if test="beginTm != null and beginTm != '' ">
+				,BEGIN_TM = #{beginTm}
+			</if>
+			<if test="echeckinTm != null and echeckinTm != '' ">
+				,ECHECKIN_TM = #{echeckinTm}
+			</if>
+			<if test="brdBtm != null and brdBtm != '' ">
+				,BRD_BTM = #{brdBtm}
+			</if>
+			<if test="brdEtm != null and brdEtm != '' ">
+				,BRD_ETM = #{brdEtm}
+			</if>
+			<if test="inPaxNum != null and inPaxNum != '' ">
+				,IN_PAX_NUM = #{inPaxNum}
+			</if>
+			<if test="outPaxNum != null and outPaxNum != '' ">
+				,OUT_PAX_NUM = #{outPaxNum}
+			</if>
+			<if test="goodOpenTm != null and goodOpenTm != '' ">
+				,GOOD_OPEN_TM = #{goodOpenTm}
+			</if>
+			<if test="goodCloseTm != null and goodCloseTm != '' ">
+				,GOOD_CLOSE_TM = #{goodCloseTm}
+			</if>
+			<if test="ftsatTm != null and ftsatTm != '' ">
+				,FTSAT_TM = #{ftsatTm}
+			</if>
+			<if test="tsat != null and tsat != '' ">
+				,TSAT = #{tsat}
+			</if>
+			<if test="procRecord != null and procRecord != '' ">
+				,PROC_RECORD = #{procRecord}
+			</if>
+			<if test="eventRecord != null and eventRecord != '' ">
+				,EVENT_RECORD = #{eventRecord}
+			</if>
+		</set>
+		<where>
+			ID = #{id}
+		</where>
+	</update>
+	<delete id="delData" >
+		delete from SA_FLTCR_OSCAR_DAY where ID = #{id}
+	</delete>
+	
+	<select id="getOfficeRestype" resultType="hashmap">
+		<![CDATA[
+			select wm_concat(t.restype) as restype, t.typename, c.name
+			  from DIM_RESTYPE t,
+			       dim_reskind a,
+			       sys_office b,
+			       (select *
+			          from sys_office
+			         where length(parent_ids) - length(replace(parent_ids, ',', '')) = 3) c
+			 where t.reskind = a.reskind
+			   and a.depid = b.id
+			   and instr(b.PARENT_IDS, c.id) > 0
+			 group by t.typename, c.name
+		]]>
+	</select>
+	
+	<select id="getDataFromView" resultMap="SaFltcrOscarDayResultMap">
+		<![CDATA[
+			select * from SA_FLTCR_OSCAR_DAY_V t 
+			where (t.IN_FLIGHT_NUMBER = #{flightNumber} or t.OUT_FLIGHT_NUMBER = #{flightNumber})
+			and t.STAT_DAY = #{statDay}
+		]]>
+	</select>
+	
+	<select id="getProcRecords" resultType="string">
+		select 
+			t.PROC_RECORD 
+		from SA_FLTCRPROC_OSCAR_DAY_V t
+		where t.FLTID in 
+		<foreach collection="fltids" open="(" close=")" separator="," item="fltid">
+			#{fltid}
+		</foreach>
+		 and t.STAT_DAY = #{statDay}
+		 <if test=" jobTypeArr!=null and jobTypeArr.size > 0">
+			 and t.JOB_TYPE in 
+			 <foreach collection="jobTypeArr" open="(" close=")" separator="," item="jobType">
+				#{jobType}
+			 </foreach>
+		 </if>
+		 order by t.CREATE_DATE desc
+	</select>
+	
+	<select id="getEventRecords" resultType="string">
+		select 
+			t.EVENT_RECORD 
+		from SA_FLTCREVENT_OSCAR_DAY_V t
+		where t.FLTID in 
+		<foreach collection="fltids" open="(" close=")" separator="," item="fltid">
+			#{fltid}
+		</foreach>
+		 and t.STAT_DAY = #{statDay}
+		 order by t.SENDTIME desc
+	</select>
+	
+	<select id="getReport" resultType="integer">
+		select id from SA_FLTCR_OSCAR_DAY
+		where STAT_DAY = #{statDay} and 
+		(IN_FLIGHT_NUMBER = #{flightNumber} or 
+		OUT_FLIGHT_NUMBER = #{flightNumber})
+	</select>
+	
+	<delete id="deleteReport">
+		delete from SA_FLTCR_OSCAR_DAY
+		where STAT_DAY = #{statDay} and 
+		(IN_FLIGHT_NUMBER = #{flightNumber} or 
+		OUT_FLIGHT_NUMBER = #{flightNumber})
+	</delete>
+</mapper>

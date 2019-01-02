@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.workflow.dao.NodeBtnDao">
+	<resultMap id="BaseResultMap" type="com.neusoft.prss.workflow.entity.NodeBtn">
+		<id column="ID" jdbcType="DECIMAL" property="id" />
+		<result column="NAME" jdbcType="VARCHAR" property="name" />
+		<result column="LABEL" jdbcType="VARCHAR" property="label" />
+		<result column="EVENT_ID" jdbcType="DECIMAL" property="eventId" />
+		<result column="SHOW_ORDER" jdbcType="DECIMAL" property="showOrder" />
+		<result column="VARIABLE" jdbcType="VARCHAR" property="variable" />
+		<result column="LIMIT_PARM" jdbcType="VARCHAR" property="limitParm" />
+		<result column="NODE_ID" jdbcType="DECIMAL" property="nodeId" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		ID, NAME, LABEL, EVENT_ID, SHOW_ORDER, VARIABLE,
+		LIMIT_PARM, NODE_ID
+	</sql>
+	<select id="getNodeBtnByNodeID" parameterType="String"
+		resultMap="BaseResultMap">
+		select
+		<include refid="Base_Column_List" />
+		from WF_NODE_BTN
+		where node_id = #{id}
+		order by show_order
+	</select>
+	<select id="getBtnEvent" resultType="com.alibaba.fastjson.JSONObject">
+		select id "value", name
+		"text" from wf_node_btn_event order by id
+	</select>
+	<delete id="delNodeBtn" parameterType="String">
+		delete from wf_node_btn
+		where NODE_ID = #{id}
+	</delete>
+	<insert id="doInsertNodeBtn" parameterType="com.alibaba.fastjson.JSONObject">
+		insert into wf_node_btn
+		(ID,
+		NAME,
+		LABEL,
+		EVENT_ID,
+		SHOW_ORDER,
+		VARIABLE,
+		LIMIT_PARM,
+		NODE_ID
+		)
+		values
+		(
+		<choose>
+			<when test="_parameter.containsKey('id')">
+				#{id,jdbcType=NUMERIC},
+			</when>
+			<otherwise>
+				WF_NODE_BTN_S.nextval,
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="_parameter.containsKey('name')">
+				#{name,jdbcType=VARCHAR},
+			</when>
+			<otherwise>
+				'',
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="_parameter.containsKey('label')">
+				#{label,jdbcType=VARCHAR},
+			</when>
+			<otherwise>
+				'',
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="_parameter.containsKey('eventId')">
+				#{eventId,jdbcType=NUMERIC},
+			</when>
+			<otherwise>
+				'',
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="_parameter.containsKey('showOrder')">
+				#{showOrder,jdbcType=NUMERIC},
+			</when>
+			<otherwise>
+				'',
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="_parameter.containsKey('variable')">
+				'${variable}',
+			</when>
+			<otherwise>
+				'',
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="_parameter.containsKey('limitParm')">
+				'${limitParm}',
+			</when>
+			<otherwise>
+				'',
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="_parameter.containsKey('nodeId')">
+				#{nodeId,jdbcType=NUMERIC}
+			</when>
+			<otherwise>
+				''
+			</otherwise>
+		</choose>
+		)
+	</insert>
+</mapper>

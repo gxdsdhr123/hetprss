@@ -1,0 +1,37 @@
+.layui-table{
+	text-align:center;
+	margin:0px;
+}
+td{
+	padding:9px 0px !important;
+    white-space:nowrap;      
+	overflow:hidden;        
+	text-overflow:ellipsis;  
+}
+.Wdate{
+	background-color:#0C4C7D;
+}
+#topDiv{
+	margin:10px 0px;
+	text-align:center;
+	color:#c7c5c0;
+}
+#searchBut{
+	border-color:#0C4C7D;
+}
+#printBut{
+	border-color:#0C4C7D;
+}
+.bottomTable{
+	width:25%;
+	float:left;
+	margin-right:-1px;
+}
+.layui-input{
+	width:8%;
+	display:inline;
+}
+#msg{
+	text-align:center;
+	color:red;
+}

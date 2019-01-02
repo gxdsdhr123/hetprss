@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.equipmen.dao.EquipmentDao">
+	<select id="listFacility" resultType="com.alibaba.fastjson.JSONObject">
+			select jdt.Type_Id as "id",jdt.type_name as "name",jdt.DEPT_ID as "pId" from JM_DEVICE_TYPE jdt	
+	</select>
+	
+	<select id="equipmentFilterTypeName" resultType="map">
+			select distinct DEVICE_NO from JM_DEVICE	
+	</select>
+	
+	<select id="equipmentFilterTypeNameI" resultType="map">
+			select distinct DEVICE_MODEL from JM_DEVICE	
+	</select>
+	
+	<select id="equipmentFilterTypeNameII" resultType="map">
+			select distinct CAR_NUMBER from JM_DEVICE	
+	</select>
+	
+	<!-- <select id="listFacilityPid" resultType="com.alibaba.fastjson.JSONObject">
+			
+		SELECT ID as "id",NAME as "name", '0' as "pId"
+        	FROM SYS_OFFICE
+       		WHERE ID IN ('31476f0e3b2e4a86be2caa5db3b68e08',
+              			 '12197a04beaa4a6797294fa5f83d9c19',
+              			 'b1bbbe565ddf44c68e6914b4723ca256')
+	</select> -->
+	
+	<select id="listFacilityPid" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT ID as "id",NAME as "name", 'e2caa5db3b68' as "pId"
+          FROM SYS_OFFICE where grade='2' and del_flag=0
+	</select>
+	
+	<select id="listFacilityPidPid" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT 'e2caa5db3b68' as "id",'设备类型' as "name", '0' as "pId" from dual
+	</select>
+	
+	<select id="equipmentFilterName" resultType="map">
+		SELECT id,name
+        FROM SYS_OFFICE
+        where grade='2' and del_flag=0
+	</select>
+	
+	<select id="listFacilityII" resultType="java.util.HashMap">
+		SELECT * FROM JM_DEVICE
+	</select>
+	
+	<select id="listFacilityCount" resultType="int">
+     		SELECT count(*) FROM JM_DEVICE jd 
+		left join JM_DEVICE_TYPE jdt on jd.type_id = jdt.type_id
+		left join SYS_USER su on jd.CREATER = su.ID
+		left join SYS_OFFICE so on so.id = jdt.DEPT_ID
+		<where>
+			<if test='mtype !=0'>
+				AND jd.TYPE_ID = #{mtype}
+			</if>
+			
+			<if test='typeName !="" and typeName !=null '>
+				AND jd.Type_Name=#{typeName}
+			</if>
+			
+			<if test='deviceStatus !="" and deviceStatus !=null'>
+				AND jd.DEVICE_STATUS=#{deviceStatus}
+			</if>
+			
+			<if test='deptId !="" and deptId!=null'>
+				AND so.id=#{deptId}
+			</if>
+			
+			<if test='deviceNo !="" and deviceNo!=null'>
+				AND jd.DEVICE_NO = #{deviceNo}
+			</if>
+			
+			<if test='deviceModel !="" and deviceModel !=null'>
+				AND jd.DEVICE_MODEL = #{deviceModel}
+			</if>
+			<if test='carNumber !="" and carNumber!=null'>
+				AND jd.CAR_NUMBER = #{carNumber}
+			</if>
+			
+			
+		</where>
+	</select>
+	
+    <!-- <select id="listFacilityCountList" resultType="com.alibaba.fastjson.JSONObject" parameterType="java.util.Map">
+		SELECT * FROM JM_DEVICE jd 
+		left join JM_DEVICE_TYPE jdt on jd.type_id = jdt.type_id
+		left join SYS_OFFICE so on so.id = jdt.DEPT_ID
+		<where>
+			<if test='mtype !=0'>
+				AND jd.TYPE_ID = #{mtype}
+			</if>
+			
+			<if test='typeName !="" and typeName !=null '>
+				AND jd.Type_Name=#{typeName}
+			</if>
+			
+			<if test='deviceStatus !="" and deviceStatus !=null'>
+				AND jd.DEVICE_STATUS=#{deviceStatus}
+			</if>
+			
+			<if test='deptId !="" and deptId!=null'>
+				AND so.id=#{deptId}
+			</if>
+			
+			
+		</where>
+	</select> -->
+	
+	
+	<select id="listFacilityCountList" resultType="com.alibaba.fastjson.JSONObject" parameterType="java.util.Map">
+	SELECT * FROM (SELECT B.*, rownum r FROM (select * from (
+		SELECT 
+			jd.DEVICE_ID,
+		    jd.TYPE_NAME,
+		    jd.DEVICE_NO,
+		    jd.DEVICE_MODEL,
+		    jd.CAR_NUMBER,
+		    jd.REMARK,
+		    su.NAME,
+		    jd.CREATE_DATE,
+		    jd.INNER_NUMBER,
+		    jd.seating_num,
+		    jd.DEVICE_STATUS 
+		
+		FROM JM_DEVICE jd 
+		left join JM_DEVICE_TYPE jdt on jd.type_id = jdt.type_id
+		left join SYS_USER su on jd.CREATER = su.ID
+		left join SYS_OFFICE so on so.id = jdt.DEPT_ID
+		where 1 = 1
+		
+			<if test='mtype !=0'>
+				AND jd.TYPE_ID = #{mtype}
+			</if>
+			
+			<if test='typeName !="" and typeName !=null '>
+				AND jd.Type_Name=#{typeName}
+			</if>
+			
+			<if test='deviceStatus !="" and deviceStatus !=null'>
+				AND jd.DEVICE_STATUS=#{deviceStatus}
+			</if>
+			
+			<if test='deptId !="" and deptId!=null'>
+				AND so.id=#{deptId}
+			</if>
+			
+			<if test='deviceNo !="" and deviceNo!=null'>
+				AND jd.DEVICE_NO = #{deviceNo}
+			</if>
+			
+			<if test='deviceModel !="" and deviceModel !=null'>
+				AND jd.DEVICE_MODEL = #{deviceModel}
+			</if>
+			<if test='carNumber !="" and carNumber!=null'>
+				AND jd.CAR_NUMBER = #{carNumber}
+			</if>
+			
+			<![CDATA[) order by ${sortName} ${sortOrder}) B WHERE rownum <= #{end} ) B WHERE r > #{begin}]]>
+			
+		
+	</select>
+	
+	
+	
+	<insert id="saveEquipment" parameterType="java.util.Map">
+		insert into JM_DEVICE_TYPE
+			(TYPE_ID,TYPE_NAME,DEPT_ID,RESKIND) 	
+		values
+			(JM_DEVICE_TYPE_S.NEXTVAL,#{name},#{pid},#{reskind})
+	</insert>
+	
+	
+	<update id="updateEquipment"  parameterType="java.util.Map">
+		update JM_DEVICE_TYPE set TYPE_NAME=#{typeName},RESKIND=#{reskind} where TYPE_ID=#{typeId}
+	</update>
+	
+	
+	<update id="updateZtreeDept" parameterType="java.util.Map">
+		update SYS_OFFICE set NAME=#{name} where ID=#{id}
+	</update>
+	
+	<update id="updateEquipmentDevice" parameterType="java.util.Map">
+		update JM_DEVICE set TYPE_NAME=#{typeName} where TYPE_ID=#{typeId}
+	</update>
+	
+	
+	<delete id="DelEquipment" parameterType="java.util.Map">
+		delete from JM_DEVICE_TYPE where TYPE_ID=#{typeId}
+	</delete>
+	
+	<delete id="DelEquipmentDevice" parameterType="java.util.Map">
+		delete from JM_DEVICE where TYPE_ID=#{typeId}
+	</delete>
+	
+	
+	<insert id="saveJmDevice" parameterType="java.util.Map">
+		insert into JM_DEVICE(DEVICE_ID,TYPE_NAME,DEVICE_NO,DEVICE_MODEL,CAR_NUMBER,DEVICE_STATUS,REMARK,CREATE_DATE,CREATER,TYPE_ID,INNER_NUMBER,SEATING_NUM) values
+		(JM_DEVICE_S.NEXTVAL,#{typeName},#{deviceNo},#{deviceModel},#{carNumber},#{deviceStatus},#{remark},sysdate,#{creater},#{typeId},#{innerNumber},#{seatingNum})
+		
+	</insert>
+	<!-- <insert id="saveJmDevice" parameterType="java.util.Map">
+		insert into JM_DEVICE(DEVICE_ID,TYPE_NAME,DEVICE_NO,DEVICE_MODEL,CAR_NUMBER,DEVICE_STATUS,REMARK,CREATE_DATE,CREATER,TYPE_ID,INNER_NUMBER) values
+		('894523498',#{typeName},#{deviceNo},#{deviceModel},#{carNumber},#{deviceStatus},#{remark},sysdate,#{creater},#{typeId},#{innerNumber})
+		
+	</insert> -->
+	
+	
+	
+	<update id="updateRevamp" parameterType="java.util.Map">
+		update JM_DEVICE 
+		<set>
+			<if test='typeName !="" and typeName !=null'>
+				TYPE_NAME=#{typeName},
+			</if>
+			
+			<if test='deviceNo !="" and deviceNo !=null'>
+				DEVICE_NO=#{deviceNo},
+			</if>
+			
+			<if test='deviceModel !="" and deviceModel !=null'>
+				DEVICE_MODEL=#{deviceModel},
+			</if>
+			
+			<if test='carNumber !="" and carNumber !=null'>
+				CAR_NUMBER=#{carNumber},
+			</if>
+			
+			<if test='deviceStatus !="" and deviceStatus !=null'>
+				DEVICE_STATUS=#{deviceStatus},
+			</if>
+			
+			<if test='seatingNum !=null'>
+				SEATING_NUM=#{seatingNum},
+			</if>
+			
+			<if test='remark !=null'>
+				REMARK=#{remark},
+			</if>
+			
+			<if test='innerNumber!=null'>
+				INNER_NUMBER=#{innerNumber},
+			</if>
+			
+		</set>
+		<where>
+			<if test='id !="" and id !=null'>
+				DEVICE_ID=${id}
+			</if>
+		</where>
+		
+	</update>
+	
+	
+	
+	<delete id="delRevamp" parameterType="string">
+		delete from JM_DEVICE where DEVICE_ID=#{id}
+	</delete>
+	
+	<select id="compileFind" parameterType="string" resultType="map">
+		SELECT * FROM JM_DEVICE where DEVICE_ID=#{id}
+	</select>
+	
+	<select id="createType" resultType="map">
+		SELECT KINDNAME, RESKIND FROM DIM_RESKIND
+	</select>
+	
+	<select id="findEdit" parameterType="string" resultType="map">
+		select * from JM_DEVICE_TYPE where TYPE_ID=#{id}
+	</select>
+	
+	<select id="findEditDept" parameterType="string" resultType="map">
+		select * from SYS_OFFICE where ID = #{id}
+	</select>
+</mapper>

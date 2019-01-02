@@ -1,0 +1,18 @@
+.color-white{
+	color:#c7c5c0;
+}
+.bootstrap-table th.color-white{
+	color:#000 !important;
+}
+.bootstrap-table .fixed-table-body .table > tbody > tr td .editable{
+	color:#c7c5c0;
+}
+
+.color-red{
+	color:#c7c5c0;
+	background:#ff0000;
+}
+.bootstrap-table td.color-red{
+    color:#000 !important;
+    background:#ff0000 !important;
+}

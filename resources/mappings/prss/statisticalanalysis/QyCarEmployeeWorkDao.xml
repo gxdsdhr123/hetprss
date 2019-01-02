@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.statisticalanalysis.dao.QyCarEmployeeWorkDao">
+	
+	<select id="getDataCount"  parameterType="hashmap" resultType="int" >
+		SELECT count(*) 
+		FROM (
+			select TEAM,NAME,
+			       SUM(TUI_NUM) TUI_NUM,
+			       SUM(TUO_NUM) TUO_NUM,
+			       SUM(I_NUM) I_NUM,
+			       SUM(D_NUM) D_NUM,
+			       SUM(T3I_NUM) T3I_NUM,
+			       SUM(TUI_NUM)+SUM(TUO_NUM)+SUM(I_NUM)+SUM(D_NUM)+SUM(T3I_NUM) TOTAL
+			from SA_EWN_QYC_DAY@Prss2prssp 
+			where 1=1
+			<if test='banZu !="null" '>
+				AND TEAM = #{banZu} 
+			</if>
+			<if test='zuYuan !="null" '>
+				AND NAME = #{zuYuan} 
+			</if> 
+			<if test='beginTime !="" '>
+				AND to_date(STAT_DAY,'yyyyMMdd') >= to_date('${beginTime}','yyyyMMdd') 
+			</if>
+			<if test='endTime !="" '>
+				AND to_date('${endTime}','yyyyMMdd') >= to_date(STAT_DAY,'yyyyMMdd')
+			</if> 
+			group by TEAM, NAME)
+	</select>
+	
+	<select id="getDataList"  parameterType="hashmap" resultType="com.alibaba.fastjson.JSONObject" >
+		select *
+		  from (SELECT A.*, rownum rn
+		          from (select TEAM,
+		                       NAME,
+		                       SUM(TUI_NUM) TUI_NUM,
+		                       SUM(TUO_NUM) TUO_NUM,
+		                       SUM(I_NUM) I_NUM,
+		                       SUM(D_NUM) D_NUM,
+		                       SUM(T3I_NUM) T3I_NUM,
+		                       SUM(TUI_NUM) + SUM(TUO_NUM) + SUM(I_NUM) + SUM(D_NUM) +
+		                       SUM(T3I_NUM) TOTAL
+		                  from SA_EWN_QYC_DAY@Prss2prssp
+		                  where 1=1 
+		                    <if test='banZu !="null" '>
+								AND TEAM = '${banZu}'
+							</if>
+							<if test='zuYuan !="null" '>
+								AND NAME = '${zuYuan}'
+							</if>
+							<if test='beginTime !="" '>
+								AND to_date(STAT_DAY,'yyyyMMdd') >= to_date('${beginTime}','yyyyMMdd')
+							</if>
+							<if test='endTime !="" '>
+								AND to_date('${endTime}','yyyyMMdd') >= to_date(STAT_DAY,'yyyyMMdd')
+							</if> 
+		                 group by TEAM, NAME
+		                 order by TEAM,NAME) A
+		         where #{end} >= rownum)
+		 where rn > #{begin}
+	</select>
+	
+	<select id="getBanZu" parameterType="string" resultType="hashmap" >
+		SELECT A.GROUP_NAME,A.GROUP_ID
+		  FROM AM_GROUP_INFO       A,
+		       AM_GROUP_WORKER_REL B,
+		       SYS_USER            C,
+		       SYS_OFFICE          D,
+		       DIM_RESKIND         E
+		 WHERE A.GROUP_ID = B.GROUP_ID
+		   AND B.WORKER_ID = C.ID
+		   AND A.OFFICE_ID = D.ID
+		   AND D.ID = E.DEPID
+		   AND E.RESKIND = 'JWQYC' 
+		   AND A.GROUP_NAME like CONCAT(CONCAT('%', #{name}), '%')
+		   group by A.GROUP_NAME,A.GROUP_ID
+	</select>
+	
+	<select id="getZuYuan" parameterType="hashmap" resultType="hashmap" >
+		SELECT C.NAME,C.ID
+		  FROM AM_GROUP_INFO       A,
+		       AM_GROUP_WORKER_REL B,
+		       SYS_USER            C,
+		       SYS_OFFICE          D,
+		       DIM_RESKIND         E
+		 WHERE A.GROUP_ID = B.GROUP_ID
+		   AND B.WORKER_ID = C.ID
+		   AND A.OFFICE_ID = D.ID
+		   AND D.ID = E.DEPID
+		   AND E.RESKIND = 'JWQYC' 
+		   AND A.GROUP_NAME = #{banZu}
+		   AND C.NAME like CONCAT(CONCAT('%', #{name}), '%')
+	</select>
+	
+	<select id="getPrintList"  parameterType="hashmap" resultType="hashmap" >
+		select TEAM,
+               NAME,
+               SUM(TUI_NUM) TUI_NUM,
+               SUM(TUO_NUM) TUO_NUM,
+               SUM(I_NUM) I_NUM,
+               SUM(D_NUM) D_NUM,
+               SUM(T3I_NUM) T3I_NUM,
+               SUM(TUI_NUM) + SUM(TUO_NUM) + SUM(I_NUM) + SUM(D_NUM) +
+               SUM(T3I_NUM) TOTAL
+          from SA_EWN_QYC_DAY@Prss2prssp
+         where 1=1 
+                <if test='banZu !="null" '>
+					AND TEAM = '${banZu}'
+				</if>
+				<if test='zuYuan !="null" '>
+					AND NAME = '${zuYuan}'
+				</if>
+				<if test='beginTime !="" '>
+					AND to_date(STAT_DAY,'yyyyMMdd') >= to_date('${beginTime}','yyyyMMdd')
+				</if>
+				<if test='endTime !="" '>
+					AND to_date('${endTime}','yyyyMMdd') >= to_date(STAT_DAY,'yyyyMMdd')
+				</if> 
+          group by TEAM, NAME
+          order by TEAM,NAME
+	</select>
+</mapper>

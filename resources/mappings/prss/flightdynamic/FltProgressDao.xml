@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.flightdynamic.dao.FltProgressDao">
+	<resultMap id="fltMap" type="com.alibaba.fastjson.JSONObject">
+		<id property="apronCode" column="apron_code" />
+		<collection property="fltData" column="apron_code" javaType="com.alibaba.fastjson.JSONArray" ofType="com.alibaba.fastjson.JSONObject">
+			<result property="infltid" column="infltid" />
+			<result property="outfltid" column="outfltid" />
+			<result property="apronCode" column="apron_code" />
+			<result property="actstandCode" column="actstand_code" />
+			<result property="fltno" column="flight_number" />
+			<result property="eta" column="eta" />
+			<result property="etd" column="etd" />
+			<result property="ata" column="ata" />
+			<result property="atd" column="atd" />
+			<result property="ioType" column="in_out_flag" />
+			<result property="inFltDate" column="in_flt_date" />
+			<result property="outFltDate" column="out_flt_date" />
+			<collection property="columns" javaType="com.alibaba.fastjson.JSONArray" ofType="com.alibaba.fastjson.JSONObject">
+				<id property="colCode" column="col_code" />
+				<collection property="tasks" javaType="com.alibaba.fastjson.JSONArray" ofType="com.alibaba.fastjson.JSONObject">
+					<result property="jobTaskId" column="job_task_id" />
+					<result property="jobTaskName" column="job_task_name" />
+					<result property="jobType" column="job_type" />
+					<result property="jobState" column="job_state" />
+					<result property="jobStartTm" column="start_tm" />
+				</collection>
+			</collection>
+		</collection>
+	</resultMap>
+	<resultMap type="com.alibaba.fastjson.JSONObject" id="fltInfoMap">
+		<id column="fltid" property="fltid"/>
+		<result column="flight_number" property="fltNo"/>
+		<result column="flight_date" property="fltDate"/>
+		<result column="aircraft_number" property="actNo"/>
+		<result column="acttype_code" property="actType"/>
+		<result column="gate" property="gate"/>
+		<result column="actstand_code" property="actStand"/>
+		<result column="d_airportname" property="dAirport"/>
+		<result column="a_airportname" property="aAirport"/>
+		<result column="std" property="std"/>
+		<result column="etd" property="etd"/>
+		<result column="atd" property="atd"/>
+		<result column="sta" property="sta"/>
+		<result column="eta" property="eta"/>
+		<result column="ata" property="ata"/>
+		<result column="in_out_flag" property="inOutFlag"/>
+	</resultMap>
+	<resultMap type="com.alibaba.fastjson.JSONObject" id="taskMap">
+		<id column="id" property="id"/>
+		<result column="name" property="name"/>
+		<result column="fltid" property="fltid"/>
+		<result column="fltNo" property="fltNo"/>
+		<result column="processId" property="processId"/>
+		<result column="jobType" property="jobType"/>
+		<result column="jobTypeId" property="jobTypeId"/>
+		<result column="person" property="person"/>
+		<result column="personId" property="personId"/>
+		<result column="orderId" property="orderId"/>
+		<result column="currTask" property="currTask"/>
+	</resultMap>
+	<sql id="alnFilter">
+		select airline_code from dim_airlines where if_show=1
+	</sql>
+	<select id="getFltList" resultMap="fltMap">
+		select a.infltid,
+		       a.outfltid,
+		       a.apron_code,
+		       a.actstand_code,
+		       a.flight_number,
+		       a.eta,
+		       a.etd,
+		       a.ata,
+		       a.atd,
+		       a.in_out_flag,
+		       a.in_flt_date,
+		       a.out_flt_date,
+		       b.id job_task_id,
+		       b.name job_task_name,
+               b.job_state,
+               b.start_tm,
+               c.col_code
+		       from
+		(
+		<!--进港-->
+		select intab.fltid infltid,
+		       outtab.fltid outfltid,
+		       nvl(intab.apron_code,outtab.apron_code) apron_code,
+		       nvl(intab.actstand_code,outtab.actstand_code) actstand_code,
+		       intab.flight_number || '/' || outtab.flight_number flight_number,
+		       to_daytime(intab.eta) eta,
+		       to_daytime(outtab.etd) etd,
+		       nvl(intab.in_out_flag,outtab.in_out_flag) in_out_flag,
+		       intab.flight_date in_flt_date,
+		       outtab.flight_date out_flt_date,
+		       intab.ata,
+		       outtab.atd
+		  from (select b.id ioid,
+		               a.fltid,
+		               a.aln_2code,
+		               a.flight_number,
+		               a.apron_code,
+		               a.actstand_code,
+		               a.eta,
+		               a.ata,
+		               a.in_out_flag,
+		               a.flight_date
+		          from fd_flt_info a, fd_flt_iorel b
+		         where a.fltid = b.in_fltid) intab
+		  full outer join
+		<!-- 出港 -->
+		 (select b.id ioid,
+		         a.fltid,
+		         a.aln_2code,
+		         a.flight_number,
+		         a.apron_code,
+		         a.actstand_code,
+		         a.etd,
+		         a.atd,
+		         a.in_out_flag,
+		         a.flight_date
+		    from fd_flt_info a, fd_flt_iorel b
+		   where a.fltid = b.out_fltid) outtab on intab.ioid = outtab.ioid
+		   		where (intab.aln_2code in(<include refid="alnFilter"/>) or outtab.aln_2code in(<include refid="alnFilter"/>))
+       		) a,jm_task b,fd_progress_conf_v c
+		   where (a.infltid = b.fltid or a.outfltid = b.fltid)
+		   and b.proc_id = c.proc_id
+		   and b.del_flag !=1
+       	   and b.job_state !=5
+		   and ((to_date(a.atd,'yyyy-mm-dd hh24:mi') + interval '10' minute) > sysdate or a.atd is null)
+		   order by apron_code,eta,etd
+	</select>
+	<select id="getFltById" resultMap="fltInfoMap">
+		select 
+		   t.fltid,
+		   t.in_out_flag,
+		   nvl(t.flight_number,'--') flight_number, --航班号
+		   flight_date flight_date, --航班日期
+	       nvl(t.aircraft_number,'') aircraft_number, --机号
+	       nvl(t.acttype_code,'--') acttype_code, --机型
+	       nvl(t.gate,'--') gate, --登机口
+	       nvl(t.actstand_code,'--') actstand_code, --机位
+	       nvl(nvl(d_airport.airport_code,t.depart_apt4code),'--') d_airportname, --起场
+	       nvl(nvl(a_airport.airport_code,t.arrival_apt4code),'--') a_airportname, --落场
+	       decode(std,null,'--',to_char(to_date(std,'yyyy-MM-dd HH24:mi'),'HH24:mi')) std, --计起
+	       decode(etd,null,'--',to_char(to_date(etd,'yyyy-MM-dd HH24:mi'),'HH24:mi')) etd, --预起
+	       decode(atd,null,'--',to_char(to_date(atd,'yyyy-MM-dd HH24:mi'),'HH24:mi')) atd, --实起
+	       decode(sta,null,'--',to_char(to_date(sta,'yyyy-MM-dd HH24:mi'),'HH24:mi')) sta, --计落
+	       decode(eta,null,'--',to_char(to_date(eta,'yyyy-MM-dd HH24:mi'),'HH24:mi')) eta, --预落
+	       decode(ata,null,'--',to_char(to_date(ata,'yyyy-MM-dd HH24:mi'),'HH24:mi')) ata --实落
+	  from fd_flt_info t,dim_airport d_airport, dim_airport a_airport
+	 where t.depart_apt4code = d_airport.icao_code(+)
+	   and t.arrival_apt4code = a_airport.icao_code(+)
+	   and t.fltid = #{fltid}
+	</select>
+	<select id="getJobTaskList" resultMap="taskMap">
+			select a.id,
+	           a.name,
+	           b.fltid fltid,
+	           b.flight_number fltNo,
+	           a.proc_id processId,
+	           d.typename jobType,
+	           d.restype jobTypeId,
+	           a.operator personId,
+	           nvl(e.name,case when a.operator is not null then '未知' end) person,
+	           f.proc_inst_id orderId,
+	           (case when g.parent_task_id = 'start' then '启动' when a.job_state = 3 then '结束' else h.display_name  end) currTask
+	      from jm_task           a,
+	           fd_flt_info       b,
+	           dim_restype       d,
+	           sys_user          e,
+	           jm_task_proc_inst f,
+	           wf_task           g,
+	           wf_hist_task      h
+	     where a.del_flag != 1
+       	   and a.job_state !=5
+	       and a.fltid = b.fltid
+	       and a.job_type = d.restype
+	       and a.operator = e.id(+)
+	       and a.id = f.task_id(+)
+	       and f.proc_inst_id = g.order_id(+)
+	       and g.parent_task_id = h.id(+)
+	       and a.fltid in(${fltids})
+	       and a.proc_id in(select proc_id from fd_progress_conf_v where col_code =#{colCode})
+	     order by a.name
+	</select>
+	<select id="getJobLateState" resultType="com.alibaba.fastjson.JSONObject">
+		select a.id "jobTaskId",
+	       round(to_number(to_date(c.finish_time, 'yyyy-mm-dd hh24:mi:ss') - to_date(c.expire_time, 'yyyy-mm-dd hh24:mi:ss')) * 24 * 60) "lateMinutes"
+		  from jm_task a, jm_task_proc_inst b, wf_hist_task c
+		 where a.id = b.task_id
+		   and b.proc_inst_id = c.order_id
+		   and c.parent_task_id = 'start'
+		   and a.id in(${jobIds})
+		 union   
+		  select a.id "jobTaskId",
+		       round(to_number(sysdate -  to_date(c.expire_time, 'yyyy-mm-dd hh24:mi:ss')) * 24 * 60) "lateMinutes"
+		  from jm_task a, jm_task_proc_inst b, wf_task c
+		 where a.id = b.task_id
+		   and b.proc_inst_id = c.order_id
+		   and c.parent_task_id = 'start'
+		   and a.id in(${jobIds})
+	</select>
+</mapper>

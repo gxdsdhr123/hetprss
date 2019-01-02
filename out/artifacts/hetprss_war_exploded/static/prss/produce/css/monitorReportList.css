@@ -1,0 +1,81 @@
+html,body{
+	height:100% !important;
+}
+#createView{
+	padding:10px;
+}
+#middleDiv button{
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	vertical-align: middle;
+	margin-top: 50px;
+	margin-bottom: 40px;
+}
+
+#leftDiv ul.list-group{
+	overflow:auto;
+	border: 1px solid #006DC0;
+	border-radius: 5px;
+	box-shadow: 0px 0px 10px -6px;
+	margin:0px;
+	height:250px;
+}
+#rightDiv ul.list-group{
+	overflow:auto;
+	border: 1px solid #006DC0;
+	border-radius: 5px;
+	box-shadow: 0px 0px 10px -6px;
+	margin:0px;
+	height:280px;
+}
+/* #leftDiv,#rightDiv,#middleDiv{
+	float:left;
+	height:100%;
+}
+#leftTitle,#rightTitle{
+	height:40px;
+	width:100%;
+	line-height:40px;
+}
+#leftTitle label,#rightTitle label{
+	padding: 0px;
+	margin: 0px;
+}
+#leftTitle > div,#rightTitle > div {
+	padding: 3px 0px;
+}
+#leftDiv ul,#rightDiv .sortable{
+	height: calc(100% - 45px);
+	width: 300px;
+	overflow:auto;
+	border: 1px solid #006DC0;
+	border-radius: 5px;
+	box-shadow: 0px 0px 10px -6px;
+	margin:0px;
+}
+.choosedField{
+	position:relative;
+}
+#middleDiv{
+	width:200px;
+	padding:15px;
+	text-algin:center;
+	padding-top:40px;
+}
+
+.bechoose{
+	background-color:#f4f4f4;
+}
+#rightDiv .hr{
+	width:100%;
+}
+#tableBox {
+	height:calc(100% - 34px);
+}
+.tab-box,.tab-content > .tab-pane{
+	height:100%;
+}
+#myTabContent {
+	height:calc(100% - 42px);
+} */

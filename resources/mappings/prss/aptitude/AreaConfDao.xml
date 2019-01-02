@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.aptitude.dao.AreaConfDao">
+	<resultMap id="BaseResultMap"
+		type="com.neusoft.prss.aptitude.entity.AreaConfEntity">
+		<result column="ID" jdbcType="DECIMAL" property="id" />
+		<result column="AREA_NAME" jdbcType="VARCHAR" property="areaName" />
+		<result column="PARENT_AREA_NAME" jdbcType="VARCHAR" property="parentAreaName" />
+		<result column="LIMIT_TYPE" jdbcType="DECIMAL" property="limitType" />
+		<result column="LIMIT_LEVEL" jdbcType="DECIMAL" property="limitLevel" />
+		<result column="PARENT_ID" jdbcType="DECIMAL" property="parentId" />
+		<result column="CREATOR_ID" jdbcType="VARCHAR" property="creatorId" />
+		<result column="CREATE_TIME" jdbcType="DATE" property="createTime" />
+		<result column="OFFICE_ID" jdbcType="VARCHAR" property="officeId" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		ID,AREA_NAME,LIMIT_TYPE,LIMIT_LEVEL,PARENT_ID,CREATOR_ID,CREATE_TIME,OFFICE_ID
+	</sql>
+	<select id="getAreaListByOfficeId" parameterType="java.util.List" resultMap="BaseResultMap">
+		select
+		d.ID,d.AREA_NAME,p.AREA_NAME as PARENT_AREA_NAME,d.LIMIT_TYPE,d.LIMIT_LEVEL,d.PARENT_ID,s.name CREATOR_ID,to_char(d.CREATE_TIME,'yyyy-MM-dd HH24:mi') CREATE_TIME,d.OFFICE_ID
+		from
+		dim_area_conf d, Sys_User s,dim_area_conf p
+		where d.OFFICE_ID in
+		<foreach item="officeId" index="index" collection="list" open="("
+			separator="," close=")">
+			#{officeId}
+		</foreach>
+		and d.CREATOR_ID = s.id
+		and d.parent_id = p.id(+)
+		order by CREATE_TIME desc
+	</select>
+	<select id="getOffice" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT *
+		FROM (SELECT ID, NAME
+		FROM SYS_OFFICE
+		START WITH ID = #{officeId}
+		CONNECT BY PRIOR ID =
+		PARENT_ID
+		AND TYPE &lt;&gt; 3 AND del_flag = '0') A
+		WHERE A.ID NOT IN (SELECT DISTINCT
+		PARENT_ID
+		FROM SYS_OFFICE
+		WHERE PARENT_ID IS NOT NULL
+		AND TYPE &lt;&gt; 3 AND del_flag = '0')
+	</select>
+	<select id="getOfficeInfo" resultType="com.alibaba.fastjson.JSONObject">
+		select id, name
+		from SYS_OFFICE
+		where ID = #{officeId}		
+	</select>
+	<select id="getOfficeId" resultType="java.lang.String">
+		SELECT id
+		FROM (SELECT ID,
+		NAME
+		FROM SYS_OFFICE
+		START WITH ID = #{officeId}
+		CONNECT BY PRIOR ID =
+		PARENT_ID
+		AND TYPE &lt;&gt; 3 AND del_flag = '0') A
+		WHERE A.ID NOT IN (SELECT DISTINCT
+		PARENT_ID
+		FROM SYS_OFFICE
+		WHERE PARENT_ID IS NOT NULL
+		AND TYPE &lt;&gt; 3 AND del_flag = '0')
+	</select>
+	<select id="getOfficeLim" resultType="com.neusoft.prss.aptitude.entity.OfficeLimConf">
+		select 
+		OFFICE_ID,JX_LIMIT,JW_LIMIT,HS_LIMIT
+		from
+		am_office_limit_conf
+		where OFFICE_ID = #{officeId}
+	</select>
+	<delete id="delOfficeLim" >
+		delete from am_office_limit_conf
+		where OFFICE_ID = #{officeId}
+	</delete>
+	<insert id="doInsterOfficeLim" >
+		insert into am_office_limit_conf
+		(OFFICE_ID,JX_LIMIT,JW_LIMIT,HS_LIMIT)
+		values 
+		(#{officeId},#{jxLimit},#{jwLimit},#{hsLimit})
+	</insert>
+	<select id="getAreaById" resultType="com.neusoft.prss.aptitude.entity.AreaConfEntity">
+		select
+		ID,AREA_NAME,LIMIT_TYPE,LIMIT_LEVEL,PARENT_ID,CREATOR_ID,to_char(CREATE_TIME,'yyyy-MM-dd HH24:mi') CREATE_TIME,OFFICE_ID
+		from 
+		dim_area_conf
+		where ID = #{id}
+		order by CREATE_TIME desc
+	</select>
+	<delete id="delAreaById" >
+		delete from dim_area_conf
+		where ID = #{id}
+	</delete>
+	<select id="getAllJX" resultType="java.lang.String">
+		SELECT TODB_ACTYPE_CODE AS actype_code FROM DIM_ACTYPE
+	</select>
+	<select id="getAllHS" resultType="java.lang.String">
+		SELECT distinct airline_code FROM dim_airlines
+	</select>
+	<select id="getAllJW" resultType="com.alibaba.fastjson.JSONObject">
+		select *
+		  from (select nvl(apron_code, nvl2(group_code, 'P' || group_code, 'unknow')) "pId",
+		               bay_code "id",
+		               bay_code "name"
+		          from dim_bay
+		        union all
+		        select distinct '0' "pId",
+		                        nvl(apron_code,
+		                            nvl2(group_code, 'P' || group_code, 'unknow')) "id",
+		                        nvl(apron_code,
+		                            nvl2(group_code, 'P' || group_code, '未知')) "name"
+		          from dim_bay) a
+		 order by a."pId",a."id"
+	</select>
+	<select id="getSeq" resultType="java.lang.Integer">
+		select
+		DIM_AREA_CONF_S.nextval from dual
+	</select>
+	<insert id="doInsertAreaConf">
+		insert into dim_area_conf
+		(<include refid="Base_Column_List" />)
+		values 
+		(#{id},#{areaName},#{limitType},#{limitLevel},#{parentId},#{creatorId},SYSDATE,#{officeId})
+	</insert>
+	<insert id="doInsertAreaElements">
+		insert into dim_area_elements
+		(id,element_code,update_time)
+		SELECT T.*
+		FROM (
+		<foreach collection="list" item="item" index="index"
+			separator=" union all ">
+			SELECT
+			#{item.id},
+			#{item.elementCode},
+			SYSDATE
+			FROM DUAL
+		</foreach>
+		) T
+	</insert>
+	<select id="getAreaElementsById" resultType="java.lang.String">
+		SELECT ELEMENT_CODE FROM dim_area_elements WHERE ID=#{id}
+	</select>
+	<select id="getSelect" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT id, area_name FROM dim_area_conf WHERE limit_type = #{type} and OFFICE_ID = #{id} and LIMIT_LEVEL = '0'
+	</select>
+	<select id="getNumOfChild" resultType="java.lang.Integer">
+		select COUNT(PARENT_ID) from dim_area_conf WHERE PARENT_ID = #{id}
+	</select>
+	<delete id="delAreaElements" >
+		delete from dim_area_elements
+		where ID = #{id}
+	</delete>
+	<update id="updateArea">
+		UPDATE dim_area_conf SET AREA_NAME = #{areaName}, PARENT_ID = #{parentId}, CREATOR_ID = #{creatorId},CREATE_TIME = SYSDATE
+		WHERE id = #{id}
+	</update>
+	<select id="getJWElementsById" resultType="com.alibaba.fastjson.JSONObject">
+<!-- 		SELECT ELEMENT_CODE "id", ELEMENT_CODE "name", nvl((SELECT APRON_CODE FROM dim_bay WHERE BAY_CODE = ELEMENT_CODE),'unknow') "pId" FROM dim_area_elements WHERE ID=#{id} -->
+<!-- 		UNION ALL -->
+<!-- 		SELECT DISTINCT nvl(APRON_CODE, 'unknow') "id", nvl(APRON_CODE, '未知') "name", '0' "pId" FROM dim_bay, dim_area_elements WHERE BAY_CODE = ELEMENT_CODE AND ID=#{id} -->
+		SELECT
+			ELEMENT_CODE "id",
+			ELEMENT_CODE "name",
+			NVL(APRON_CODE,NVL2(GROUP_CODE, 'P' || GROUP_CODE, 'unknow')) "pId" 
+	    FROM
+	      DIM_BAY,
+	      DIM_AREA_ELEMENTS  
+	    WHERE
+	      BAY_CODE = ELEMENT_CODE and
+	      ID =#{id} 
+	    UNION ALL
+	    SELECT DISTINCT
+	      NVL(APRON_CODE,NVL2(GROUP_CODE, 'P' || GROUP_CODE, 'unknow')) "id",
+	      NVL(APRON_CODE,NVL2(GROUP_CODE, 'P' || GROUP_CODE, '未知')) "name",
+	      '0' "pId" 
+	    FROM
+	      DIM_BAY,
+	      DIM_AREA_ELEMENTS
+	    WHERE
+	      BAY_CODE = ELEMENT_CODE 
+	      AND ID =#{id}
+	</select>
+</mapper>

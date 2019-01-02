@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.leadershipScheduling.dao.LeadershipSchedulingDao">
+	
+	<!-- 查询未添加的部门 -->
+	<select id="getOfficeSelect" resultType="hashmap">
+		SELECT
+			so.id,
+			so.NAME 
+		FROM
+			sys_office so 
+		<if test="'select' == flag">
+			WHERE NOT EXISTS ( SELECT office_id AS id FROM AM_LEADER_OFFICE_CONF ALPC WHERE so.id = ALPC.office_id )		
+		</if>
+	</select>
+	<!-- 查询最大 id am_leader_plan_s  序列   获取当前值 currval 第一次执行会出问题， 数据空需要先执行nextval-->
+<!-- 	<select id="queryWorkerId" resultType="string"> -->
+<!-- 		select max(id) from am_leader_plan -->
+<!-- 	</select> -->
+	<select id="queryStaffNameByOffice" resultType="hashmap">
+		select id, name from sys_user where office_id =  #{officeId} 
+		<if test="null != staffName">
+			and name like #{staffName}		
+		</if>
+	</select>
+	<!--  -->
+	<select id="queryForOfficeId" resultType="hashmap">
+		select * from AM_LEADER_OFFICE_CONF where OFFICE_ID = #{officeId}
+	</select>
+	<!-- 查询该部门当天计划 -->
+	<select id="queryLeaderDetail" resultType="hashmap">
+		select
+			 alp.id ID
+			,sy.name OFFICENAME
+			,alp.start_tm STARTTM
+			,alp.end_tm ENDTM
+			,sy.phone PHONE
+			,sy.mobile MOBILE
+			,sy.duty DUTY
+			,sy.id WORKERID
+		 from AM_LEADER_PLAN alp
+		 left join SYS_USER sy on alp.worker_id = sy.id
+		 where alp.office_id = #{officeId}
+		 <if test="null != flag">
+		 	and alp.id = #{id}
+		 </if>
+		 <if test="null != pdate">
+		 	and alp.pdate = #{pdate}
+		 </if>
+		  order by alp.id 
+	</select>
+	<!-- 得到主表数据 -->
+	<select id="getGriData" resultType="hashmap">
+		 SELECT
+			 ALOC.SEQ_NUM SEQNUM
+			,ALOC.OFFICE_ID OFFICEID
+			,SO.NAME OFFICENAME
+			,DATA1.MON
+			,DATA1.TUE
+			,DATA1.WED
+			,DATA1.THU
+			,DATA1.FRI
+			,DATA1.SAT
+			,DATA1.SUN
+		 FROM 
+		 AM_LEADER_OFFICE_CONF ALOC
+		LEFT JOIN 
+		 (select OFFICEID,MON_TM MON, TUE_TM TUE, WED_TM WED, THU_TM THU, FRI_TM FRI, SAT_TM SAT, SUN_TM SUN
+		  from (select ALP.office_id OFFICEID, to_char(to_date(ALP.pdate, 'yyyymmdd') - 1, 'd') as wk,
+		               to_char(WMSYS.WM_CONCAT(TO_CHAR(SU.NAME)||'  '||SU.PHONE||' '||SU.MOBILE||':'||ALP.start_tm||'~'||ALP.end_tm)) as INFO
+		          from AM_LEADER_PLAN ALP
+							LEFT JOIN SYS_USER SU ON SU.ID = ALP.WORKER_ID
+							where TO_DATE(PDATE, 'YYYYMMDD') BETWEEN  
+							<!-- 指定日期所在周计划 -->
+							<if test="null != searchTime">
+								(select TRUNC(to_date(#{searchTime}, 'yymmdd') + 7*0, 'IW')  from DUAL) 
+							</if> 
+							<!-- 当前时间所在周计划 -->
+<!-- 							<if test="null == searchTime || '' == searchTime">							 -->
+<!-- 							 	(select TRUNC(to_date(to_char(sysdate, 'yyyymmdd'), 'yymmdd') + 7*0, 'IW')  from DUAL)  -->
+<!-- 							</if>  -->
+							<!-- 当前日期 前后共三天计划 -->
+							<if test="null != dayBefore &amp;&amp; null != dayafter">
+								to_date(#{dayBefore}, 'yyyy-mm-dd')
+							</if>
+							AND 
+							<if test="null != searchTime">
+								(select TRUNC(to_date(#{searchTime}, 'yymmdd'), 'IW') + 6 + 7*0   from DUAL) 
+							</if>
+<!-- 							<if test="null == searchTime || '' == searchTime">								 -->
+<!-- 								(select TRUNC(to_date(to_char(sysdate, 'yyyymmdd'), 'yymmdd'), 'IW') + 6 + 7*0   from DUAL)  -->
+<!-- 							</if> -->
+							<if test="null != dayBefore &amp;&amp; null != dayafter">
+								to_date(#{dayafter}, 'yyyy-mm-dd')
+							</if>
+							group by ALP.pdate,ALP.office_id) 
+		pivot(max(INFO) as tm for wk in (1 MON, 2 TUE, 3 WED, 4 THU, 5 FRI, 6 SAT, 7 SUN))) DATA1 ON DATA1.OFFICEID = ALOC.OFFICE_ID
+		LEFT JOIN SYS_OFFICE SO ON SO.ID = ALOC.OFFICE_ID
+		ORDER BY ALOC.SEQ_NUM ASC
+	</select>
+	<!-- 得到当前最大排序值 -->
+	<select id="getSeqMaxNum" resultType="string">
+		select max(SEQ_NUM) from AM_LEADER_OFFICE_CONF
+	</select>
+	<!-- 保存当前部门 -->
+	<insert id="saveDept" parameterType="hashmap">
+		insert into AM_LEADER_OFFICE_CONF(OFFICE_ID, SEQ_NUM, ACTIVE_FLAG) values (#{officeId}, #{seqNum} ,#{activeFlag} )
+	</insert>
+	<!-- 保存人员计划 -->
+	<insert id="insertStaff" parameterType="hashmap">
+		insert into am_leader_plan(id, worker_id, pdate, start_tm, end_tm, office_id) values(am_leader_plan_s.nextval, #{workerId}, #{pdate}, #{startTm}, #{endTm}, #{officeId})
+	</insert>
+	<!-- 修改当前部门排序 -->
+	<update id="updateDept" parameterType="hashmap">
+		update AM_LEADER_OFFICE_CONF set SEQ_NUM = #{seqNum} where OFFICE_ID = #{officeId}
+	</update>
+	<!-- 修改当前人员时间 -->
+	<update id="updateStaff" parameterType="hashmap">
+		update am_leader_plan set start_tm = #{startTm}, end_tm = #{endTm} where id = #{id}
+	</update>
+	<!-- 删除当前部门 -->
+	<delete id="delDept" parameterType="hashmap">
+		delete from AM_LEADER_OFFICE_CONF where OFFICE_ID = #{officeId}
+	</delete>
+	<!-- 删除人员计划 -->
+	<delete id="delStaff" parameterType="hashmap">
+		delete from am_leader_plan where OFFICE_ID = #{officeId}
+		<if test="null != staffId">
+			 and id = #{staffId}		
+		</if>
+		<if test="null != pdate">
+			 and pdate = #{pdate}		
+		</if>
+	</delete>
+</mapper>

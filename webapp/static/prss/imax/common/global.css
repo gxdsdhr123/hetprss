@@ -1,0 +1,206 @@
+html,body {
+	height: 100%;
+	font-size: 16px;
+/* 	overflow:hidden !important; */
+}
+
+* {
+	font-family: Microsoft YaHei
+}
+
+h3 {
+	font-family: Microsoft YaHei
+}
+
+.container {
+	width: 100%;
+	background: #141824 url(../../../images/bg1920.png) center
+		no-repeat;
+	color: #ffffff;
+	padding-top: 60px;
+	height:1079px;
+	overflow: hidden;
+}
+
+.box {
+	border-top: 0px;
+	background-color: rgba(255, 255, 255, 0.1);
+	margin-bottom: 20px;
+	padding:10px;
+}
+
+.box-header {
+	color: #eee;
+	font-weight: bold;
+	padding: 10px;
+	text-align: center;
+}
+
+.box-body {
+	padding: 10px;
+}
+
+div[class*='col-md'] {
+	padding-left: 5px;
+	padding-right: 5px;
+}
+
+.inner-row {
+	padding-left: 5px;
+	padding-right: 15px;
+}
+
+.layui-breadcrumb a {
+	color: #fff !important;
+}
+
+.layui-breadcrumb .aactive {
+	color: #01AAED !important;
+}
+
+.box-header .box-title {
+	font-size: 24px !important;
+}
+/** table style */
+.dataTableHead {
+	width: 100%;
+	text-align: center;
+	vertical-align: middle;
+	font-size: 100%;
+	border: 1px solid rgba(71, 82, 106, 1);
+	position: absolute;
+	top: -38px;
+	left: 0;
+}
+
+.dataTableHead thead {
+	font-weight: bold;
+	font-size: 100%;
+}
+
+.dataTableHead thead td,.dataTableHead thead th {
+	padding-top: 5px;
+	padding-bottom: 5px;
+	border: 1px solid rgba(71, 82, 106, 1);
+	text-align: center;
+	background-color: rgba(71, 82, 106, 0.5)
+}
+
+.dataTable {
+	width: 100%;
+	height: 100%;
+	text-align: center;
+	vertical-align: middle;
+	font-size: 100%;
+	border: 1px solid rgba(71, 82, 106, 1);
+}
+
+.dataTable thead {
+	font-weight: bold;
+	font-size: 100%;
+}
+
+.dataTable thead td,.dataTable thead th {
+	padding-top: 5px;
+	padding-bottom: 5px;
+	border: 1px solid rgba(71, 82, 106, 1);
+	text-align: center;
+	background-color: rgba(71, 82, 106, 0.5)
+}
+
+.dataTable tbody td {
+	padding: 5px
+}
+
+.dataTable tbody tr{
+	border-top: 1px solid rgba(71, 82, 106, 1);
+	border-bottom: 1px solid rgba(71, 82, 106, 1);
+}
+.dataTable tbody tr:nth-child(odd) {
+/* 	background-color: rgba(71, 82, 106, 0.5) */
+}
+
+.dataTable tbody tr:nth-child(even) {
+/* 	background-color: rgba(77, 112, 150, 0.5) */
+}
+
+/*panelTable style*/
+.panelTable {
+	background-color: rgba(77, 112, 150, 0.5);
+	padding:10px;
+}
+.panelTable table{
+	width:100%;
+}
+.panelTable thead td{
+	text-align: center;
+}
+.panelTable td{
+	padding:5px;
+}
+
+/*数据时间*/
+#dataTimeDiv {
+	position: absolute;
+	top: 90%;
+	right: 1%;
+	line-height: 50px;
+	color: #ffffff;
+}
+
+.noDataDiv {
+	width: 100%;
+	height: 100%;
+	text-align: center;
+	background: rgba(255, 255, 255, 0.1);
+}
+
+.noDataText {
+	color: #fff;
+	display: inline-block;
+	/*background: url('../images/logo.png') no-repeat;*/
+	width: 150px;
+	height: 25px;
+	padding: 8px 0px;
+	font-style:oblique;
+}
+
+.container-title {
+	font-size:30px;
+	font-weight: bold;
+	padding:10px 0;
+}
+
+.layui-form-label{
+	width:200px;
+}
+.layui-form-select input.layui-input {
+	border:1px solid #006DC0 !important;
+	background-color:#002F63;
+	color:#ffffff;
+}
+.layui-form-select dl.layui-anim{
+	border:1px solid #006DC0;
+	background-color:#002F63;
+	color:#ffffff;
+}
+.layui-form-select dl.layui-anim > dd.layui-this,
+.layui-form-select dl.layui-anim > dd:hover{
+	background-color:#13285d;
+	color:#ffffff;
+	border:1px solid #006DC0;
+	border-left:0;
+	border-right:0;
+}
+
+.chartTable td {
+	border: 1px solid rgba(71, 82, 106, 1);
+	text-align: center;
+	padding: 5px;
+}
+
+input.rangeDate{
+	border:1px solid #006DC0;
+	background-color:#002F63;
+	color:#ffffff;
+}

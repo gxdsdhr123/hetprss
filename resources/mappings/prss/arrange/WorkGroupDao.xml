@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.arrange.dao.WorkGroupDao">
+	<select id="getListData" resultType="com.alibaba.fastjson.JSONObject">
+		select a.team_id as id,
+		a.team_name as tname,
+		u.name as teamer,
+		s.name as creator,
+		to_char(a.create_time,'yyyy-mm-dd hh24:mi') as createtime 
+		from
+		am_task_team a
+		left
+		join sys_user u on u.id =
+		a.leader_id
+		left join
+		sys_user s on s.id =
+		a.creator_id
+		where
+		a.OFFICE_ID=#{officeId}
+	</select>
+	<select id="getMembersByDeptid" resultType="com.alibaba.fastjson.JSONObject">
+		select id as "id" ,name as "text"
+		from
+		sys_user  where office_id=#{deptid} and DEL_FLAG='0'
+	</select>
+	<select id="getUnselectedByDeptid" resultType="com.alibaba.fastjson.JSONObject">
+		select id as "id" ,name as "text"
+		from
+		sys_user where office_id=#{teamid} and DEL_FLAG='0' and id not in(
+		select distinct
+		worker_id from AM_TEAM_WORKER_REL where worker_id is not
+		null
+		union
+		select distinct LEADER_ID from am_task_team where LEADER_ID is not
+		null
+		)
+	</select>
+	<select id="getMembersByteamid" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		u.id as "id",name as "text"
+		from
+		AM_TASK_TEAM g
+		left join AM_TEAM_WORKER_REL r
+		on
+		g.TEAM_ID
+		=
+		r.TEAM_ID
+		left
+		join sys_user u on r.worker_id = u.id
+		where
+		g.TEAM_ID
+		=#{teamid} and u.id
+		is not null and u.id not in (select LEADER_ID from
+		AM_TASK_TEAM where
+		TEAM_ID
+		=#{teamid})
+	</select>
+
+	<select id="getGroupInfoByid" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		TEAM_ID as
+		teamId,
+		LEADER_ID as leaderId,
+		TEAM_NAME as teamName
+		from
+		AM_TASK_TEAM where
+		TEAM_ID
+		=#{teamid}
+		and
+		rownum=1
+	</select>
+
+	<insert id="insertTeamInfo">
+		insert INTO AM_TASK_TEAM
+		(TEAM_ID,
+		OFFICE_ID,
+		LEADER_ID,
+		CREATOR_ID,
+		TEAM_NAME)
+		values
+		(#{teamId},
+		#{officeId}, #{leaderId},
+		#{creatorId},#{teamName})
+	</insert>
+
+	<insert id="insertWorkerRel">
+		insert INTO AM_TEAM_WORKER_REL
+		(TEAM_ID,
+		WORKER_ID,
+		IF_LEADER,
+		CREATOR_ID)
+		SELECT T.*
+		FROM (
+		<foreach collection="list" item="item" index="index"
+			separator=" union all ">
+			SELECT
+			#{item.teamId},
+			#{item.workerid},
+			#{item.ifleader},
+			#{item.creatorId}
+			FROM DUAL
+		</foreach>
+		) T
+	</insert>
+
+	<select id="getCgId">
+		select AM_GROUP_INFO_s.nextval from dual
+	</select>
+	<delete id="delTeamInfo">
+		delete from AM_TASK_TEAM where
+		TEAM_ID=#{id}
+	</delete>
+	<delete id="delTeamWorkerRel">
+		delete from AM_TEAM_WORKER_REL where
+		TEAM_ID=#{id}
+	</delete>
+
+</mapper>

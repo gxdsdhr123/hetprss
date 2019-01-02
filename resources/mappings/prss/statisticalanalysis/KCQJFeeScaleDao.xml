@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.statisticalanalysis.dao.KCQJFeeScaleDao">
+	
+	
+	<select id="getListCount" resultType="int" parameterType="Map">
+		SELECT COUNT(9) FROM BILL_KCQJ_FEESCALE_CONF
+		<where>
+				<if test="alnCode!=null and alnCode!=''">
+					AND ALN_3CODE =#{alnCode}
+				</if>
+				<if test="actType!=null and actType!=''">
+					AND INSTR(TODB_ACTYPE_CODE,#{actType})!=0
+				</if>
+		</where>
+	</select>
+	
+	<select id="getDataList" resultType="Map" parameterType="Map">
+		SELECT * FROM (
+			SELECT
+				ID,
+				ALN_3CODE,
+				TODB_ACTYPE_CODE,
+				HQ_CHARGES,
+				HH_CHARGES,
+				GZ_CHARGES,
+				ROW_NUMBER () OVER ( ORDER BY ID ) NUM ,
+				B.AIRLINE_SHORTNAME
+			FROM
+				BILL_KCQJ_FEESCALE_CONF A
+			LEFT JOIN DIM_AIRLINES B on A.ALN_3CODE=B.ICAO_CODE
+			<where>
+				<if test="alnCode!=null and alnCode!=''">
+					AND ALN_3CODE =#{alnCode}
+				</if>
+				<if test="actType!=null and actType!=''">
+					AND INSTR(TODB_ACTYPE_CODE,#{actType})!=0
+				</if>
+			</where>
+		)
+		WHERE <![CDATA[NUM>#{begin} AND NUM<=#{end}]]>
+		ORDER BY NUM
+		
+	</select>
+	
+	<insert id="save" parameterType="com.alibaba.fastjson.JSONObject">
+		INSERT INTO BILL_KCQJ_FEESCALE_CONF 
+			 (ID,
+			 ALN_3CODE, 
+			 TODB_ACTYPE_CODE, 
+			 HQ_CHARGES, 
+			 HH_CHARGES, 
+			 GZ_CHARGES)
+		VALUES( 
+		BILL_KCQJ_FEESCALE_CONF_S.NEXTVAL, 
+		#{alnCode}, 
+		'${actType}', 
+		#{hqCharges}, 
+		#{hhCharges}, 
+		#{gzCharges})
+	</insert>
+	
+	<select id="getDataById"  resultType="com.alibaba.fastjson.JSONObject" >
+		SELECT
+			ID,
+			ALN_3CODE,
+			TODB_ACTYPE_CODE,
+			HQ_CHARGES,
+			HH_CHARGES,
+			GZ_CHARGES
+		FROM
+			BILL_KCQJ_FEESCALE_CONF
+		WHERE ID=#{id}
+	</select>
+	
+	<delete id="delBillById">
+		DELETE FROM BILL_KCQJ_FEESCALE_CONF WHERE ID=#{id}
+	</delete>
+	
+	<update id="saveEdit" parameterType="com.alibaba.fastjson.JSONObject">
+		UPDATE BILL_KCQJ_FEESCALE_CONF SET 
+			ALN_3CODE=#{alnCode},
+			TODB_ACTYPE_CODE=#{actType},
+			HQ_CHARGES=#{hqCharges},
+			HH_CHARGES=#{hhCharges},
+			GZ_CHARGES=#{gzCharges}
+		WHERE ID=#{id}
+	</update>
+	
+	<select id="getActTypeByAlnCode" resultType="string">
+		SELECT
+			listagg ( TODB_ACTYPE_CODE, ',' ) within GROUP ( ORDER BY id ) TODB_ACTYPE_CODE 
+		FROM
+			BILL_KCQJ_FEESCALE_CONF 
+		WHERE
+			ALN_3CODE = #{alnCode} 
+		<if test="id!=null and id!=''">
+			AND ID !=#{id}
+		</if>
+<!-- 		<where> -->
+<!-- 			 <choose> -->
+<!-- 		        <when test="alnCode != null and  alnCode !=''"> -->
+<!-- 		            AND ALN_3CODE = #{alnCode}  -->
+<!-- 		        </when> -->
+<!-- 		        <otherwise> -->
+<!-- 		            AND ALN_3CODE is null -->
+<!-- 		        </otherwise> -->
+<!-- 		    </choose> -->
+<!-- 			<if test="id!=null and id!=''"> -->
+<!-- 				AND ID !=#{id} -->
+<!-- 			</if> -->
+<!-- 		</where>	 -->
+		
+		GROUP BY
+			ALN_3CODE
+	</select>
+</mapper>

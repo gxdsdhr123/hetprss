@@ -1,0 +1,8 @@
+.chart-table{
+	position: absolute;bottom:0;right:15px;left:12%;
+}
+.bz-text{line-height:200%; padding-top:30px; padding-left:30px; font-size:18px;}
+
+.pie-text{font-size:18px; line-height:200%; padding-top:30px;}
+
+.pie-table{height:250px; font-size:18px;}

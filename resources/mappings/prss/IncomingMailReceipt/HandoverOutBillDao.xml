@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="com.neusoft.prss.IncomingMailReceipt.dao.HandoverOutBillDao">
+	<!-- 获取出港航班 -->
+	<select id="getAirFligthInfo" resultType="hashmap">
+		SELECT 
+		   OUTFLT.FLTID,
+	       OUTFLT.FLIGHT_NUMBER FLIGHTNUMBER,
+	       OUTFLT.ACTSTAND_CODE ACTSTANDCODE,
+	       OUTFLT.AIRCRAFT_NUMBER AIRCRAFTNUMBER,		<!-- 机号 -->
+	       INFLT.ETA,
+	       OUTFLT.ETD,
+	       OUTFLT.ACTTYPE_CODE ACTTYPECODE
+	  FROM FD_FLT_INFO INFLT, FD_FLT_IOREL IOREL, FD_FLT_INFO OUTFLT
+	  WHERE INFLT.FLTID = IOREL.IN_FLTID
+	   AND IOREL.OUT_FLTID = OUTFLT.FLTID
+	   AND OUTFLT.FLIGHT_DATE = #{flightDate}
+	   AND OUTFLT.FLIGHT_NUMBER = #{flightNumber}
+	   AND OUTFLT.IN_OUT_FLAG LIKE 'D%'
+
+	</select>
+	<!-- 获取出港货邮单  -->
+	<select id="getOutData" resultType="hashmap">
+		SELECT * FROM(
+			select 
+				 ROWNUM NO
+			  	,bjh.id ID
+			  	,bjh.FLTID FLTID
+				,bjh.flight_date FLIGHTDATE
+				,bjh.flight_number FLIGHTNUMBER
+				,bjh.ACT_TYPE ACTTYPECODE
+				,bjh.AIRCRAFT_NUMBER AIRCRAFTNUMBER
+				,bjh.ACTSTAND_CODE ACTSTANDCODE
+				,bjh.ETA
+				,bjh.ETD
+				,bjh.OPERATOR
+				,su.name OPERATORNAME
+				,to_char(bjh.create_date, 'yyyy-mm-dd hh24:mi:ss') CREATEDATE
+			from BILL_CGHYJJD_HD bjh
+			left join sys_user su on su.id = bjh.operator
+			<trim prefix="WHERE" prefixOverrides="AND |OR ">
+				<if test="null != searchData">
+					and no like #{searchData}
+					or bjh.flight_date like #{searchData}
+					or bjh.flight_number like #{searchData}
+					or bjh.AIRCRAFT_NUMBER like #{searchData}
+					or bjh.ACTSTAND_CODE like #{searchData}
+					or bjh.ETA like #{searchData}
+					or su.name like #{searchData}
+					or bjh.create_date like #{searchData}
+				</if>
+			</trim>
+			order by bjh.create_date DESC
+		)
+		<trim prefix="WHERE" prefixOverrides="AND |OR ">
+			<if test="totalSize != 0">		
+			 	and NO BETWEEN #{begin} AND #{end} 
+			</if>
+			<if test="null != searchId">
+				and id = #{searchId}
+			</if>
+			<if test="null != flightDate and null != flightNumber">
+				and FLIGHTDATE = #{flightDate} and FLIGHTNUMBER = #{flightNumber}
+			</if>
+		</trim>
+	</select>
+	<!-- 获取出港货邮详情表数据 -->
+	<select id="getOutDetailData" resultType="hashmap">
+			select 
+			 rownum seq
+			,bjhg.coll_code COLL_CODE
+			,bjhg.INC_GOODS INC_GOODS
+			,bjhg.REMARK REMARK
+			,bjha.SIGNATORY SIGNATORY
+<!-- 			,bjha.SIGNATORY_TIME SIGNATORYDATE -->
+			,bjha.RECEIVER RECEIVER
+			,bjha.RECEIVE_TIME RECEIVERDATE
+			,bjhg.WEIGHT
+			,null A	<!-- 重复司机占位 -->
+			,null B <!-- 重复司机时间占位 -->
+		from bill_cghyjjd_hd_goods bjhg
+		left join bill_cghyjjd_hd_atta bjha on bjhg.bill_id = bjha.bill_id and bjhg.RECEIVER = bjha.RECEIVER
+		where bjhg.bill_id = #{searchId}
+
+	</select>
+
+	<!-- 保存主表数据 -->
+	<insert id="saveFlight" useGeneratedKeys="true"
+		keyProperty="id">
+		<selectKey resultType="String" keyProperty="id" order="BEFORE">
+			SELECT
+			<choose>
+				<when test="id!='null' and id!=''">
+					#{id}
+				</when>
+				<otherwise>
+					BILL_JGHYJJD_HD_S.NEXTVAL
+				</otherwise>
+			</choose>
+			from dual
+		</selectKey>
+		INSERT INTO 
+		bill_cghyjjd_hd ( ID, FLTID, FLIGHT_NUMBER, ACT_TYPE, AIRCRAFT_NUMBER, OPERATOR, CREATE_DATE, ACTSTAND_CODE, FLIGHT_DATE, ETA, ETD, OPERATOR_NAME )
+		VALUES (
+		#{id}, #{fltid}, #{flightNumber}, #{actType}, #{aircraftNumber}, #{operator}, #{createDate}, #{actstandCode},
+		#{flightDate}, #{eta}, #{etd}, #{operatorName})
+	</insert>
+
+	<!-- 保存 出港货邮物品 -->
+	<insert id="saveGoods" parameterType="hashmap">
+		INSERT INTO BILL_CGHYJJD_HD_GOODS ( ID, COLL_CODE, INC_GOODS, REMARK,
+			 BILL_ID, RECEIVER, RECEIVE_TIME, RECEIVE_STATUS, OPERATOR, OPERATOR_DATE, WEIGHT  ) 
+			  select BILL_CGHYJJD_HD_GOODS_S.NEXTVAL, A.* from(
+		<foreach collection="goodsList" item="tabdata" index="index" open="(" close=")" separator="union all">
+			select #{tabdata.collCode}, #{tabdata.incGoods}, #{tabdata.remark}, #{tabdata.billId}, 
+				#{tabdata.receiver}, #{tabdata.receiveTime}, #{tabdata.receiveStatus}, #{tabdata.operator}, 
+				to_char(#{tabdata.operateDate}, 'yyyy-mm-dd hh24:mi:ss'), #{tabdata.weight} from dual
+		</foreach>
+		) A
+	</insert>
+	
+	
+	<!-- 暂不明确 -->
+	<insert id="saveAtta" parameterType="hashmap">
+		INSERT INTO bill_cghyjjd_hd_atta ( ID, BILL_ID, RECEIVER, RECEIVE_TIME ) 
+		select bill_cghyjjd_hd_atta_s.NEXTVAL, A.* from(
+		<foreach collection="attaList" item="tabdata" index="index" open="(" close=")" separator="union all">
+			SELECT #{tabdata.billId}, #{tabdata.receiver}, #{tabdata.receiveTime} FROM DUAL
+		</foreach>
+		) A
+	</insert>
+	
+	<!--修改主表数据    暂留格式  需要修改主表时使用 -->
+	<update id="updateMainData" parameterType="hashmap">
+		UPDATE bill_cghyjjd_hd SET
+			
+			<if test="null != operator">
+				OPERATOR = #{operator}		
+			</if>
+			<if test="null != operatorName">
+				,OPERATOR_NAME = #{operatorName}			
+			</if>
+			<if test="null != scheduler">
+				,CREATE_DATE = #{createDate}		
+			</if>
+		WHERE
+		ID = #{searchId}
+	</update>
+	
+	
+	
+	<!-- 删除签署表-->
+	<delete id="delAttaData" parameterType="hashmap">
+		delete from bill_cghyjjd_hd_atta where bill_id = #{searchId}
+	</delete>
+	
+	<!-- 删除单据 -->
+	<delete id="delGoodsData" parameterType="hashmap">
+		delete from bill_cghyjjd_hd_goods where bill_id = #{searchId}
+	</delete>
+	<!-- 删除航班数据 -->
+	<delete id="delMain" parameterType="hashmap">
+		delete from bill_cghyjjd_hd where id = #{searchId}
+	</delete>
+	
+</mapper>

@@ -1,0 +1,504 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.produce.dao.QcczAssignReportDao">
+	
+	<select id="getListCount" resultType="int" parameterType="Map">
+		select count(*) as num
+          from bill_assign_report a, sys_user b, sys_office c,dim_restype d
+         where a.operator = b.id
+           and b.office_id = c.id
+           and a.job_type = d.restype
+           <if test='beginTime !="" '>
+				and a.create_date >= to_date(#{beginTime}, 'yyyyMMdd')
+		   </if>
+		   <if test='endTime !="" '>
+				and to_date(#{endTime}, 'yyyyMMdd') >= a.create_date
+		   </if> 
+	</select>
+	
+	<select id="getList" resultType="Map" parameterType="Map">
+		select *
+		  from (SELECT A.*, rownum rn
+		          from (select a.id,
+		          			   to_char(a.create_date,'yyyy-MM-dd HH24:mi:ss') create_date,
+		                       a.flight_number,
+		                       a.aircraft_number,
+		                       c.name,
+		                       a.operator_name,
+		                       d.typename
+		                  from bill_assign_report a, sys_user b, sys_office c,dim_restype d
+		                 where a.operator = b.id
+		                   and b.office_id = c.id
+		                   and a.job_type = d.restype
+		                   <if test='beginTime !="" '>
+								and a.create_date >= to_date(#{beginTime}, 'yyyyMMdd')
+						   </if>
+						   <if test='endTime !="" '>
+								and to_date(#{endTime}, 'yyyyMMdd') >= a.create_date
+						   </if> 
+		                   order by a.id desc) A
+		         where #{end} >= rownum)
+		 where rn > #{begin}
+	</select>
+
+	<select id="getDataById" resultType="Map" parameterType="string">
+		select *
+          from bill_assign_report where id = #{id}
+	</select>
+	
+	<select id="getFlightDetail" resultType="com.alibaba.fastjson.JSONObject" parameterType="Map">
+		select a.fltid,
+		       a.ACTSTAND_CODE,
+		       a.AIRCRAFT_NUMBER,
+		       a.ACTTYPE_CODE,
+		       a.PROPERTY_CODE,
+		       a.ATA,
+		       a.ATD,
+		       b.job_kind,
+		       b.job_type,
+		       c.typename
+		  from FD_FLT_INFO a, JM_TASK b, dim_restype c
+		 where a.fltid = b.fltid(+)
+		   and b.job_type = c.restype(+)
+		   and b.job_kind = 'JWQCCZZ'
+		   and a.flight_number = #{flightNumber}
+		   and a.flight_date = #{flightDate}
+		   group by a.fltid,
+		       a.ACTSTAND_CODE,
+		       a.AIRCRAFT_NUMBER,
+		       a.ACTTYPE_CODE,
+		       a.PROPERTY_CODE,
+		       a.ATA,
+		       a.ATD,
+		       b.job_kind,
+		       b.job_type,
+		       c.typename
+	</select>
+	
+	<select id="getFlightDetailPrssp" resultType="com.alibaba.fastjson.JSONObject" parameterType="Map">
+		select a.fltid,
+		       a.ACTSTAND_CODE,
+		       a.AIRCRAFT_NUMBER,
+		       a.ACTTYPE_CODE,
+		       a.PROPERTY_CODE,
+		       a.ATA,
+		       a.ATD,
+		       b.job_kind,
+		       b.job_type,
+		       c.typename
+		  from FD_FLT_INFO_HIS@PRSS2PRSSP a, JM_TASK_HIS@PRSS2PRSSP b, dim_restype c
+		 where a.fltid = b.fltid(+)
+		   and b.job_type = c.restype(+)
+		   and b.job_kind = 'JWQCCZZ'
+		   and a.flight_number = #{flightNumber}
+		   and a.flight_date = #{flightDate}
+		   group by a.fltid,
+		       a.ACTSTAND_CODE,
+		       a.AIRCRAFT_NUMBER,
+		       a.ACTTYPE_CODE,
+		       a.PROPERTY_CODE,
+		       a.ATA,
+		       a.ATD,
+		       b.job_kind,
+		       b.job_type,
+		       c.typename
+	</select>
+	
+	<select id="getTaskDetail" resultType="com.alibaba.fastjson.JSONObject" parameterType="Map">
+		select max(b.dw_name) as dw_name,
+	           max(b.wc_name) as wc_name,
+	           max(b.kscz_name) as kscz_name,
+	           min(a.act_arrange_tm) as act_arrange_tm,
+	           min(b.dw_ft) as dw_ft,
+	           max(b.wc_ft) as wc_ft,
+	           min(b.kscz_ft) kscz_ft
+	      from JM_TASK a, (select b.task_id,
+	                   case c.display_name
+	                     when '到位' then
+	                      c.display_name
+	                     else
+	                      ''
+	                   end as dw_name,
+	                   case c.display_name
+	                     when '到位' then
+	                      c.finish_time
+	                     else
+	                      ''
+	                   end as dw_ft,
+	                   case c.display_name
+	                     when '完成' then
+	                      c.display_name
+	                     else
+	                      ''
+	                   end as wc_name,
+	                   case c.display_name
+	                     when '完成' then
+	                      c.finish_time
+	                     else
+	                      ''
+	                   end as wc_ft,
+	                   case c.display_name
+	                     when '开始操作' then
+	                      c.display_name
+	                     else
+	                      ''
+	                   end as kscz_name,
+	                   case c.display_name
+	                     when '开始操作' then
+	                      c.finish_time
+	                     else
+	                      ''
+	                   end as kscz_ft
+	              from jm_task_proc_inst b, wf_hist_task_v c
+	             where b.proc_inst_id = c.order_id) b
+	     where a.id = b.task_id(+)
+	       and a.fltid = #{fltId}
+	       and a.job_type = #{jobType}
+      group by a.fltid
+	</select>
+	
+	<select id="getTaskDetailPrssp" resultType="com.alibaba.fastjson.JSONObject" parameterType="Map">
+		select max(b.dw_name) as dw_name,
+	           max(b.wc_name) as wc_name,
+	           max(b.kscz_name) as kscz_name,
+	           min(a.act_arrange_tm) as act_arrange_tm,
+	           min(b.dw_ft) as dw_ft,
+	           max(b.wc_ft) as wc_ft,
+	           min(b.kscz_ft) kscz_ft
+	      from JM_TASK_HIS@prss2prssp a, (select b.task_id,
+	                   case c.display_name
+	                     when '到位' then
+	                      c.display_name
+	                     else
+	                      ''
+	                   end as dw_name,
+	                   case c.display_name
+	                     when '到位' then
+	                      c.finish_time
+	                     else
+	                      ''
+	                   end as dw_ft,
+	                   case c.display_name
+	                     when '完成' then
+	                      c.display_name
+	                     else
+	                      ''
+	                   end as wc_name,
+	                   case c.display_name
+	                     when '完成' then
+	                      c.finish_time
+	                     else
+	                      ''
+	                   end as wc_ft,
+	                   case c.display_name
+	                     when '开始操作' then
+	                      c.display_name
+	                     else
+	                      ''
+	                   end as kscz_name,
+	                   case c.display_name
+	                     when '开始操作' then
+	                      c.finish_time
+	                     else
+	                      ''
+	                   end as kscz_ft
+	              from jm_task_proc_inst_HIS@prss2prssp b, wf_hist_task_v_HIS@prss2prssp c
+	             where b.proc_inst_id = c.order_id) b
+	     where a.id = b.task_id(+)
+	       and a.fltid = #{fltId}
+	       and a.job_type = #{jobType}
+      group by a.fltid
+	</select>
+	
+	<select id="getPeople" resultType="Map" >
+		select id,name from sys_user WHERE OFFICE_ID = '55402da62c0e49848b2b02524f8a545a'
+	</select>
+	
+	<insert id="saveReport"  parameterType="Map" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+		<selectKey resultType="int" order="BEFORE" keyProperty="id">   
+            select BILL_ASSIGN_REPORT_S.Nextval from dual
+        </selectKey>  
+		insert into BILL_ASSIGN_REPORT (ID,FLTID,FLIGHT_NUMBER,JOB_TYPE
+		<if test='ACTTYPE_CODE != null'>
+			,ACT_TYPE
+	    </if> 
+	    <if test='AIRCRAFT_NUMBER !=null'>
+			,AIRCRAFT_NUMBER
+	    </if> 
+		,OPERATOR,OPERATOR_NAME,CREATE_DATE
+		<if test='REMARK != null'>
+			,REMARK
+	    </if> 
+	    <if test='ATA !=null'>
+			,ATA
+	    </if> 
+	    <if test='ATD !=null'>
+			,ATD 
+	    </if> 
+		)
+		values (#{id},#{FLTID},#{flightNumber},#{jobType}
+		<if test='ACTTYPE_CODE != null'>
+			,#{ACTTYPE_CODE}
+	    </if> 
+	    <if test='AIRCRAFT_NUMBER !=null'>
+			,#{AIRCRAFT_NUMBER}
+	    </if> 
+		,#{lingban},(select name from sys_user where id in #{lingban}),sysdate
+		<if test='REMARK !=null '>
+			,#{REMARK}
+	    </if> 
+	    <if test='ATA !=null '>
+			,#{ATA}
+	    </if> 
+	    <if test='ATD !=null '>
+			,#{ATD}
+	    </if> 
+		)
+	</insert >
+	
+	<insert id="saveHis"  parameterType="Map" >
+		insert into bill_assign_job_his (id,user_id,item_id,report_id) 
+		values (bill_assign_job_his_s.nextval,#{userId},#{itemId},#{reportId})
+	</insert>
+	
+	<select id="getDataDetail" resultType="Map" parameterType="Map">
+		select e.id,
+	           e.fltid,
+	           e.flight_number,
+	           e.act_type as ACTTYPE_CODE,
+	           e.aircraft_number,
+	           e.signatory,
+	           e.remark,
+	           e.operator,
+	           a.flight_date,
+	           a.ACTSTAND_CODE,
+	           a.PROPERTY_CODE,
+	           a.ata,
+	           a.atd,
+	           c.typename,
+	           max(d.dw_name) as dw_name,
+	           max(d.wc_name) as wc_name,
+	           max(d.kscz_name) as kscz_name,
+	           min(b.act_arrange_tm) as act_arrange_tm,
+	           min(d.dw_ft) as dw_ft,
+	           max(d.wc_ft) as wc_ft,
+	           min(d.kscz_ft) kscz_ft
+	      from FD_FLT_INFO a,
+	           JM_TASK b,
+	           dim_restype c,
+	           (select f.task_id,
+                     case g.display_name
+                       when '到位' then
+                        g.display_name
+                       else
+                        ''
+                     end as dw_name,
+                     case g.display_name
+                       when '到位' then
+                        g.finish_time
+                       else
+                        ''
+                     end as dw_ft,
+                     case g.display_name
+                       when '完成' then
+                        g.display_name
+                       else
+                        ''
+                     end as wc_name,
+                     case g.display_name
+                       when '完成' then
+                        g.finish_time
+                       else
+                        ''
+                     end as wc_ft,
+                     case g.display_name
+                       when '开始操作' then
+                        g.display_name
+                       else
+                        ''
+                     end as kscz_name,
+                     case g.display_name
+                       when '开始操作' then
+                        g.finish_time
+                       else
+                        ''
+                     end as kscz_ft
+                from jm_task_proc_inst f, wf_hist_task_v g
+               where f.proc_inst_id = g.order_id) d,
+	           bill_assign_report e
+	     where a.fltid = b.fltid(+)
+	       and b.job_type = c.restype(+)
+	       and b.id = d.task_id(+)
+	       and a.fltid = e.fltid
+	       and b.job_kind = 'JWQCCZZ'
+	       and c.restype = #{jobType}
+	       and e.job_type = #{jobType}
+	       and a.fltid = #{fltId}
+	       and b.job_type = #{jobType}
+	     group by e.id,
+	              e.fltid,
+	              e.flight_number,
+	              e.act_type,
+	              e.aircraft_number,
+	              c.typename,
+	              e.signatory,
+	              e.remark,
+	              e.operator,
+	              a.flight_date,
+	              a.ACTSTAND_CODE,
+	              a.PROPERTY_CODE,
+	              a.ata,
+	              a.atd,
+	              c.typename
+	     order by act_arrange_tm
+	</select>
+	
+	<select id="getDataDetailPrssp" resultType="Map" parameterType="Map">
+		select e.id,
+		       e.fltid,
+		       e.flight_number,
+		       e.act_type as ACTTYPE_CODE,
+		       e.aircraft_number,
+		       e.signatory,
+		       e.remark,
+		       e.operator,
+		       e.job_type,
+		       a.flight_date,
+		       a.ACTSTAND_CODE,
+		       a.PROPERTY_CODE,
+		       a.ata,
+		       a.atd,
+		       c.typename,
+		       max(d.dw_name) as dw_name,
+		       max(d.wc_name) as wc_name,
+		       max(d.kscz_name) as kscz_name,
+		       min(b.act_arrange_tm) as act_arrange_tm,
+		       min(d.dw_ft) as dw_ft,
+		       max(d.wc_ft) as wc_ft,
+		       min(d.kscz_ft) kscz_ft
+		  from FD_FLT_INFO_HIS@Prss2prssp a,
+		       JM_TASK_HIS@Prss2prssp b,
+		       dim_restype c,
+		       (select b.task_id,
+		               case c.display_name
+		                 when '到位' then
+		                  c.display_name
+		                 else
+		                  ''
+		               end as dw_name,
+		               case c.display_name
+		                 when '到位' then
+		                  c.finish_time
+		                 else
+		                  ''
+		               end as dw_ft,
+		               case c.display_name
+		                 when '完成' then
+		                  c.display_name
+		                 else
+		                  ''
+		               end as wc_name,
+		               case c.display_name
+		                 when '完成' then
+		                  c.finish_time
+		                 else
+		                  ''
+		               end as wc_ft,
+		               case c.display_name
+		                 when '开始操作' then
+		                  c.display_name
+		                 else
+		                  ''
+		               end as kscz_name,
+		               case c.display_name
+		                 when '开始操作' then
+		                  c.finish_time
+		                 else
+		                  ''
+		               end as kscz_ft
+		          from jm_task_proc_inst_HIS@Prss2prssp b, wf_hist_task_v_HIS@Prss2prssp c
+		         where b.proc_inst_id = c.order_id) d,
+		       bill_assign_report e
+		 where a.fltid = b.fltid(+)
+		   and b.job_type = c.restype(+)
+		   and b.id = d.task_id(+)
+		   and a.fltid = e.fltid
+		   and b.job_kind = 'JWQCCZZ'
+		   and c.restype = #{jobType}
+	       and e.job_type = #{jobType}
+		   and a.fltid = #{fltId}
+		   and b.job_type = #{jobType}
+		 group by e.id,
+		          e.fltid,
+		          e.flight_number,
+		          e.act_type,
+		          e.aircraft_number,
+		          c.typename,
+		          e.signatory,
+		          e.remark,
+		          e.operator,
+		          e.job_type,
+		          a.flight_date,
+		          a.ACTSTAND_CODE,
+		          a.PROPERTY_CODE,
+		          a.ata,
+		          a.atd,
+		          c.typename
+		 order by act_arrange_tm
+
+	</select>
+	
+	<select id="getSelectPeople" resultType="Map" parameterType="String">
+		select a.item_id, to_char(wm_concat(a.user_id)) as names
+		  from bill_assign_job_his a, bill_assign_job_item b
+		 where a.item_id = b.item_id
+		   and a.report_id = #{id}
+		 group by a.item_id
+	</select>
+	
+	<delete id="deleteReport"  parameterType="String">
+		delete from bill_assign_report where id = #{reportId}
+	</delete>
+	
+	<delete id="deleteHis"  parameterType="String">
+		delete from bill_assign_job_his where report_id = #{reportId}
+	</delete>
+	
+	<update id="updateReport" parameterType="Map">
+		update bill_assign_report 
+		   set FLTID = #{FLTID},FLIGHT_NUMBER = #{flightNumber},OPERATOR = #{lingban},
+		   	   OPERATOR_NAME = (select name from sys_user where id = #{lingban}),CREATE_DATE = sysdate,
+			   job_type = #{jobType}
+			   <if test='ACTTYPE_CODE != null'>
+					,ACT_TYPE = #{ACTTYPE_CODE}
+			    </if>
+			   <if test='AIRCRAFT_NUMBER !=null'>
+					,AIRCRAFT_NUMBER = #{AIRCRAFT_NUMBER}
+			    </if> 
+			   <if test='REMARK !=null '>
+					,REMARK = #{REMARK}
+			    </if> 
+			   <if test='ATA !=null '>
+					,ATA = #{ATA}
+			    </if> 
+			   <if test='ATD !=null '>
+			   		,ATD = #{ATD}
+			   </if> 
+		 where id = #{id}
+	</update>
+	
+	<select id="getPeopleName"  resultType="String" parameterType="String">
+		select name from sys_user where id = #{id}
+	</select>
+	
+	<select id="getOperator" resultType="String" parameterType="Map">
+	    select *
+	      from (select operator
+	              from jm_task
+	             where fltid = #{fltId}
+	               and job_type = #{jobType}
+	             group by operator, start_tm
+	             order by start_tm)
+	     where rownum = 1
+	</select>
+</mapper>

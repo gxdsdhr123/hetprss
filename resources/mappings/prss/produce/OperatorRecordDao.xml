@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.produce.dao.OperatorRecordDao">
+
+	<select id="getListCount" resultType="int" parameterType="Map">
+		SELECT COUNT(9) NUM FROM (
+			   SELECT A.NAME FROM BILL_VEHICLE_BOUND H, SYS_USER A,JM_DEVICE b ,jm_device_type c
+				WHERE 1=1 
+					AND H.OPER_ID = A.ID
+				  	AND H.vehicle_number = b.inner_number 
+				  	AND b.type_id = c.type_id
+				  	AND c.reskind in( '${reskind}')
+					<if test="beginTime !=null and beginTime !=''">
+					<![CDATA[ 
+						 AND to_char(h.oper_bound_date,'yyyymmdd')>='${beginTime}'
+					 ]]>
+					</if>
+					<if test="endTime !=null and endTime !=''">
+					<![CDATA[ 
+					 	AND to_char(h.oper_bound_date,'yyyymmdd')<='${endTime}'
+					 ]]>
+					</if>
+		            <if test="operatorName != null and operatorName != ''">
+		             	AND (A.NAME like '%${operatorName}%' or A.NO like '%${operatorName}%')
+		            </if>
+		            <if test="innerNumber != null and innerNumber != ''">
+		             	AND H.VEHICLE_NUMBER like '%${innerNumber}%'
+		            </if>
+		       GROUP BY A.NAME, TO_CHAR(H.OPER_BOUND_DATE, 'yyyy-mm-dd')
+		)
+	</select>
+	
+	<select id="getList" resultType="Map" parameterType="Map">
+		SELECT ID,NAME,OPER_DATE,VEHICLE_NUMBER FROM (
+		 	SELECT ID,NAME,OPER_DATE,VEHICLE_NUMBER,
+               ROW_NUMBER() OVER(ORDER BY OPER_DATE DESC) NUM FROM(
+			SELECT 
+				   TO_CHAR(WM_CONCAT(T.ID)) ID,
+			       A.NAME,
+			       TO_CHAR(T.OPER_BOUND_DATE, 'yyyy-mm-dd') OPER_DATE,
+<!-- 			       TO_CHAR(T.OPER_BOUND_DATE, 'yyyy-mm-dd hh24:mi') CREATE_DATE, -->
+<!-- 			       T.VEHICLE_NUMBER, -->
+				   TO_CHAR(WM_CONCAT(T.VEHICLE_NUMBER)) VEHICLE_NUMBER,
+<!-- 			       ROW_NUMBER() OVER(ORDER BY T.ID DESC) NUM -->
+			       ROW_NUMBER() OVER(ORDER BY A.NAME DESC) NUM
+			  FROM BILL_VEHICLE_BOUND T, SYS_USER A,JM_DEVICE b ,jm_device_type c
+			 WHERE T.OPER_ID = A.ID
+			  	AND t.vehicle_number = b.inner_number 
+			  	AND b.type_id = c.type_id
+			  	AND c.reskind in( '${reskind}')
+				<if test="beginTime !=null and beginTime !=''">
+					<![CDATA[ 
+					 AND to_char(t.oper_bound_date,'yyyymmdd')>='${beginTime}'
+					 ]]>
+				</if>
+				<if test="endTime !=null and endTime !=''">
+					<![CDATA[ 
+					 AND to_char(t.oper_bound_date,'yyyymmdd')<='${endTime}'
+					 ]]>
+				</if>
+	            <if test="innerNumber != null and innerNumber != ''">
+	             	AND T.VEHICLE_NUMBER like '%${innerNumber}%'
+	            </if>
+	            <if test="operatorName != null and operatorName != ''">
+	             	AND (A.NAME like '%${operatorName}%' or A.NO like '%${operatorName}%')
+	            </if>
+	         GROUP BY A.NAME, TO_CHAR(T.OPER_BOUND_DATE, 'yyyy-mm-dd')
+			 ORDER BY OPER_DATE DESC
+		 ) )
+		 WHERE <![CDATA[NUM>#{begin} AND NUM<=#{end}]]>
+	</select>
+	<!-- 接车、收车项目 -->
+	<sql id="program">
+	SELECT *
+  		FROM (
+          	SELECT 
+          		 A.BOUND_ID,
+	             A.id,
+	             C.INNER_NUMBER,
+                 A.VEHICLE_NUMBER,
+                 TO_CHAR(E.OPER_BOUND_DATE, 'yyyy-mm-dd hh24:mi') CREATE_DATE,
+                 A.OPERATOR_ID,
+                 A.GL_NUM VALUE0,
+                 A.XS_NUM VALUE1,
+                 A.RY_NUM VALUE2,
+                 A.JY_NUM VALUE3,
+                 A.INS_TYPE, 
+				<!--检查单类型1：接车检查单，2：收车检查单 -->
+                 B.JCXM_NAME,
+                 B.JCXM_VAL
+            FROM BILL_CLJC_INS A, BILL_CLJC_JCXM_INS B, JM_DEVICE C,SYS_USER D,BILL_VEHICLE_BOUND E
+           WHERE A.ID = B.CLJC_ID
+             AND A.VEHICLE_NUMBER = C.Inner_Number
+             AND A.OPERATOR_ID = D.ID
+             AND a.bound_id in (${bondId})
+<!--              <if test="ins_type != null and ins_type != ''"> -->
+<!-- 	             AND A.INS_TYPE = '${ins_type}' -->
+<!--              </if> -->
+	         AND E.ID = A.BOUND_ID
+           ORDER BY OPER_DATE
+         )
+         PIVOT(           
+          MIN(JCXM_NAME) AS JCXM_NAME,
+           MIN(JCXM_VAL) AS INS_TYPE FOR JCXM_NAME IN(
+           
+           <!-- T1行李拖车 -->
+           <if test="reskind != null and (reskind == 'ZPT1XLS' or reskind == 'ZPT2GNXLS' or reskind == 'ZPT3XLS' or reskind == 'ZPT2GJXLS')">
+	           '外观卫生' AS "外观卫生"
+	           ,'灭火器' AS "灭火器"
+	           ,'反光镜' AS "反光镜"
+	           ,'油箱盖' AS "油箱盖"
+	           ,'轮挡' AS "轮挡"  
+	           ,'轮胎' AS "轮胎"  
+	           ,'仪表' AS "仪表"          
+	           ,'机油' AS "机油"
+	           ,'燃油' AS "燃油"
+	           ,'喇叭' AS "喇叭"
+	           ,'灯光' AS "灯光"
+	           ,'转向' AS "转向"
+	           ,'制动' AS "制动"
+           </if>
+           <!-- 摆渡车 -->
+           <if test="reskind != null and reskind == 'JWBDC'">
+           	   '外观' AS "外观"
+	           ,'灯光' AS "灯光"
+	           ,'转向' AS "转向"
+	           ,'车门' AS "车门"
+	           ,'卫生' AS "卫生"  
+	           ,'喇叭' AS "喇叭"            
+	           ,'刹车' AS "刹车"
+	           ,'消防锤' AS "消防锤"
+	           ,'仪表' AS "仪表"
+	           ,'灭火器' AS "灭火器"
+	           ,'轮胎' AS "轮胎"
+	           ,'气压表' AS "气压表"
+	           ,'毛巾' AS "毛巾"
+	           ,'麂皮' AS "麂皮"
+	           ,'掸子' AS "掸子"
+	           ,'水桶' AS "水桶"
+	           ,'GPS' AS "GPS"
+	           ,'升降系统' AS "升降系统"
+	           ,'液压系统' AS "液压系统"
+	           ,'轮档' AS "轮档"
+	           ,'抱夹系统' AS "抱夹系统"
+           </if>
+           )
+       )
+	</sql>
+	<!-- 人员车辆绑定 -->
+	<sql id="list">
+		SELECT B.FLIGHT_NUMBER,
+		   B.FLIGHT_DATE,
+	       B.AIRCRAFT_NUMBER,
+	       B.GATE,<!-- 到达口 ,登机口-->
+	       B.ACTSTAND_CODE,<!-- 机位 -->
+	       C.NAME,
+	       M.INNER_NUMBER,
+	       SUBSTR(B.ETA, 12, 5) ETA,
+	       SUBSTR(B.STD, 12, 5) STD,
+	       IN_OUT_FLAG,
+	       SUBSTR(A2.CREATE_TIME, 12, 5) ACT_ARRANGE_TM,
+	       TO_CHAR(RECEIVTIME,'hh24:mi') RECEIVTIME,
+	       <if test="reskind != null and reskind == 'JWBDC'">
+		       SUBSTR("摆渡车到位_FINISH_TIME", 12, 5) AS TIME1,
+		       SUBSTR("摆渡车上客_FINISH_TIME", 12, 5) AS TIME2,
+		       SUBSTR("摆渡车发车_FINISH_TIME", 12, 5) AS TIME3,
+		       SUBSTR("摆渡车完成_FINISH_TIME", 12, 5) AS TIME4
+	       </if>
+	  FROM JM_TASK A,
+	       FD_FLT_INFO B,
+	       SYS_USER C,
+	       (SELECT *
+	          FROM (SELECT T.FLTID, T.TASKID, T.FINISH_TIME, T.NODENAME
+	                  FROM (SELECT FLTID,
+	                               FINISH_TIME,
+	                               OPERATOR,
+	                               ID,
+	                               TASKID,
+	                               NODENAME NODENAME,
+	                               ROW_NUM
+	                          FROM (SELECT FLTID,
+	                                       TASK_NAME,
+	                                       FINISH_TIME,
+	                                       OPERATOR,
+	                                       ID,
+	                                       TASKID,
+	                                       ROW_NUM
+	                                  FROM (SELECT ID,
+	                                               C.FLTID,
+	                                               C.ID TASKID,
+	                                               D.TASK_NAME,
+	                                               FINISH_TIME,
+	                                               OPERATOR,
+	                                               ROW_NUMBER() OVER(PARTITION BY FLTID, TASK_NAME ORDER BY FINISH_TIME DESC) AS ROW_NUM
+	                                          FROM (SELECT A.FLTID,
+	                                                       B.PROC_INST_ID,
+	                                                       A.ID
+	                                                  FROM JM_TASK           A,
+	                                                       JM_TASK_PROC_INST B
+	                                                 WHERE A.ID = B.TASK_ID
+	                                                   AND A.DEL_FLAG = 0
+	                                                   AND JOB_STATE <![CDATA[ <>]]> '5') C,
+	                                               (SELECT ORDER_ID,
+	                                                       TASK_NAME,
+	                                                       FINISH_TIME,
+	                                                       OPERATOR
+	                                                  FROM WF_TASK
+	                                                UNION ALL
+	                                                SELECT ORDER_ID,
+	                                                       TASK_NAME,
+	                                                       FINISH_TIME,
+	                                                       OPERATOR
+	                                                  FROM WF_HIST_TASK) D
+	                                         WHERE C.PROC_INST_ID = D.ORDER_ID
+	                                           AND OPERATOR IS NOT NULL
+	                                           AND FINISH_TIME IS NOT NULL) E) T1,
+	                               (SELECT B.NAME,
+	                                       A.RESKIND,
+	                                       A.RESTYPE,
+	                                       A.TYPENAME || B.LABEL AS NODENAME
+	                                  FROM DIM_RESTYPE A, WF_NODE B
+	                                 WHERE A.RESKIND = B.JOB_KIND
+	                                   AND A.RESTYPE = B.JOB_TYPE) T2
+	                         WHERE T1.TASK_NAME = T2.NAME) T
+	                 WHERE 1 = 1) PIVOT(MIN(FINISH_TIME) AS FINISH_TIME FOR NODENAME IN(
+	                  <if test="reskind != null and reskind == 'JWBDC'">
+							'摆渡车到位' AS
+							"摆渡车到位",
+							'摆渡车上客' AS
+							"摆渡车上客",
+							'摆渡车发车' AS
+							"摆渡车发车",
+							'摆渡车完成' AS
+							"摆渡车完成"
+	                  </if>
+	                                                                                    ))) E,
+	       BILL_VEHICLE_BOUND H,
+	       JM_DEVICE M,
+	       JM_TASK_BOUND_V J,
+	       (SELECT T.JOB_TASK_ID, MAX(B.RECEIVTIME) RECEIVTIME, B.MTOER
+	          FROM WF_ORDER_MSG_LOG T
+	          LEFT JOIN MM_INFO A
+	            ON T.MID = A.ID
+	          LEFT JOIN MM_INFO_TO B
+	            ON T.MID = B.MID
+	           AND A.ID = B.MID
+	         WHERE TASK_ID = 'start'
+	         GROUP BY T.JOB_TASK_ID, B.MTOER) K,
+	       	JM_TASK_PROC_INST A1,
+       		WF_HIST_ORDER A2
+	 WHERE A.FLTID = B.FLTID
+		   AND A.OPERATOR = C.ID
+		   AND A.OPERATOR = H.OPER_ID
+		   AND A.ID = J.TASK_ID
+		   AND H.ID = J.BOUND_ID
+		   AND H.VEHICLE_NUMBER = M.INNER_NUMBER
+		   AND E.TASKID(+) = A.ID
+		   AND E.FLTID(+) = A.FLTID
+	       AND A.ID = K.JOB_TASK_ID
+	       AND A.OPERATOR = K.MTOER
+	       AND A.ID = A1.TASK_ID
+	   	   AND A1.PROC_INST_ID = A2.ID
+		   AND JOB_KIND = '${reskind}'
+		   <if test="reskind != null and reskind == 'JWBDC'">
+		  	 AND JOB_TYPE = 'JWBDCbdc'
+		   </if>
+	       AND H.ID in (${bondId})
+       ORDER BY B.FLIGHT_NUMBER DESC,A2.CREATE_TIME 
+	</sql>
+	<sql id="queryDataGZ">
+		SELECT TO_CHAR(WM_CONCAT(CLGZ_DESC)) CLGZ_DESC, INS_TYPE,ID
+		  FROM (
+	        SELECT B.CLGZ_DESC, A.INS_TYPE,T.ID
+	          FROM BILL_VEHICLE_BOUND T
+	          JOIN BILL_CLJC_INS A
+	            ON T.ID = A.BOUND_ID
+	          JOIN BILL_CLGZ_INS B
+			  	ON B.CLJC_ID = A.ID
+	        WHERE T.ID in (${bondId}))
+		 GROUP BY INS_TYPE,ID
+		 ORDER BY INS_TYPE
+	</sql>
+	<sql id="queryDataTP">
+	 	SELECT TO_CHAR(WM_CONCAT(FILE_PATH)) FILE_PATH,
+		       INS_TYPE,
+		       TO_CHAR(WM_CONCAT(DECODE(FILE_TYPE, -1, '', FILE_TYPE))) FILE_TYPE,
+		       ID
+		  FROM (
+	        SELECT C.FILE_PATH, INS_TYPE, C.FILE_TYPE,T.ID
+	          FROM BILL_VEHICLE_BOUND T
+	          JOIN BILL_CLJC_INS A
+	            ON T.ID = A.BOUND_ID
+	          JOIN BILL_CLGZ_INS B
+	            ON B.CLJC_ID = A.ID
+	          JOIN BILL_JCGZ_ATTA_INS C
+	            ON B.ID = C.CLGZ_ID
+	         WHERE T.ID in( ${bondId}))
+		 GROUP BY INS_TYPE,ID
+         
+	</sql>
+	<select id="queryData" resultType="com.alibaba.fastjson.JSONObject">
+<!-- 		<if test="ins_type!=null and ins_type!=99 and ins_type != 3 and ins_type != 4"> -->
+		<if test="ins_type!=null and ins_type==5">
+			<include refid="program"></include>
+		</if>
+		<if test="ins_type !=null and ins_type==99">
+			<include refid="list"></include>
+		</if>
+		<if test="ins_type != null and ins_type == 3">
+			<include refid="queryDataGZ"></include>
+		</if>
+		<if test="ins_type != null and ins_type == 4">
+			<include refid="queryDataTP"></include>
+		</if>
+	</select>
+</mapper>

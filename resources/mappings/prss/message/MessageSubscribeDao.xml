@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.message.dao.MessageSubscribeDao">
+
+	<resultMap type="com.neusoft.prss.message.entity.MessageSubscribeVO" id="subscribeList">
+		<result property="id" column="id" />
+		<result property="mtemplid" column="mtitle" />
+		<result property="crtime" column="crtime" />
+		<result property="cruserid" column="cruserid" />
+		<result property="cruseren" column="cruseren" />
+		<result property="totype" column="totype" />
+		<result property="torange" column="torange" />
+		<result property="mtext" column="mtext" />
+		<result property="schtime" column="schtime" />
+		<result property="hbiotype" column="hbiotype" />
+		<result property="flightnumber" column="flightnumber" />
+		<result property="torangenames" column="torangenames" />
+		<result property="hbevent" column="hbevent" />
+		<result property="disable" column="disable" />
+		<result property="condition" column="condition" />
+		<result property="mtemplname" column="mtemplname" />
+		<result property="ifsms" column="ifsms" />
+		<result property="hbeventname" column="hbeventname" />
+		<result property="hbiotypename" column="hbiotypename" />
+		<result property="disablename" column="disablename" />
+		<result property="totypename" column="totypename" />
+		<result property="mtemplname" column="mtemplname" />
+		<result property="ruleid" column="ruleid" />
+		<result property="colids" column="colids" />
+		<result property="drlStr" column="drlStr"/>
+		<result property="drools" column="drools"/>
+		<result property="jobId" column="jobId"/>
+		<result property="kindname" column="kindname"/>
+		<result property="sendDate" column="sendDate"/>
+	</resultMap>
+	
+	<resultMap type="com.neusoft.prss.message.entity.SRListVO" id="srlist">
+		<result property="no" column="no" />
+		<result property="name" column="name" />
+		
+	</resultMap>
+	
+	<select id="getsubscribeList" parameterType="Map" resultMap="subscribeList">
+		SELECT * FROM (SELECT B.*, rownum r FROM (select * from (SELECT A.ID,
+                               MTEMPLID,
+                               TO_CHAR(CRTIME, 'yyyy-MM-dd hh24:mi:ss') CRTIME,
+                               CRUSERID,
+                               CRUSEREN,
+                               TOTYPE,
+                               TORANGE,
+                               A.MTEXT,
+                               SCHTIME,
+                               A.FIOTYPE,
+                               FLIGHTNUMBER,
+                               TORANGENAMES,
+                               HBEVENT,
+                               DISABLE,
+                               RULEID,
+                               IFSMS,
+                               A.VARCOLS,
+                               B.MTITLE,
+                               NVL(A.JOBID,0) JOBID,
+                               NVL(C.EVENT_NAME, '') HBEVENTNAME,
+                               NVL(E.RULE, '') CONDITION,
+                               NVL(E.COLIDS, '') COLIDS,
+                               NVL(T.TEXT, '') HBIOTYPENAME,
+                               DECODE(A.DISABLE, '0', '停用', '1', '启用', '') DISABLENAME,
+                               DECODE(A.TOTYPE,
+                                      '0',
+                                      '个人',
+                                      '1',
+                                      '角色',
+                                      '2',
+                                      '部门',
+                                      '') TOTYPENAME,
+                                J.KINDNAME,
+                                A.SENDDATE
+                          FROM MM_SUBSCRIBE A
+                          LEFT JOIN MM_TEMPLATE B
+                            ON A.MTEMPLID = B.ID
+                          LEFT JOIN RM_RULE_INFO E
+                            ON A.RULEID = E.ID
+                          LEFT JOIN SYS_EVENT C
+                            ON A.HBEVENT = C.EVENT_ID
+                          LEFT JOIN DIM_COMMON_DICT T
+                            ON T.TYPE = 'ioType'
+                           AND A.FIOTYPE = T.VALUE
+                          LEFT JOIN SYS_USER H
+    						ON A.CRUSERID = H.ID
+                         LEFT JOIN DIM_RESKIND J
+   							ON H.OFFICE_ID = J.DEPID
+                         WHERE 1 = 1
+                         <if test="userType ==null or userType !=1 ">
+							and a.cruserid = #{cruserid}
+                         </if>
+    					<if test="jobKind ==null or jobKind !='all' ">
+							and H.Office_Id = #{jobKind}
+                         </if>
+    					<if test="event ==null or event !='all' ">
+							and C.EVENT_NAME like '%'|| #{event} || '%'
+                         </if>
+						<if test="disablename!=null and disablename!='-1'">  <![CDATA[ and a.disable=#{disablename} ]]> </if>
+						<if test="flightnumber!=null and flightnumber!=''">  <![CDATA[ and a.flightnumber like '%'||#{flightnumber}||'%' ]]> </if>
+						<if test="crtime!=null and crtime!=''">  <![CDATA[ and to_char(A.CRTIME,'yyyyMMdd') =#{crtime} ]]> </if>
+						<![CDATA[) order by ${sortName} ${sortOrder}) B WHERE rownum <= #{end} ) B WHERE r > #{begin}]]>
+	</select>
+	
+	<select id="getsubscribeListCount"  resultType="int" parameterType="Map">
+	  	select count(*) 
+		from  MM_SUBSCRIBE a 
+         LEFT JOIN SYS_USER H
+			ON A.CRUSERID = H.ID
+		 LEFT JOIN SYS_EVENT C
+            ON A.HBEVENT = C.EVENT_ID
+		where 1=1
+        <if test="userType ==null or userType !=1 ">
+			and a.cruserid = #{cruserid}
+        </if>
+		<if test="disablename!=null and disablename!='-1'">  <![CDATA[ and a.disable=#{disablename} ]]> </if>
+		<if test="flightnumber!=null and flightnumber!=''">  <![CDATA[ and a.flightnumber like '%'||#{flightnumber}||'%' ]]> </if>
+		<if test="crtime!=null and crtime!=''">  <![CDATA[ and to_char(A.CRTIME,'yyyyMMdd') =#{crtime} ]]> </if>
+		<if test="jobKind ==null or jobKind !='all' ">
+			and H.Office_Id = #{jobKind}
+        </if>
+        <if test="event ==null or event !='all' ">
+			and C.EVENT_NAME like '%'|| #{event} || '%'
+        </if>
+	</select>
+	
+	<select id="getdetailPage" parameterType="HashMap" resultMap="subscribeList">
+		select  a.ID,
+	       MTEMPLID,
+	       to_char(CRTIME,'yyyy-MM-dd hh24:mi:ss') CRTIME,
+	       CRUSERID,
+	       CRUSEREN,
+	       TOTYPE,
+	       TORANGE,
+	       A.MTEXT,
+	       SCHTIME,
+	       FLIGHTNUMBER,
+	       TORANGENAMES,
+	       HBEVENT,
+	       DISABLE,
+	       RULEID,
+	       IFSMS,
+	       A.VARCOLS,
+	       JOBID,       
+	       A.FIOTYPE HBIOTYPE,
+	       NVL(T.TEXT, '') HBIOTYPENAME,
+	       NVL(E.COLIDS, '') COLIDS,
+	       NVL(E.DRL_STR, '') DRLSTR,
+	       NVL(B.MTITLE, '') MTEMPLNAME,
+	       NVL(C.NAME, '') HBEVENTNAME,
+	       NVL(E.TEXT, '') CONDITION,
+	       NVL(E.RULE, '') DROOLS,
+	       A.IFPOPUP,
+	       A.TOTYPE MFROMTYPE,
+	       A.SENDDATE
+		from  MM_SUBSCRIBE a 
+		left join mm_template b on a.mtemplid = b.id 
+		left join RM_RULE_INFO e on a.ruleid =  e.id
+		left join DIM_SYSEVENTS c on c.code= a.hbevent and ifmess='1'
+		left join dim_common_dict t on a.FIOTYPE=t.value and t.type = 'ioType'
+		where a.id=#{id}
+	</select>
+	
+	<select id="getDimSysEvents" resultType="com.neusoft.prss.message.entity.CommonVO" parameterType="String">
+	           SELECT t.event_id code,t.event_name name FROM Sys_Event t where 1=1 
+	           order by t.event_id
+	</select>
+	
+	<select id="getFiotype" resultType="com.neusoft.prss.message.entity.CommonVO">
+	           SELECT t.value code ,t.text name FROM dim_common_dict t WHERE t.type = 'ioType' and t.VALUE IN ('A0','D0') ORDER BY t.sort
+	</select>
+	
+	<insert id="insertDimSysEvents" parameterType="com.neusoft.prss.message.entity.MessageSubscribeVO">
+         insert into MM_SUBSCRIBE
+		(id,mtemplid,crtime,cruserid,cruseren,totype,torange,mtext,schtime,fiotype,
+		flightnumber,torangenames,hbevent,disable,ruleid,ifsms,varcols,jobId,ifpopup,sendDate)
+		values
+		(#{id},#{mtemplid},sysdate,#{cruserid},#{cruseren},#{totype},#{torange},#{mtext},#{schtime},#{hbiotype},
+		#{flightnumber},#{torangenames},#{hbevent},#{disable},#{ruleid},#{ifsms},#{varcols},#{jobId},#{ifpopup},#{sendDate})		
+	</insert>
+	
+	<insert id="insertRmRuleIfno" parameterType="com.neusoft.prss.message.entity.MessageSubscribeVO">
+         insert into RM_RULE_INFO
+		(id,rule,colids,CREATE_TIME,CREATE_USER,TEXT,DRL_STR)
+		values
+		(#{ruleid},#{drools},#{colids},sysdate,#{cruserid},#{condition},#{drlStr})		
+	</insert>
+	
+	<delete id="deleteDimSysEvents" parameterType="string">
+		delete from MM_SUBSCRIBE where id in
+		<foreach item="id" index="index" collection="array" open="(" separator="," close=")">  
+			#{id}  
+		</foreach> 
+	</delete>
+	
+	<delete id="deleteRmRuleIfno" parameterType="string">
+		delete from RM_RULE_INFO where id in
+		<foreach item="id" index="index" collection="array" open="(" separator="," close=")">  
+			#{id}  
+		</foreach> 
+	</delete>
+	
+	<update id="updateDimSysEvents" parameterType="com.neusoft.prss.message.entity.MessageSubscribeVO">
+		update MM_SUBSCRIBE set
+		mtemplid=#{mtemplid},
+		cruserid=#{cruserid},
+		cruseren=#{cruseren},
+		totype=#{totype},
+		torange=#{torange},
+		mtext=#{mtext},
+		schtime=#{schtime},
+		fiotype=#{hbiotype},
+		flightnumber=#{flightnumber},
+		torangenames=#{torangenames},
+		hbevent=#{hbevent,jdbcType=VARCHAR},
+		disable=#{disable},
+		varcols=#{varcols},
+		ifsms=#{ifsms},
+		jobId=#{jobId},
+		ruleid=#{ruleid},
+		ifpopup=#{ifpopup},
+		sendDate=#{sendDate}
+		where id = #{id}
+	</update>
+	<update id="updateRmRuleIfno" parameterType="com.neusoft.prss.message.entity.MessageSubscribeVO">
+		update RM_RULE_INFO set
+		rule=#{drools},
+		colids=#{colids}
+		,UPDATE_TIME= sysdate,
+		UPDATE_USER=#{cruserid},
+		TEXT=#{condition},
+		DRL_STR = #{drlStr}
+		where id = #{ruleid}
+	</update>
+	
+	<select id="varList" parameterType="HashMap" resultMap="srlist">
+<!-- 		 select no,name from (select t.varen as no,t.varcn as name from DIM_RULEVARS t WHERE ismess='1' order by NAME) -->
+ 		SELECT a.id no,a.COL_CNNAME name,a.IS_CHG ischg FROM sys_grid_column a
+	</select>
+	
+	<select id="loadJobKind" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT t.depid CODE,t.kindname NAME FROM DIM_RESKIND t 
+	</select>
+</mapper>

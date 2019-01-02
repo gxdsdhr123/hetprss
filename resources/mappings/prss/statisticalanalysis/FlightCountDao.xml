@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.statisticalanalysis.dao.FlightCountDao">
+	
+	<select id="getFirstCount" parameterType="hashMap" resultType="hashMap" >
+		SELECT sum(FLT_TOTAL) FLT_TOTAL,sum(I_NUM) I_NUM,sum(D_NUM) D_NUM,sum(GW_TOTAL) GW_TOTAL,sum(BJ_TOTAL) BJ_TOTAL,
+		sum(AIR_NUM) AIR_NUM,sum(CAR_NUM) CAR_NUM,sum(DH_TOTAL) DH_TOTAL,sum(NH_TOTAL) NH_TOTAL,sum(HH_TOTAL) HH_TOTAL,sum(DC_TOTAL) DC_TOTAL,sum(GWD_NUM) GWD_NUM,sum(GWI_NUM) GWI_NUM,sum(BJD_NUM) BJD_NUM,sum(BJI_NUM) BJI_NUM,
+		sum(DHD_NUM) DHD_NUM,sum(DHI_NUM) DHI_NUM,sum(NHD_NUM) NHD_NUM,sum(NHI_NUM) NHI_NUM,sum(HHD_NUM) HHD_NUM,sum(HHI_NUM) HHI_NUM,sum(DCD_NUM) DCD_NUM,sum(DCI_NUM) DCI_NUM,
+		sum(IN_FLT_NUM) IN_FLT_NUM,sum(OUT_FLT_NUM) OUT_FLT_NUM  
+		FROM SA_IOF_OSCAR_DAY@Prss2prssp 
+		WHERE to_date(STAT_DAY,'yyyyMMdd') >= to_date('${beginTime}','yyyyMMdd') and to_date('${endTime}','yyyyMMdd') >=to_date(STAT_DAY,'yyyyMMdd') 
+	</select>
+	
+	<select id="getSecondCount" parameterType="hashMap" resultType="hashMap" >
+		SELECT sum(FLT_TOTAL) FLT_TOTAL,sum(I_NUM) I_NUM,sum(D_NUM) D_NUM,sum(GW_TOTAL) GW_TOTAL,sum(BJ_TOTAL) BJ_TOTAL,
+		sum(AIR_NUM) AIR_NUM,sum(CAR_NUM) CAR_NUM,sum(DH_TOTAL) DH_TOTAL,sum(NH_TOTAL) NH_TOTAL,sum(HH_TOTAL) HH_TOTAL,sum(DC_TOTAL) DC_TOTAL,sum(GWD_NUM) GWD_NUM,sum(GWI_NUM) GWI_NUM,sum(BJD_NUM) BJD_NUM,sum(BJI_NUM) BJI_NUM, 
+		sum(DHD_NUM) DHD_NUM,sum(DHI_NUM) DHI_NUM,sum(NHD_NUM) NHD_NUM,sum(NHI_NUM) NHI_NUM,sum(HHD_NUM) HHD_NUM,sum(HHI_NUM) HHI_NUM,sum(DCD_NUM) DCD_NUM,sum(DCI_NUM) DCI_NUM  
+		FROM SA_IOF_OSCAR_DAY@Prss2prssp 
+		WHERE to_date(STAT_DAY,'yyyyMMdd') >= to_date('${vsBeginTime}','yyyyMMdd') and to_date('${vsEndTime}','yyyyMMdd') >=to_date(STAT_DAY,'yyyyMMdd') 
+	</select>
+	
+	<select id="getBeginSaAlnOscarDay" parameterType="hashMap" resultType="hashMap" >
+		SELECT sum(FLT_NUM) FLT_NUM,ALN_ACT 
+		FROM SA_ALN_OSCAR_DAY@Prss2prssp 
+		WHERE to_date(STAT_DAY,'yyyyMMdd') >= to_date('${beginTime}','yyyy-MM-dd') and to_date('${endTime}','yyyy-MM-dd') >=to_date(STAT_DAY,'yyyyMMdd') and ACTTYPE = #{type} 
+		group by ALN_ACT
+	</select>
+	
+	<select id="getEndSaAlnOscarDay" parameterType="hashMap" resultType="hashMap" >
+		SELECT sum(FLT_NUM) FLT_NUM,ALN_ACT 
+		FROM SA_ALN_OSCAR_DAY@Prss2prssp 
+		WHERE to_date(STAT_DAY,'yyyyMMdd') >= to_date('${vsBeginTime}','yyyy-MM-dd') and to_date('${vsEndTime}','yyyy-MM-dd') >=to_date(STAT_DAY,'yyyyMMdd') and ACTTYPE = #{type} 
+		group by ALN_ACT
+	</select>
+</mapper>

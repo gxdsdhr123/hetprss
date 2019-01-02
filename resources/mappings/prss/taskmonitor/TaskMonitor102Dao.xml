@@ -1,0 +1,652 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.taskmonitor.dao.TaskMonitor102Dao">
+	
+	<select id="getPersonTaskData" resultType="hashmap">
+		select * from JM_XLLY_OPERATOR_JK_V t
+		<where>
+			1=1
+			<if test="isPart == 1">
+				and if_off = 0
+			</if>
+			<if test="dayOrNight!=null and dayOrNight!='' ">
+				and DAY_OR_NIGHT = #{dayOrNight}
+			</if>
+		</where>
+		order by OPERATOR_NAME 
+	</select>
+	
+	<select id="getPersonTaskByPersonIds" resultType="hashmap">
+		select * from JM_XLLY_ALLOPERATOR_JK_V t
+		where t.ID in
+		<foreach collection="personIds" open="(" close=")" separator="," item="id">
+			#{id}
+		</foreach>
+		<if test="isPart == 1">
+			and if_off = 0
+		</if>
+		order by  t.pos, t.IF_STAR,t.ID, t.rk
+	</select>
+		
+	<select id="getFlightTaskData" resultType="hashmap">
+		select * from jm_xlly_flight_number_jk_v t 
+		order by t.order_id, t.in_out_flag2, t.name
+	</select>
+	
+	<select id="getDefSwitch" resultType="integer">
+		<![CDATA[
+			select
+			   min(case
+			       when to_date(to_char(sysdate,'yyyy-mm-dd ')||start_time,'yyyy-mm-dd hh24mi') <= sysdate and 
+			            to_date(to_char(sysdate,'yyyy-mm-dd ')||end_time,'yyyy-mm-dd hh24mi') >= sysdate
+			       then 0
+			       else 1
+			       end) state
+			from JM_BDC_BUZY_TIME
+		]]>
+	</select>
+	
+	<select id="getInOutFlight" resultType="com.neusoft.prss.taskmonitor.entity.TaskFlightInfo">
+
+		--点击进出港
+		select t1.fltid,
+		       --进港航班号
+		       t1.flight_number as inFltNum,
+		       --出港航班号
+		       t3.flight_number as outFltNum,
+		       --机号
+		       nvl(t1.aircraft_number, t3.aircraft_number) as aircraftNumber,
+		       --机型
+		       (select icao_code
+		          from DIM_ACTYPE
+		         where todb_ACTYPE_CODE = nvl(t1.ACTTYPE_CODE, t3.ACTTYPE_CODE)) as acttypeCode,
+		       --机位
+		       case
+		         when t1.actstand_code = t3.actstand_code then
+		          t1.actstand_code
+		         else
+		          t1.actstand_code || '|' || t3.actstand_code
+		       end as actstandCode,
+		       --到达口
+		       t1.gate,
+		       to_daytime(t1.sta) as sta,
+		       to_daytime(t1.eta) as eta,
+		       to_daytime(t1.ata) as ata,
+		       to_daytime(t3.std) as std,
+		       to_daytime(t3.etd) as etd,
+		       to_daytime(t3.atd) as atd,
+		       --国际国内标识
+		       nvl(t1.flt_attr_code, t3.flt_attr_code) as fltAttrCode,
+		       --vip
+		       (select text
+		          from dim_common_dict
+		         where type = 'vipFlag'
+		           and value = nvl(t1.vip_flag, t3.vip_flag)) as vipFlag,
+		       --重保
+		       case
+		         when nvl(t1.ssg_flag, t3.ssg_flag) is not null then
+		          (select text
+		             from dim_common_dict
+		            where type = 'vipFlag'
+		              and value = '5')
+		         else
+		          null
+		       end as ssgFlag,
+		       --接飞
+		       t1.BEF_AFT_FLTNO as befAftFltno,
+		       --状态
+		       (select decode(max(text), '正常', '正班', max(text))
+		          from dim_common_dict
+		         where type = 'acfStatus'
+		           and value = t1.status) as status,
+		       --登机开始时间
+		       to_daytime(t3.BRD_BTM) as brdBtm,
+		       --登机结束时间
+		       to_daytime(t3.BRD_ETM) as brdEtm,
+		       t1.route_3code || '-HET-' || t3.route_3code hx
+		  from fd_flt_info t1
+		  join fd_flt_iorel t2
+		    on (t2.in_fltid = t1.fltid)
+		  join fd_flt_info t3
+		    on (t2.out_fltid = t3.fltid)
+		  left join fd_flt_cla_airground t4
+		    on (t1.fltid = t4.fltid)
+		     where t1.fltid = #{fltid} or t3.fltid = #{fltid}
+		  </select>	
+		
+		
+		<select id="getInFlight" resultType="com.neusoft.prss.taskmonitor.entity.TaskFlightInfo">
+		   --点击进港
+		   select t1.fltid,
+		          --进港航班号
+		          t1.flight_number as inFltNum,
+		          --出港航班号
+		          t3.flight_number as outFltNum,
+		          --机号
+		          nvl(t1.aircraft_number,t3.aircraft_number) as aircraftNumber,
+		          --机型
+		          (select icao_code
+		             from DIM_ACTYPE
+		            where todb_ACTYPE_CODE = nvl(t1.ACTTYPE_CODE,t3.ACTTYPE_CODE)) as acttypeCode,
+		          --进港机位
+		          t1.actstand_code as actstandCode,
+		          --到达口
+		          t1.gate,
+		          to_daytime(t1.sta) as sta,
+		          to_daytime(t1.eta) as eta,
+		          to_daytime(t1.ata) as ata,
+		          to_daytime(t3.std) as std,
+		          to_daytime(t3.etd) as etd,
+		          to_daytime(t3.atd) as atd,
+		          --国际国内标识
+		          nvl(t1.flt_attr_code,t3.flt_attr_code) as fltAttrCode,
+		       --vip
+		       (select text
+		          from dim_common_dict
+		         where type = 'vipFlag'
+		           and value = nvl(t1.vip_flag, t3.vip_flag)) as vipFlag,
+		       --重保
+		       case
+		         when nvl(t1.ssg_flag, t3.ssg_flag) is not null then
+		          (select text
+		             from dim_common_dict
+		            where type = 'vipFlag'
+		              and value = '5')
+		         else
+		          null
+		       end as ssgFlag,
+		          --接飞
+		          t1.BEF_AFT_FLTNO as befAftFltno,
+		          --状态
+		          (select decode(max(text), '正常', '正班', max(text))
+		             from dim_common_dict
+		            where type = 'acfStatus'
+		              and value = t1.status) as status,
+		          --登机开始时间
+		          to_daytime(t3.BRD_BTM) as brdBtm,
+		          --登机结束时间
+		          to_daytime(t3.BRD_ETM) as brdEtm,
+		          t1.route_3code || '-HET' hx
+		     from fd_flt_info t1
+		     full join fd_flt_iorel t2
+		       on (t2.in_fltid = t1.fltid)
+		     full join fd_flt_info t3
+		       on (t2.out_fltid = t3.fltid  and t3.in_out_flag='D1')
+		     left join fd_flt_cla_airground t4
+		       on (t1.fltid = t4.fltid)
+		     where t1.fltid = #{fltid}
+		  </select>	
+		
+		<select id="getOutFlight" resultType="com.neusoft.prss.taskmonitor.entity.TaskFlightInfo">
+		   --点击出港
+		   select t1.fltid,
+		          --进港航班号
+		          t1.flight_number as inFltNum,
+		          --出港航班号
+		          t3.flight_number as outFltNum,
+		          --机号
+		          nvl(t1.aircraft_number,t3.aircraft_number) as aircraftNumber,
+		          --机型
+		          (select icao_code
+		             from DIM_ACTYPE
+		            where todb_ACTYPE_CODE = nvl(t1.ACTTYPE_CODE,t3.ACTTYPE_CODE)) as acttypeCode,
+		          --出港机位
+		          t3.actstand_code as actstandCode,
+		          --到达口
+		          t1.gate,
+		          to_daytime(t1.sta) as sta,
+		          to_daytime(t1.eta) as eta,
+		          to_daytime(t1.ata) as ata,
+		          to_daytime(t3.std) as std,
+		          to_daytime(t3.etd) as etd,
+		          to_daytime(t3.atd) as atd,
+		          --国际国内标识
+		          nvl(t1.flt_attr_code,t3.flt_attr_code) as fltAttrCode,
+		       --vip
+		       (select text
+		          from dim_common_dict
+		         where type = 'vipFlag'
+		           and value = nvl(t1.vip_flag, t3.vip_flag)) as vipFlag,
+		       --重保
+		       case
+		         when nvl(t1.ssg_flag, t3.ssg_flag) is not null then
+		          (select text
+		             from dim_common_dict
+		            where type = 'vipFlag'
+		              and value = '5')
+		         else
+		          null
+		       end as ssgFlag,
+		          --接飞
+		          t1.BEF_AFT_FLTNO as befAftFltno,
+		          --状态
+		          (select decode(max(text), '正常', '正班', max(text))
+		             from dim_common_dict
+		            where type = 'acfStatus'
+		              and value = t1.status) as status,
+		          --登机开始时间
+		          to_daytime(t3.BRD_BTM) as brdBtm,
+		          --登机结束时间
+		          to_daytime(t3.BRD_ETM) as brdEtm,
+		          'HET-' || t3.route_3code hx
+		     from fd_flt_info t1
+		     full join fd_flt_iorel t2
+		       on (t2.in_fltid = t1.fltid  and t1.in_out_flag='A1')
+		     full join fd_flt_info t3
+		       on (t2.out_fltid = t3.fltid)
+		     left join fd_flt_cla_airground t4
+		       on (t1.fltid = t4.fltid)
+		     where t3.fltid = #{fltid}
+		  </select>	
+
+	
+	<select id="getTaskInfo" resultType="com.neusoft.prss.taskmonitor.entity.TaskNode">
+		--点击任务
+		select tb1.id,
+		       status,
+		       name,
+		       --当是1时展示拖出机位、拖入机位
+		       case
+		         when name like '%拖拽%' then
+		          1
+		         else
+		          0
+		       end as ifActstand,
+			   proc_id as procId,
+		       tm1 as eArrive,
+		       tm2 as aArrive,
+		       tm3 as eStart2,
+		       tm4 as aStart2,
+		       tm5 as eStart,
+		       tm6 as aStart,
+		       tm7 as eEnd,
+		       tm8 as aEnd,
+		       car_id as carId,
+		       tb3.FROM_ACTSTAND as fromActstand,
+		       tb3.TO_ACTSTAND as toActstand
+		  from (select a.id,
+		               --当前状态
+		               case
+		                 when c.PARENT_TASK_ID = 'start' then
+		                  null
+		                 when c.display_name = '已完成' then
+		                  '完成'
+		                 else
+		                  (select display_name
+		                     from wf_hist_task_v
+		                    where id = c.PARENT_TASK_ID)
+		               end as status
+		               --任务名
+		              ,
+		               name,
+		               PROC_ID,
+		               (SELECT VEHICLE_NUMBER
+		                  FROM (SELECT VEHICLE_NUMBER,
+		                               OPER_ID,
+		                               ROW_NUMBER() OVER(PARTITION BY OPER_ID ORDER BY OPER_BOUND_DATE DESC) AS ROW_NUM
+		                          FROM BILL_VEHICLE_BOUND
+		                         WHERE STATUS = 1)
+		                 WHERE ROW_NUM = 1
+		                   AND OPER_ID = a.OPERATOR) AS CAR_ID
+		          from jm_task a,
+		               jm_task_proc_inst b,
+		               (select order_id, PARENT_TASK_ID, display_name
+		                  from wf_task
+		                union
+		                select order_id, PARENT_TASK_ID, '已完成'
+		                  from wf_hist_task_v
+		                 where display_name = '完成') c
+		         where a.id = b.task_id(+)
+		           and b.proc_inst_id = c.order_id(+)
+		           and a.id = #{taskId}) tb1
+		  left join (select id,
+		                    max(decode(jd_name, '到位', jd_eft, null)) as tm1,
+		                    max(decode(jd_name, '到位', jd_ft, null)) as tm2,
+		                    max(decode(jd_name, '开始拖动', jd_eft, null)) as tm3,
+		                    max(decode(jd_name, '开始拖动', jd_ft, null)) as tm4,
+		                    max(decode(jd_name, '开始靠接', jd_eft,'开始', jd_eft, null)) as tm5,
+		                    max(decode(jd_name, '开始靠接', jd_ft ,'开始', jd_ft , null)) as tm6,
+		                    max(decode(jd_name, '完成', jd_eft, null)) as tm7,
+		                    max(decode(jd_name, '完成', jd_ft, null)) as tm8
+		               from (select a.id,
+		                            c.display_name as jd_name,
+		                            to_daytime(c.expire_time) as jd_eft,
+		                            to_daytime(c.finish_time) as jd_ft
+		                       from jm_task a, jm_task_proc_inst b, wf_hist_task_v c
+		                      where a.id = b.task_id
+		                        and b.proc_inst_id = c.order_id
+		                        and a.id = #{taskId}
+		                     union
+		                     select a.id,
+		                            c.display_name "节点名称",
+		                            to_daytime(c.expire_time) "节点预计完成时间",
+		                            to_daytime(c.finish_time) "节点完成时间"
+		                       from jm_task a, jm_task_proc_inst b, wf_task c
+		                      where a.id = b.task_id
+		                        and b.proc_inst_id = c.order_id
+		                        and a.id = #{taskId}) tb1
+		              group by id) tb2
+		    on (tb1.id = tb2.id)
+		  left join jm_task_plus_v tb3
+		    on (tb1.id = tb3.taskId)
+	</select>
+	
+	<select id="highTasks" resultType="string">
+		select a.id
+		from jm_task a left join jm_task b on a.fltid = b.fltid
+		where b.id = #{taskId}
+	</select>
+	
+	<select id="getIfTimeConflict" resultType="hashmap">
+		<![CDATA[
+			select * from
+			(select '新拖动任务时段(' || t1.e_start_tm || '-' || t1.e_end_tm || ')与该人员保障任务时段(' ||
+			       t2.e_start_tm || '-' || t2.e_end_tm || ')冲突' as msg,
+			       to_char(wm_concat(t1.id) over(partition by '')) || ',${taskId}'  as ids
+			  from (select e_start_tm, e_end_tm, id
+			          from jm_task
+			         where operator = #{operatorId}
+			           and job_state in ('1', '2')
+			           and e_start_tm is not null
+			           and e_end_tm is not null) t1
+			  join (select e_start_tm, e_end_tm
+			          from jm_task
+			         where e_start_tm is not null
+			           and e_end_tm is not null
+			           and id = #{taskId}) t2
+			    on (t1.e_end_tm > t2.e_start_tm and t1.e_start_tm < t2.e_end_tm)
+			 ) where rownum = 1
+		]]>
+	</select>
+	
+	<select id="getIfCarEnough" resultType="integer">
+		<![CDATA[
+			select case
+		       --符合最后的航班才判断，否则返回1
+		         when (select count(*) c
+		                 from jm_task mt
+		                 left join jm_task t
+		                   on mt.fltid = t.fltid
+		                where t.id = #{taskId}
+		                  and mt.job_state in ('0', '6')
+						  and mt.del_flag='0'
+		                  and mt.id != #{taskId}) = 0 then
+		         --混装航班看国际人数和国内人数
+		          case
+		            when FLT_ATTR_CODE = 'M' and
+		                 (nvl((select sum(nvl(t3.seating_num, 110))
+		                        from jm_task t1
+		                        left join (select vehicle_number, oper_id
+		                                    from (select vehicle_number,
+		                                                 oper_id,
+		                                                 row_number() over(partition by oper_id order by oper_bound_date desc) as row_num
+		                                            from bill_vehicle_bound
+		                                           where status = 1)
+		                                   where row_num = 1) t2
+		                          on (oper_id = operator)
+		                        left join jm_device t3
+		                          on (t3.inner_number = t2.vehicle_number)
+		                       where job_type = 'JWBDCbdc'
+		                         and fltid = #{fltid}
+		                         and del_flag = 0
+		                         and job_state <> '5'
+		                         and name like '%国内%'
+		                         and id <> #{taskId}),
+		                      0) + nvl((select nvl(t3.seating_num, 110)
+		                                    from (select vehicle_number, oper_id
+		                                            from (select vehicle_number,
+		                                                         oper_id,
+		                                                         row_number() over(partition by oper_id order by oper_bound_date desc) as row_num
+		                                                    from bill_vehicle_bound
+		                                                   where status = 1)
+		                                           where row_num = 1
+		                                             and oper_id = #{operatorId}) t2
+		                                    join jm_device t3
+		                                      on (t3.inner_number = t2.vehicle_number)),
+		                                  110) - nvl(D_PAX_NUM, 0) < 0) then
+		             1
+		            when FLT_ATTR_CODE = 'M' and
+		                 (nvl((select sum(nvl(t3.seating_num, 110))
+		                        from jm_task t1
+		                        left join (select vehicle_number, oper_id
+		                                    from (select vehicle_number,
+		                                                 oper_id,
+		                                                 row_number() over(partition by oper_id order by oper_bound_date desc) as row_num
+		                                            from bill_vehicle_bound
+		                                           where status = 1)
+		                                   where row_num = 1) t2
+		                          on (oper_id = operator)
+		                        left join jm_device t3
+		                          on (t3.inner_number = t2.vehicle_number)
+		                       where job_type = 'JWBDCbdc'
+		                         and del_flag = 0
+		                         and job_state <> '5'
+		                         and fltid = #{fltid}
+		                         and name like '%国际%'
+		                         and id <> #{taskId}),
+		                      0) + nvl((select nvl(t3.seating_num, 110)
+		                                    from (select vehicle_number, oper_id
+		                                            from (select vehicle_number,
+		                                                         oper_id,
+		                                                         row_number() over(partition by oper_id order by oper_bound_date desc) as row_num
+		                                                    from bill_vehicle_bound
+		                                                   where status = 1)
+		                                           where row_num = 1
+		                                             and oper_id = #{operatorId}) t2
+		                                    join jm_device t3
+		                                      on (t3.inner_number = t2.vehicle_number)),
+		                                  110) - nvl(I_PAX_NUM, 0) < 0) then
+		             1
+		          --进港航班看旅客人数
+		            when substr(in_out_flag, 1, 1) = 'A' and
+		                 (nvl((select sum(nvl(t3.seating_num, 110))
+		                        from jm_task t1
+		                        left join (select vehicle_number, oper_id
+		                                    from (select vehicle_number,
+		                                                 oper_id,
+		                                                 row_number() over(partition by oper_id order by oper_bound_date desc) as row_num
+		                                            from bill_vehicle_bound
+		                                           where status = 1)
+		                                   where row_num = 1) t2
+		                          on (oper_id = operator)
+		                        left join jm_device t3
+		                          on (t3.inner_number = t2.vehicle_number)
+		                       where job_type = 'JWBDCbdc'
+		                         and del_flag = 0
+		                         and job_state <> '5'
+		                         and fltid = #{fltid}
+		                         and id <> #{taskId}),
+		                      0) + nvl((select nvl(t3.seating_num, 110)
+		                                   from (select vehicle_number, oper_id
+		                                           from (select vehicle_number,
+		                                                        oper_id,
+		                                                        row_number() over(partition by oper_id order by oper_bound_date desc) as row_num
+		                                                   from bill_vehicle_bound
+		                                                  where status = 1)
+		                                          where row_num = 1
+		                                            and oper_id = #{operatorId}) t2
+		                                   join jm_device t3
+		                                     on (t3.inner_number = t2.vehicle_number)),
+		                                 110) - nvl(PAX_NUM, 0) < 0) then
+		             1
+		          --出港航班看值机人数
+		            when substr(in_out_flag, 1, 1) = 'D' and
+		                 (nvl((select sum(nvl(t3.seating_num, 110))
+		                        from jm_task t1
+		                        left join (select vehicle_number, oper_id
+		                                    from (select vehicle_number,
+		                                                 oper_id,
+		                                                 row_number() over(partition by oper_id order by oper_bound_date desc) as row_num
+		                                            from bill_vehicle_bound
+		                                           where status = 1)
+		                                   where row_num = 1) t2
+		                          on (oper_id = operator)
+		                        left join jm_device t3
+		                          on (t3.inner_number = t2.vehicle_number)
+		                       where job_type = 'JWBDCbdc'
+		                         and del_flag = 0
+		                         and job_state <> '5'
+		                         and fltid = #{fltid}
+		                         and id <> #{taskId}),
+		                      0) + nvl((select nvl(t3.seating_num, 110)
+		                                   from (select vehicle_number, oper_id
+		                                           from (select vehicle_number,
+		                                                        oper_id,
+		                                                        row_number() over(partition by oper_id order by oper_bound_date desc) as row_num
+		                                                   from bill_vehicle_bound
+		                                                  where status = 1)
+		                                          where row_num = 1
+		                                            and oper_id = #{operatorId}) t2
+		                                   join jm_device t3
+		                                     on (t3.inner_number = t2.vehicle_number)),
+		                                 110) - nvl(PCK_NUM, 0) < 0) then
+		             1
+		            else
+		             0
+		          end
+		         else
+		          0
+		       end as change_car_id
+		  from fd_flt_info tb1
+		  left join fd_flt_cla_passenger tb2
+		    on (tb1.fltid = tb2.fltid)
+		 where tb1.fltid = #{fltid}
+		]]>
+	</select>
+	
+	<select id="getIfOffWork" resultType="integer">
+		<![CDATA[
+			select max(flag) flag from (
+				select case when e_start_tm < to_char(sysdate,'yyyy-MM-dd HH24:mi:ss') and  
+				       to_char(sysdate + (to_date(rte_end_tm,'yyyy-MM-dd HH24:mi:ss') - to_date(e_start_tm,'yyyy-MM-dd HH24:mi:ss')),'yyyy-MM-dd HH24:mi:ss') > offtm then 1 
+				       when e_start_tm >= to_char(sysdate,'yyyy-MM-dd HH24:mi:ss') and rte_end_tm > offTm then 1 
+				       else 0
+				       end flag
+				from (
+				select  greatest(etime1,nvl(etime2,'0'),nvl(etime3,'0')) offTm ,b.e_start_tm,b.rte_end_tm
+				from am_worker_plan a ,jm_task b
+				where pdate in (to_char(sysdate - 1,'yyyy-MM-dd'),to_char(sysdate,'yyyy-MM-dd'),to_char(sysdate + 1,'yyyy-MM-dd'))
+				and worker_id = #{operatorId}
+				and ((to_char(sysdate,'yyyy-MM-dd HH24:mi:ss') >= stime1 and to_char(sysdate,'yyyy-MM-dd HH24:mi:ss') <= etime1) or 
+				    (to_char(sysdate,'yyyy-MM-dd HH24:mi:ss') >= stime2 and to_char(sysdate,'yyyy-MM-dd HH24:mi:ss') <= etime2) or
+				    (to_char(sysdate,'yyyy-MM-dd HH24:mi:ss') >= stime3 and to_char(sysdate,'yyyy-MM-dd HH24:mi:ss') <= etime3))
+				and b.id = #{taskId}
+				)
+				union all select 0 from dual
+			)
+		]]>
+	</select>
+	
+	<select id="getJmTask"  resultType="hashmap">
+		select * from jm_task where id = #{taskId}
+	</select>
+	
+	<select id="getRules"  resultType="hashmap">
+		<![CDATA[
+			SELECT distinct
+				A.ID as ruleId, 
+				A.DESCRIPTION as ruleName
+			  FROM RM_RULE_INFO A, JM_RULE_PROC_REL B, WF_PROCESS C
+			 WHERE A.ID = B.RULE_ID
+			   AND B.PROC_ID = C.ID
+			   AND C.JOB_KIND = 'XLLY'
+			   AND C.JOB_TYPE = #{jobType} --作业类型
+			   AND A.IF_MANUAL = 1
+			   AND A.IF_VALID = 1
+	   ]]>
+	</select>
+	<select id="getUnfinishTaskCount" resultType="integer">
+		<![CDATA[
+			select count(1)   from jm_task
+	     	where job_state in ('1', '2')  and operator = #{operator}
+     	]]>
+	</select>
+	<insert id="saveWorkerPos" parameterType="hashmap">
+		<![CDATA[
+			insert into am_worker_pos
+			(
+				ID,
+				WORKER_ID,
+				POS_TYPE,
+				POS,
+				UPDATE_TM,
+				OPERATOR,
+				OFFICE_ID
+			)
+			values
+			(
+				am_worker_pos_s.nextval,
+				#{workerId},
+				#{posType},
+				#{pos},
+				to_char(sysdate,'yyyy-mm-dd hh24:mi:ss'),
+				#{operator},
+				#{officeId}
+			)
+		]]>
+	</insert>
+	
+	<select id="getShiftEndTimes" resultType="com.alibaba.fastjson.JSONObject">
+		select etime "etime"
+		  from dim_shifts_type a,sys_user b
+		 where a.creator_id = b.id(+) 
+		   and shifts_name is not null 
+           and stime is not null 
+           and etime is not null
+           and (b.office_id = #{officeId})
+	</select>
+	
+	<select id="getWorkerShiftsInfo" resultType="com.alibaba.fastjson.JSONObject">
+		select b.name,
+		       a.worker_id,
+		       a.shifts_id,
+		       a.stime1_label,
+		       a.etime1_label,
+		       a.stime2_label,
+		       a.etime2_label,
+		       a.stime3_label,
+		       a.etime3_label
+		  from am_worker_plan a, sys_user b
+		 where a.worker_id = b.id
+		   and a.worker_id in (${workerId})
+		   and a.pdate = to_char(sysdate, 'yyyy-MM-dd')
+	</select>
+	
+	<insert id="setOverWorkTime">
+		insert into am_worker_plan
+		  (ID,
+		   OFFICE_ID,
+		   WORKER_ID,
+		   PDATE,
+		   STIME1,
+		   ETIME1,
+		   BUSY_INTERVAL,
+		   IDLE_INTERVAL,
+		   SORTNUM,
+		   SHIFTS_TYPE,
+		   STIME1_LABEL,
+		   ETIME1_LABEL,
+		   SHIFTS_ID)
+		values
+		  (am_worker_plan_s.nextval,
+		   #{officeId},
+		   #{workerId},
+		   to_char(sysdate, 'yyyy-MM-dd'),
+		   #{startTime},
+		   #{endTime},
+		   0,
+		   0,
+		   1,
+		   0,
+		   #{start},
+		   #{end},
+		   -1)
+	</insert>
+	
+	<select id="getNodeIds" resultType="integer" >
+		select node_id
+		  from wf_process_node
+		 where process_id = (select proc_id from jm_task where id = #{taskId})
+		 order by node_order
+	</select>
+</mapper>

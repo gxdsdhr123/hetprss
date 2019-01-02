@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.imax.dao.IMAXDao">
+	
+	<!-- index -->
+	<select id="getSafeRunTime_index" resultType="hashmap">
+		<![CDATA[
+			--安全运行时间
+			select trunc(mi / (60 * 24)) as day,
+			       mod(trunc(mi / 60), 24) as hour,
+			       trunc(mod(mi, 60)) as mi
+			  from (select (sysdate - to_date(value, 'yyyy-mm-dd hh24:mi:ss')) * 1440 as mi
+			          from dim_common_dict
+			         where type = 'safe_time'
+			           and sort = '1')
+		]]>
+	</select>
+	
+	<select id="getLeader_index" resultType="string">
+		<![CDATA[
+			--排班领导（现在没有领导排班，没有数）
+			select max((select name from sys_user b where b.id = a.worker_id)) as name
+			  from am_leader_plan a
+			 where PDATE = to_char(sysdate, 'YYYYMMDD')
+			   and START_TM <= to_char(sysdate, 'hh24mi')
+			   and END_TM > to_char(sysdate, 'hh24mi')
+		]]>
+	</select>
+	
+	
+	<select id="getCarNums_index" resultType="hashmap">
+		<![CDATA[
+			--车辆占用 
+	      select type_name,
+	          sum(case when status='空闲' then 1 else 0 end) as kx_num,
+	          sum(case when status='在用' then 1 else 0 end) as zy_num
+	      from 
+	      jm_sjdp5_flight1_v
+	      where type_name in ('牵引车'，'摆渡车','行李托车')
+	      group by type_name
+		]]>
+	</select>
+	
+	
+	<resultMap type="hashmap" id="indexPersonNumsMap">
+		<result property="id" column="office_id" javaType="string" jdbcType="VARCHAR"/>
+		<result property="kx" column="working_operator" javaType="integer" jdbcType="NUMERIC"/>
+		<result property="zg" column="all_operator" javaType="integer" jdbcType="NUMERIC"/>
+		<result property="oc" column="zyl" javaType="java.math.BigDecimal" jdbcType="NUMERIC"/>
+	</resultMap>
+	<select id="getPersonNums_index" resultMap="indexPersonNumsMap">
+		<![CDATA[
+			 --人员占用
+			 select 
+				 id as office_id,
+				 sum(case when state='空闲' then 1 else 0 end) as working_operator,  --空闲中人
+				 sum(case when state<>'请假' then 1 else 0 end) as all_operator ,           --全部人
+				 sum(case when state='工作中' then 1 else 0 end)
+				 /sum(case when state<>'请假' then 1 else 0 end) as zyl --占用率
+			 from jm_sjdp4_operator_status_v
+			 group by office_name,id
+		]]>
+	</select>
+	
+	<resultMap type="hashmap" id="indexFlightNumsMap">
+		<result property="hour" column="flight_hour" javaType="string" jdbcType="VARCHAR"/>
+		<result property="cg" column="flight_cg" javaType="integer" jdbcType="NUMERIC"/>
+		<result property="jg" column="flight_jg" javaType="integer" jdbcType="NUMERIC"/>
+		<result property="gj" column="flight_gj" javaType="integer" jdbcType="NUMERIC"/>
+	</resultMap>
+	<select id="getFlightNumsList_index" resultMap="indexFlightNumsMap">
+		<![CDATA[
+			select
+		        t.flight_hour,
+		        t.flight_cg,
+		        t.flight_jg
+		      from jm_sjdp1_flight_v t
+		      order by t.flight_hour
+		]]>
+	</select>
+	
+	<select id="getFlightNums_index" resultType="hashmap">
+		<![CDATA[
+			 select sum(case
+			              when in_out_flag like 'A%' then
+			               1
+			              else
+			               0
+			            end) as innum, --进港航班数
+			        sum(case
+			              when in_out_flag like 'D%' then
+			               1
+			              else
+			               0
+			            end) as outnum, --出港航班数
+			        sum(case
+			              when PROPERTY_CODE = 'B/J' then
+			               1
+			              else
+			               0
+			            end) as bj --备降航班数
+			   from fd_flt_info a
+			  where a.flight_date = to_char(sysdate, 'YYYYMMDD')
+		]]>
+	</select>
+	
+	<select id="getFlightGf_index" resultType="hashmap">
+		<![CDATA[
+			select *
+			from jm_sjdp1_gf_v
+		]]>
+	</select>
+	
+	<select id="getFlightYw_index" resultType="hashmap">
+		<![CDATA[
+			select sum(case
+			             when DELAY_REASON is not null then
+			              1
+			             else
+			              null
+			           end) as yw, --延误
+			       sum(case
+			             when status = '1' then
+			              1
+			             else
+			              null
+			           end) as qx --取消
+			  from fd_flt_info a
+			 where a.flight_date = to_char(sysdate, 'YYYYMMDD')
+		]]>
+	</select>
+	
+	
+	<select id="getFlightRate_index" resultType="hashmap">
+		<![CDATA[
+			select * from jm_sjdp1_percent_v t
+			order by t.union_code
+		]]>
+	</select>
+	
+	<select id="getMonitorNums_index" resultType="hashmap">
+		<![CDATA[
+			select * from jm_sjdp1_baozhang_v t
+		]]>
+	</select>
+	
+	<select id="getDepartmentIllegal_index" resultType="hashmap">
+		<![CDATA[
+			   --部门操作违规情况
+			   select * from
+			  ( select 
+				   	office,
+				   	count(1) as wgnum
+			   from jm_sjdp1_operator_v
+			   group by office)
+			   where rownum <= 10
+		]]>
+	</select>
+	
+	<select id="getPersonIllegal_index" resultType="hashmap">
+		<![CDATA[
+			  select * from jm_sjdp1_operator_v t
+		]]>
+	</select>
+	
+	<!-- run1 -->
+	<select id="flightChart_run1" resultType="hashmap">
+		<![CDATA[
+			select
+				union_code,
+				flight_hour,
+				flight_num - yw_num as zc_num,
+				yw_num
+			from jm_sjdp2_flight2_v
+			order by union_code,flight_hour
+		]]>
+	</select>
+	
+	<select id="flightText_run1" resultType="hashmap">
+		<![CDATA[
+			select * from jm_sjdp2_flight1_v
+		]]>
+	</select>
+	
+	<select id="flightTable_run1" resultType="hashmap">
+		<![CDATA[
+			select * from jm_sjdp2_flight3_v t
+			order by t.in_out_flag
+		]]>
+	</select>
+	
+	<!-- run2 -->
+	<select id="runText_run2" resultType="hashmap">
+		<![CDATA[
+			select * from jm_sjdp3_flight1_v
+		]]>
+	</select>
+	
+	<select id="runTable_run2" resultType="hashmap">
+		<![CDATA[
+			select * from jm_sjdp3_flight2_v
+		]]>
+	</select>
+	
+	<select id="runChart_run2" resultType="hashmap">
+		<![CDATA[
+			select * from jm_sjdp3_flight4_v
+		]]>
+	</select>
+	
+	<select id="ywText_run2" resultType="hashmap">
+		<![CDATA[
+			select * from jm_sjdp3_flight3_v
+		]]>
+	</select>
+	
+	<select id="ywChart_run2" resultType="hashmap">
+		<![CDATA[
+	      select DELAY_REASON as REASON, count(distinct fltid) as NUM
+	        from (select t1.fltid,
+	                     case
+	                       when t.DESCRIPTION_CN in ('航班晚到',
+	                                                 '流量控制',
+	                                                 '机械故障',
+	                                                 '旅客原因',
+	                                                 '航空公司',
+	                                                 '联检原因',
+	                                                 '机场设施',
+	                                                 '天气原因',
+	                                                 'BGS原因') then
+	                        t.DESCRIPTION_CN
+	                       else
+	                        '其它原因'
+	                     end as DELAY_REASON
+	                from dim_delay t, fd_flt_info t1
+	               where t1.DELAY_REASON = t.DELAY_CODE
+	                 and t1.flight_date = to_char(sysdate, 'YYYYMMDD'))
+	       group by DELAY_REASON
+		]]>
+	</select>
+	
+	<!-- resource1 -->
+	<select id="getDepList_resource1" resultType="string">
+		 <![CDATA[
+			 select office_name from jm_sjdp4_operator_status_v
+			 group by office_name
+			 order by count(1) desc
+		]]>
+	</select>
+	
+	<select id="getMonitorChart_resource1" resultType="hashmap">
+		 <![CDATA[
+			 select *
+				  from (select nvl(a.OFFICE_NAME, b.OFFICE_NAME) as OFFICE_NAME,
+				               nvl(a.flight_hour, b.flight_hour) as flight_hour,
+				               a.per_num as a_num, --实际
+				               b.per_num as e_num --预计
+				          from (select OFFICE_NAME,
+				                       flight_hour, --小时
+				                       per_num --实际保障人数
+				                  from jm_sjdp4_operator_hour_t
+				                 where flight_date = to_char(sysdate, 'yyyymmdd')) a
+				          full join (select OFFICE_NAME,
+				                           flight_hour, --小时
+				                           per_num --实际保障人数
+				                      from jm_sjdp4_operator_status3_v) b
+				            on (a.OFFICE_NAME = b.OFFICE_NAME and
+				               a.flight_hour = b.flight_hour)) v
+				 where office_name = #{depId}
+				 order by flight_hour
+		]]>
+	</select>
+	
+	<select id="getMonitorText_resource1" resultType="hashmap">
+		 <![CDATA[
+			 select * from jm_sjdp4_operator_status2_v
+			 where kindname = #{depId}
+		]]>
+	</select>
+	
+	<select id="occupyChart_resource1" resultType="hashmap">
+		 <![CDATA[
+			  select
+				 sum(case when state='空闲' then 1 else 0 end) as kx_num,  --空闲人
+				 sum(case when state='请假' then 1 else 0 end) as qj_num,  --请假人
+				 sum(case when state='工作中' then 1 else 0 end) as gz_num,  --工作中人
+				 sum(case when state<>'请假' then 1 else 0 end) as all_num           --在岗人
+			 from jm_sjdp4_operator_status_v
+			 where office_name = #{depId}
+		]]>
+	</select>
+	
+	<select id="occupyTable_resource1" resultType="hashmap">
+		 <![CDATA[
+			  select 
+			       t.name,
+			       t.state,
+			       t.flight_num,
+			       t.workload,
+			       t.blockup
+			 from jm_sjdp4_operator_status_v t
+			where  office_name = #{depId}
+		]]>
+	</select>
+	
+	
+	
+	<!-- resource2 -->
+	<select id="getDepList_resource2" resultType="string">
+		<![CDATA[
+			 select type_name from jm_sjdp5_flight1_v
+			 group by type_name
+			 order by count(1) desc
+		]]>
+	</select>
+	
+	<select id="getMonitorChart_resource2" resultType="hashmap">
+		 <![CDATA[
+			  select type_name,
+			       flight_hour, --小时
+			       car_num --实际保障车数
+			  from jm_sjdp5_car_hour_t
+			 where flight_date = to_char(sysdate, 'yyyymmdd')
+			 and type_name = #{depId}
+			 order by flight_hour
+		]]>
+	</select>
+	
+	<select id="getMonitorText_resource2" resultType="hashmap">
+		 <![CDATA[
+			 select * from jm_sjdp5_flight2_v
+			 where kindname = #{depId}
+		]]>
+	</select>
+	
+	<select id="occupyChart_resource2" resultType="hashmap">
+		 <![CDATA[
+			 select 
+				sum(case when status='空闲' then 1 else 0 end) as kx_num,
+				sum(case when status='在用' then 1 else 0 end) as zy_num,
+				sum(case when status='维修' then 1 else 0 end) as wx_num,
+				sum(case when status in ('空闲','在用') then 1 else 0 end) as total_num
+			from 
+			jm_sjdp5_flight1_v
+			 where type_name = #{depId}
+		]]>
+	</select>
+	
+	<select id="occupyTable_resource2" resultType="hashmap">
+		 <![CDATA[
+			select 
+			  t.car_number,
+			  t.status,
+			  t.bz_num,
+			  t.xs_num,
+			  t.bx_tm
+			from jm_sjdp5_flight1_v t
+			where  t.type_name = #{depId}
+			and rownum <= 4
+		]]>
+	</select>
+	
+	<select id="getDept_illegal" resultType="hashmap">
+		<![CDATA[
+			select r.reskind,r.kindname from
+			(select distinct v.office from jm_sjdp6_flight1_v@prss2prssp v) o,
+			dim_reskind r
+			where o.office = r.reskind
+		]]>
+	</select>
+	
+	<select id="getBarList_monitor" resultType="hashmap">
+		select * from jm_sjdp7_jk1_v
+	</select>
+	
+	<select id="getTableList_monitor" resultType="hashmap">
+		select 
+		       r.kindname,v.ok_times,v.nook_times
+		from jm_sjdp7_jk3_v v,dim_reskind r
+		where v.job_kind = r.reskind
+	</select>
+	
+	<select id="getBzObj_monitor" resultType="hashmap">
+		select * from jm_sjdp7_jk2_v
+		where in_out_flag = #{inOut}
+	</select>
+</mapper>

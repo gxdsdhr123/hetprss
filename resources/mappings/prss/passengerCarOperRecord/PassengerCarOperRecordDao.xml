@@ -1,0 +1,709 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="com.neusoft.prss.passengerCarOperRecord.dao.PassengerCarOperRecordDao">
+
+
+	<!-- 获取航班信息 -->
+	<select id="getAirFligthInfo" resultType="hashmap">
+		SELECT IN_FLT.FLTID, <!--航班ID -->
+	       IN_FLT.FLIGHT_NUMBER FLIGHTNUMBER, <!--进港航班号-->
+	       IN_FLT.AIRCRAFT_NUMBER AIRCRAFTNUMBER, <!--机号-->
+	       IN_FLT.ACTTYPE_CODE ACTTYPECODE, <!--机型-->
+			IN_FLT.ACTSTAND_CODE ACTSTANDCODE, <!--机位-->
+			IN_FLT.eta eta,
+			OUT_FLT.etd etd
+	  FROM FD_FLT_INFO          IN_FLT,
+	       FD_FLT_INFO          OUT_FLT,
+	       FD_FLT_IOREL         IOREL,
+	       FD_FLT_CLA_AIRGROUND CLA,
+	       (SELECT FLTID,
+	       NVL(NVL(ZPJCZX_GOODCLOSE_T, ZPCGZX_GOODCLOSE_T), ZPJGZX_GOODCLOSE_T) GOODCLOSE
+	       FROM WF_TASKNODE_FINISH_TIME_V) GOOD
+	  WHERE IN_FLT.FLTID=IOREL.IN_FLTID
+	    AND IOREL.OUT_FLTID=OUT_FLT.FLTID(+)
+	    AND GOOD.FLTID(+)=IN_FLT.FLTID
+	    AND CLA.FLTID(+)=IN_FLT.FLTID
+	    AND IN_FLT.FLIGHT_DATE=#{flightDate}
+	    AND IN_FLT.FLIGHT_NUMBER=#{flightNumber}
+	UNION ALL 
+	SELECT OUT_FLT.FLTID,--航班ID
+				 OUT_FLT.FLIGHT_NUMBER FLIGHTNUMBER, <!--出港航班号-->
+	       OUT_FLT.AIRCRAFT_NUMBER AIRCRAFTNUMBER, <!--机号-->
+	       OUT_FLT.ACTTYPE_CODE ACTTYPECODE, <!--机型-->
+	       OUT_FLT.ACTSTAND_CODE ACTSTANDCODE, <!--机位-->
+	       IN_FLT.eta eta,
+				 OUT_FLT.etd etd
+	  FROM FD_FLT_INFO          IN_FLT,
+	       FD_FLT_INFO          OUT_FLT,
+	       FD_FLT_IOREL         IOREL,
+	       FD_FLT_CLA_AIRGROUND CLA,
+	       (SELECT FLTID,
+	       NVL(NVL(ZPJCZX_GOODCLOSE_T, ZPCGZX_GOODCLOSE_T), ZPJGZX_GOODCLOSE_T) GOODCLOSE
+	       FROM WF_TASKNODE_FINISH_TIME_V) GOOD
+	  WHERE OUT_FLT.FLTID=IOREL.OUT_FLTID
+	    AND IOREL.IN_FLTID=IN_FLT.FLTID(+)
+	    AND GOOD.FLTID(+)=OUT_FLT.FLTID
+	    AND CLA.FLTID(+)=OUT_FLT.FLTID
+	    AND OUT_FLT.FLIGHT_DATE=#{flightDate}
+	    AND OUT_FLT.FLIGHT_NUMBER=#{flightNumber}
+	</select>
+	<!-- 获取增加页面表格头部数据 -->
+	<select id="getAddHeaderData" resultType="hashmap">
+		SELECT
+			b.* 
+		FROM
+			bill_jcxm_type a,
+			bill_jcxm_ins b 
+		WHERE
+			a.jcxm_id = b.id 
+			AND a.type_id = '3' 
+			AND b.item_status = '1' 
+		ORDER BY
+			b.id
+	</select>
+	
+	<!-- 获取车辆信息 -->
+	<select id="getDeviceNumber" resultType="hashmap">
+<!-- 		select distinct -->
+<!-- 			 jd.DEVICE_NO text -->
+<!-- 			,jd.DEVICE_ID value --> 
+<!-- 			,jd.DEVICE_NO value -->
+<!-- 		from jm_device jd -->
+<!-- 		left join jm_device_type jdt on jd.type_id = jdt.type_id  -->
+<!-- 		where jdt.dept_id = #{officeId} -->
+<!-- 		AND DEVICE_STATUS = '1' -->
+		select distinct
+			 jd.inner_number text
+			,jd.inner_number value
+		from jm_device jd
+		where  type_id in( '325','326','327','328')
+	</select>
+	
+	<!-- 获取操作人列表 -->
+	<select id="getOperList" resultType="hashmap">
+		SELECT id, name FROM sys_user WHERE office_id='66e1641b260b4e088937f33ac04ff0cb'
+	</select>
+	
+	<!-- 获取客梯车操作单  -->
+	<select id="getMainData" resultType="hashmap">
+		 select *
+	       from (select ROWNUM rn, a.*
+	               from (select to_char(wm_concat(id)) ID,
+	               				flight_Date FLIGHTDATE,
+						      flight_number FLIGHTNUMBER,
+						      aircraft_number AIRCRAFTNUMBER,
+						      to_char(wm_concat(operator_name)) OPERATORNAME,
+						      max(create_date) createdate
+					     from bill_zpktcstktc_hd
+							<trim prefix="WHERE" prefixOverrides="AND |OR ">
+								<if test="null != searchData">
+									and FLIGHT_DATE like #{searchData}
+									or FLIGHT_NUMBER like #{searchData}
+									or AIRCRAFT_NUMBER like #{searchData}
+								</if>
+							</trim>
+						 group by flight_Date,
+						      flight_number,
+						      aircraft_number
+						order by createdate desc) a
+	              where #{end} >= ROWNUM ) t
+	      WHERE t.rn >= #{begin}
+	</select>
+	
+	<select id="getMainDataSize" resultType="int">
+		 select count(*)
+           from (select to_char(wm_concat(id)) ID,
+         				flight_Date FLIGHTDATE,
+				      flight_number FLIGHTNUMBER,
+				      aircraft_number AIRCRAFTNUMBER,
+				      to_char(wm_concat(operator_name)) OPERATORNAME,
+				      max(create_date) createdate
+			     from bill_zpktcstktc_hd
+					<trim prefix="WHERE" prefixOverrides="AND |OR ">
+						<if test="null != searchData">
+							and FLIGHT_DATE like #{searchData}
+							or FLIGHT_NUMBER like #{searchData}
+							or AIRCRAFT_NUMBER like #{searchData}
+						</if>
+					</trim>
+				 group by flight_Date,
+				      flight_number,
+				      aircraft_number)
+	</select>
+	
+	<select id="getDetailData" resultType="hashmap">
+		 select FLTID
+				,ID ID
+				,ACTSTAND_CODE ACTSTANDCODE
+				,FLIGHT_DATE FLIGHTDATE
+				,FLIGHT_NUMBER FLIGHTNUMBER
+				,AIRCRAFT_NUMBER AIRCRAFTNUMBER
+				,SIGNATORY
+				,ETA
+				,ETD
+				,ACT_TYPE ACTTYPECODE
+				,OPERATOR
+				,OPERATOR_NAME OPERATORNAME
+				,POST
+				,SCHEDULER
+			from bill_zpktcstktc_hd
+			where id = #{searchId}
+	</select>
+	
+	<!-- 获取表格数据 -->
+	<select id="getTableData" resultType="hashmap">
+	select a.*,b.remark,b.id as remarkId,c.operator,c.operator_name,to_daytime(to_char(c.create_date,'yyyy-mm-dd hh24:mi:ss')) as create_date from (
+		  select bill_id,device_no DEVICE_NO
+		        ,to_char(wm_concat(case  when jcxm_id = 'wg' then to_char(jcxm_val)  else  ''  end)) wg
+		        ,to_char(wm_concat(case  when jcxm_id = 'hb' then to_char(jcxm_val)  else  ''  end)) hb
+		        ,to_char(wm_concat(case  when jcxm_id = 'sj' then to_char(jcxm_val)  else  ''  end)) sj
+		        ,to_char(wm_concat(case  when jcxm_id = 'lt' then to_char(jcxm_val)  else  ''  end)) lt
+		        ,to_char(wm_concat(case  when jcxm_id = 'dg' then to_char(jcxm_val)  else  ''  end)) dg
+		        ,to_char(wm_concat(case  when jcxm_id = 'ws' then to_char(jcxm_val)  else  ''  end)) ws 
+		        ,to_char(wm_concat(case  when jcxm_id = 'zd' then to_char(jcxm_val)  else  ''  end)) zd
+		        ,to_char(wm_concat(case  when jcxm_id = 'zj' then to_char(jcxm_val)  else  ''  end)) zj
+		        ,to_char(wm_concat(case  when jcxm_id = 'mhq' then to_char(jcxm_val)  else  ''  end)) mhq
+		        ,to_char(wm_concat(case  when jcxm_id = 'qcd' then to_char(jcxm_val)  else  ''  end)) qcd
+		        ,to_char(wm_concat(case  when jcxm_id = 'scd' then to_char(jcxm_val)  else  ''  end)) scd
+		    from bill_zpktcstktc_hd_goods
+		    where bill_id = #{searchId}
+		    GROUP BY device_no,bill_id 
+		    order by device_no  ) a,bill_zpktcstktc_hd_remark b,bill_zpktcstktc_hd c
+		    where a.bill_id = b.bill_id and b.bill_id = c.id
+	</select>
+	<select id="getCarData" resultType="hashmap">
+		select a.*,b.remark,b.id as remarkId,c.operator,c.operator,c.operator_name,c.fltid,c.id as billId,
+				to_daytime(to_char(c.create_date,'yyyy-mm-dd hh24:mi:ss')) as create_date 
+		 from (
+			  select bill_id,device_no DEVICE_NO
+			        ,to_char(wm_concat(case  when jcxm_id = 'wg' then to_char(jcxm_val)  else  ''  end)) wg
+			        ,to_char(wm_concat(case  when jcxm_id = 'hb' then to_char(jcxm_val)  else  ''  end)) hb
+			        ,to_char(wm_concat(case  when jcxm_id = 'sj' then to_char(jcxm_val)  else  ''  end)) sj
+			        ,to_char(wm_concat(case  when jcxm_id = 'lt' then to_char(jcxm_val)  else  ''  end)) lt
+			        ,to_char(wm_concat(case  when jcxm_id = 'dg' then to_char(jcxm_val)  else  ''  end)) dg
+			        ,to_char(wm_concat(case  when jcxm_id = 'ws' then to_char(jcxm_val)  else  ''  end)) ws 
+			        ,to_char(wm_concat(case  when jcxm_id = 'zd' then to_char(jcxm_val)  else  ''  end)) zd
+			        ,to_char(wm_concat(case  when jcxm_id = 'zj' then to_char(jcxm_val)  else  ''  end)) zj
+			        ,to_char(wm_concat(case  when jcxm_id = 'mhq' then to_char(jcxm_val)  else  ''  end)) mhq
+			        ,to_char(wm_concat(case  when jcxm_id = 'qcd' then to_char(jcxm_val)  else  ''  end)) qcd
+			        ,to_char(wm_concat(case  when jcxm_id = 'scd' then to_char(jcxm_val)  else  ''  end)) scd
+			    from bill_zpktcstktc_hd_goods
+			    where bill_id = #{searchId}
+			    GROUP BY device_no,bill_id 
+			    order by device_no  ) a,bill_zpktcstktc_hd_remark b,bill_zpktcstktc_hd c
+			    where a.bill_id(+) = c.id and b.bill_id(+) = c.id and c.id = #{searchId} and rownum = 1
+	</select>
+	<!-- 获取最大id值 -->
+<!-- 	<select id="getGoodsMaxId" resultType="string"> -->
+<!-- 		select max(id) from bill_zpktcstktc_hd_goods -->
+<!-- 	</select> -->
+	<select id="getGoodsList" resultType="hashmap">
+		select * from bill_zpktcstktc_hd_goods where BILL_ID = #{searchId}
+	</select>
+	<!-- 获取航空公司下拉选 -->
+	<select id="getAirFlightList" resultType="hashmap">
+		SELECT AIRLINE_CODE,DESCRIPTION_CN FROM DIM_AIRLINES 
+	</select>
+	<!-- 保存主表数据 -->
+	<insert id="addDataHD" useGeneratedKeys="true"
+		keyProperty="id">
+		<selectKey resultType="String" keyProperty="id" order="BEFORE">
+			SELECT
+			<choose>
+				<when test="id!='null' and id!=''">
+					#{id}
+				</when>
+				<otherwise>
+					BILL_ZPKTCSTKTC_HD_S.NEXTVAL
+				</otherwise>
+			</choose>
+			from dual
+		</selectKey>
+		INSERT INTO 
+		BILL_ZPKTCSTKTC_HD ( ID, FLTID, FLIGHT_NUMBER, ACT_TYPE, AIRCRAFT_NUMBER, OPERATOR, CREATE_DATE, ACTSTAND_CODE, FLIGHT_DATE, ETD, ETA, POST, SCHEDULER, OPERATOR_NAME )
+		VALUES (
+		#{id}, #{fltid}, #{flightNumber}, #{actType}, #{aircraftNumber}, #{operator}, to_date(#{createDate}, 'yyyy-mm-dd HH24:MI'), #{actstandCode},
+		#{flightDate}, #{etd}, #{eta}, #{post}, #{scheduler}, #{operatorName})
+	</insert>
+
+	<!-- 暂无数据， 为测试 -->
+	<insert id="s" parameterType="java.util.List">
+		INSERT INTO bill_zpktcstktc_hd_goods ( JCXM_ID, JCXM_VAL, JCXM_NAME, BILL_ID,
+			 DEVICE_ID, DEVICE_NO,
+			 id ) 
+		<foreach collection="list" item="tabdata" index="index" open="(" close=")" separator="union all">
+				select * from (
+				SELECT
+				b.id JCXM_ID,
+				b.item_code JCXM_VAL,
+				b.item_name JCXM_NAME 
+				FROM
+					bill_jcxm_type a,
+					bill_jcxm_ins b 
+				WHERE
+					a.jcxm_id = b.id 
+					AND a.type_id = 3 
+					AND b.item_status = 1 
+					AND b.item_code = #{tabdata.status}
+				),
+				(SELECT
+					#{tabdata.billId} BILL_ID 
+				FROM DUAL 
+				),
+				<!-- 没有数据， 测试数据 -->
+				(select #{tabdata.deviceId} DEVICE_ID, 'test' DEVICE_NO from dual),
+<!-- 				( -->
+<!-- 				SELECT DISTINCT -->
+<!-- 					jd.DEVICE_ID,  -->
+<!-- 					jd.DEVICE_NO -->
+<!-- 				FROM -->
+<!-- 					jm_device jd -->
+<!-- 					LEFT JOIN jm_device_type jdt ON jd.type_id = jd.type_id  -->
+<!-- 				WHERE -->
+<!-- 					jdt.dept_id = #{tabdata.deviceId} -->
+<!-- 				), -->
+				( SELECT #{tabdata.id} id FROM DUAL )
+		</foreach>
+	</insert>
+	
+	<insert id="saveGoodsBatch" parameterType="java.util.List">
+		INSERT INTO bill_zpktcstktc_hd_goods (id, JCXM_ID, JCXM_VAL, JCXM_NAME, BILL_ID, DEVICE_ID, DEVICE_NO ) 
+			select bill_zpktcstktc_hd_goods_S.NEXTVAL, A.* from(
+		<foreach collection="list" item="tabdata" index="index" open="(" close=")" separator="union all">
+			select * from (
+			<choose>
+				<when test="tabdata.status.name == 'scd' || tabdata.status.name == 'qcd' ">
+					select 
+					#{tabdata.status.name} JCXM_ID,
+					#{tabdata.status.value} JCXM_VAL,
+					<if test="tabdata.status.name == 'scd'">
+						'停车地' JCXM_NAME
+					</if>
+					<if test="tabdata.status.name == 'qcd'">
+						'取车地' JCXM_NAME
+					</if>
+					from dual
+				</when>
+				<otherwise>
+					SELECT
+					b.item_code JCXM_ID,
+					<if test="tabdata.status.value == 1 ">					
+						'1' JCXM_VAL,
+					</if>
+					<if test="tabdata.status.value == 2 ">					
+						'2' JCXM_VAL,
+					</if> 
+					b.item_name JCXM_NAME 
+					FROM
+						bill_jcxm_type a,
+						bill_jcxm_ins b 
+					WHERE
+						a.jcxm_id = b.id 
+						AND a.type_id = 3 
+						AND b.item_status = 1 
+						AND b.item_code = #{tabdata.status.name}
+				</otherwise>
+			</choose>
+				),
+				(SELECT #{tabdata.billId} BILL_ID FROM DUAL ),
+				<!-- 没有数据， 测试数据 -->
+				(select #{tabdata.deviceId} DEVICE_ID, #{tabdata.deviceId} DEVICE_NO from dual)
+<!-- 				( -->
+<!-- 				SELECT DISTINCT -->
+<!-- 					jd.DEVICE_NO,  -->
+<!-- 					jd.DEVICE_NO -->
+<!-- 				FROM -->
+<!-- 					jm_device jd -->
+<!-- 					LEFT JOIN jm_device_type jdt ON jd.type_id = jd.type_id  -->
+<!-- 				WHERE -->
+<!-- 					jdt.DEVICE_NO = #{tabdata.deviceId} -->
+<!-- 				) -->
+		</foreach>
+		) A
+	</insert>
+	
+	
+	<!-- 修改主表数据-->
+	<update id="updateMainData" parameterType="hashmap">
+		UPDATE BILL_ZPKTCSTKTC_HD SET
+			
+			<if test="null != operator">
+				OPERATOR = #{operator}		
+			</if>
+			<if test="null != operatorName">
+				,OPERATOR_NAME = #{operatorName}			
+			</if>
+			<if test="null != scheduler">
+				,SCHEDULER = #{scheduler}		
+			</if>
+			<if test="null != post">
+				,POST = #{post}		
+			</if>
+			
+		WHERE
+		ID = #{id}
+	</update>
+	
+	
+	
+	<!-- 删除goods列表-->
+	<delete id="deleteGoods" parameterType="hashmap">
+		DELETE FROM bill_zpktcstktc_hd_goods WHERE BILL_ID = #{id}
+	</delete>
+	
+	<!-- 删除主表数据 -->
+	<delete id="del" parameterType="hashmap">
+		DELETE FROM bill_zpktcstktc_hd WHERE ID = #{searchId}
+	</delete>
+	
+	<select id="getFilePath" resultType="String" parameterType="hashmap">
+		select file_path
+		  from bill_zpktcstktc_hd_atta
+		 where remark_id = #{remarkId}
+		   and file_type = #{type}
+	</select>
+	
+	<select id="getCarTime" resultType="hashmap" parameterType="hashmap">
+		select max(case
+	             when (t1.name like '%靠接%' or t1.name like '%靠撤%') and
+	                  t3.display_name = '到位' then
+	              finish_time
+	             else
+	              null
+	           end) as time1,
+		       max(case
+		             when (t1.name like '%靠接%' or t1.name like '%靠撤%') and
+		                  t3.display_name = '靠接完毕' then
+		              finish_time
+		             else
+		              null
+		           end) as time2,
+		       max(case
+		             when (t1.name like '%撤离%' or t1.name like '%靠撤%') and
+		                  t3.display_name = '撤离完毕' then
+		              finish_time
+		             else
+		              null
+		           end) as time3
+		  from (select *
+		          from jm_task
+		         where job_kind = 'ZPKTC'
+		           and fltid in (select in_fltid
+		                           from fd_flt_iorel
+		                          where in_fltid = #{fltId}
+		                             or out_fltid = #{fltId}
+		                         union all
+		                         select out_fltid
+		                           from fd_flt_iorel
+		                          where in_fltid = #{fltId}
+		                             or out_fltid = #{fltId})) t1
+		  join (select * from jm_task_plus_v where INNER_NUMBER = #{deviceNo}) t2
+		    on (t1.id = t2.taskid)
+		  left join (select *
+		               from jm_task_proc_inst b, wf_hist_task_v c
+		              where b.proc_inst_id = c.order_id) t3
+		    on (t1.id = t3.task_id)
+		 group by t2.INNER_NUMBER
+	</select>
+	
+	<!-- 修改主表数据-->
+	<insert id="insertOperator" parameterType="hashmap">
+		<selectKey keyProperty="id" resultType="int" order="BEFORE">
+            select BILL_ZPKTCSTKTC_HD_S.Nextval from dual
+        </selectKey>
+        insert into BILL_ZPKTCSTKTC_HD(id,
+        OPERATOR,
+        OPERATOR_NAME,
+        FLIGHT_NUMBER,
+        AIRCRAFT_NUMBER,
+        FLIGHT_DATE,
+        POST,
+        SCHEDULER,
+        ETA,
+        ETD,
+        ACTSTAND_CODE,
+        ACT_TYPE) 
+        values (#{id},
+        #{operator},
+        (select name from sys_user where id = #{operator}),
+        #{flightNumber},
+        #{AIRCRAFTNUMBER},
+        #{flightDate},
+        #{post},
+        #{scheduler},
+        #{ETA},
+        #{ETD},
+        #{ACTSTANDCODE},
+        #{ACTTYPECODE})
+	</insert>
+	
+	<!-- 修改主表数据-->
+	<update id="updataOperator" parameterType="hashmap">
+            update BILL_ZPKTCSTKTC_HD
+            set OPERATOR = #{operator},
+                OPERATOR_NAME = (select name from sys_user where id = #{operator}),
+                FLIGHT_NUMBER = #{flightNumber},
+                AIRCRAFT_NUMBER = #{AIRCRAFTNUMBER},
+                FLIGHT_DATE = #{flightDate}
+          where id = #{id}
+	</update>
+
+	<insert id="updataRemark" parameterType="hashmap">
+        <selectKey keyProperty="remarkId" resultType="int" order="BEFORE">
+            select count(*) as remarkId from BILL_ZPKTCSTKTC_HD_REMARK where bill_id = #{id}
+        </selectKey>
+        <if test="remarkId > 0">
+            update BILL_ZPKTCSTKTC_HD_REMARK
+            <set>
+               <if test="deviceNo != null" >  
+                    vehicle_number= #{deviceNo},
+               </if>
+               <if test="remark != null" >  
+                    remark= #{remark},
+               </if>
+            </set>
+            <where>
+                bill_id = #{id}
+            </where>
+        </if>
+        <if test="remarkId == 0">
+            insert into BILL_ZPKTCSTKTC_HD_REMARK(id,bill_id,vehicle_number,remark) 
+            values (BILL_ZPKTCSTKTC_HD_REMARK_S.Nextval,#{id},#{deviceNo},#{remark})
+        </if>
+	</insert>
+	
+	<insert id="updataWG" parameterType="hashmap">
+        <selectKey keyProperty="WG_ID" resultType="int" order="BEFORE">
+            select count(*) as WG_ID from bill_zpktcstktc_hd_goods where bill_id = #{id} and jcxm_id = 'wg'
+        </selectKey>
+        <if test="WG_ID > 0">
+            update bill_zpktcstktc_hd_goods
+            <set>
+            	
+               <if test="deviceNo != null" >  
+                    device_no= #{deviceNo},
+               </if>
+               <if test="WG != null" >  
+                    jcxm_val= #{WG},
+               </if>
+            </set>
+            <where>
+                bill_id = #{id} AND jcxm_id = 'wg'
+            </where>
+        </if>
+        <if test="WG_ID == 0">
+            insert into bill_zpktcstktc_hd_goods(id,bill_id,device_no,jcxm_id,jcxm_val,jcxm_name) 
+            values (BILL_ZPKTCSTKTC_HD_GOODS_S.Nextval,#{id},#{deviceNo},'wg',#{WG},'外观')
+        </if>
+	</insert>
+	
+	<insert id="updataHB" parameterType="hashmap">
+        <selectKey keyProperty="HB_ID" resultType="int" order="BEFORE">
+            select count(*) as HB_ID from bill_zpktcstktc_hd_goods where bill_id = #{id} and jcxm_id = 'hb'
+        </selectKey>
+        <if test="HB_ID > 0">
+            update bill_zpktcstktc_hd_goods
+            <set>
+            	
+               <if test="deviceNo != null" >  
+                    device_no= #{deviceNo},
+               </if>
+               <if test="HB != null" >  
+                    jcxm_val= #{HB},
+               </if>
+            </set>
+            <where>
+                bill_id = #{id} AND jcxm_id = 'hb'
+            </where>
+        </if>
+        <if test="HB_ID == 0">
+            insert into bill_zpktcstktc_hd_goods(id,bill_id,device_no,jcxm_id,jcxm_val,jcxm_name) 
+            values (BILL_ZPKTCSTKTC_HD_GOODS_S.Nextval,#{id},#{deviceNo},'hb',#{HB},'护板')
+        </if>
+	</insert>
+	
+	<insert id="updataSJ" parameterType="hashmap">
+        <selectKey keyProperty="SJ_ID" resultType="int" order="BEFORE">
+            select count(*) as SJ_ID from bill_zpktcstktc_hd_goods where bill_id = #{id} and jcxm_id = 'sj'
+        </selectKey>
+        <if test="SJ_ID > 0">
+            update bill_zpktcstktc_hd_goods
+            <set>
+            	
+               <if test="deviceNo != null" >  
+                    device_no= #{deviceNo},
+               </if>
+               <if test="SJ != null" >  
+                    jcxm_val= #{SJ},
+               </if>
+            </set>
+            <where>
+                bill_id = #{id} AND jcxm_id = 'sj'
+            </where>
+        </if>
+        <if test="SJ_ID == 0">
+            insert into bill_zpktcstktc_hd_goods(id,bill_id,device_no,jcxm_id,jcxm_val,jcxm_name) 
+            values (BILL_ZPKTCSTKTC_HD_GOODS_S.Nextval,#{id},#{deviceNo},'sj',#{SJ},'升降')
+        </if>
+	</insert>
+	
+	<insert id="updataDG" parameterType="hashmap">
+        <selectKey keyProperty="DG_ID" resultType="int" order="BEFORE">
+            select count(*) as DG_ID from bill_zpktcstktc_hd_goods where bill_id = #{id} and jcxm_id = 'dg'
+        </selectKey>
+        <if test="DG_ID > 0">
+            update bill_zpktcstktc_hd_goods
+            <set>
+               <if test="deviceNo != null" >  
+                    device_no= #{deviceNo},
+               </if>
+               <if test="DG != null" >  
+                    jcxm_val= #{DG},
+               </if>
+            </set>
+            <where>
+                bill_id = #{id} AND jcxm_id = 'dg'
+            </where>
+        </if>
+        <if test="DG_ID == 0">
+            insert into bill_zpktcstktc_hd_goods(id,bill_id,device_no,jcxm_id,jcxm_val,jcxm_name) 
+            values (BILL_ZPKTCSTKTC_HD_GOODS_S.Nextval,#{id},#{deviceNo},'dg',#{DG},'灯光')
+        </if>
+	</insert>
+	
+	<insert id="updataLT" parameterType="hashmap">
+        <selectKey keyProperty="LT_ID" resultType="int" order="BEFORE">
+            select count(*) as LT_ID from bill_zpktcstktc_hd_goods where bill_id = #{id} and jcxm_id = 'lt'
+        </selectKey>
+        <if test="LT_ID > 0">
+            update bill_zpktcstktc_hd_goods
+            <set>
+            	
+               <if test="deviceNo != null" >  
+                    device_no= #{deviceNo},
+               </if>
+               <if test="LT != null" >  
+                    jcxm_val= #{LT},
+               </if>
+            </set>
+            <where>
+                bill_id = #{id} AND jcxm_id = 'lt'
+            </where>
+        </if>
+        <if test="LT_ID == 0">
+            insert into bill_zpktcstktc_hd_goods(id,bill_id,device_no,jcxm_id,jcxm_val,jcxm_name) 
+            values (BILL_ZPKTCSTKTC_HD_GOODS_S.Nextval,#{id},#{deviceNo},'lt',#{LT},'轮胎')
+        </if>
+	</insert>
+	
+	<insert id="updataWS" parameterType="hashmap">
+        <selectKey keyProperty="WS_ID" resultType="int" order="BEFORE">
+            select count(*) as WS_ID from bill_zpktcstktc_hd_goods where bill_id = #{id} and jcxm_id = 'ws'
+        </selectKey>
+        <if test="WS_ID > 0">
+            update bill_zpktcstktc_hd_goods
+            <set>
+            	
+               <if test="deviceNo != null" >  
+                    device_no= #{deviceNo},
+               </if>
+               <if test="WS != null" >  
+                    jcxm_val= #{WS},
+               </if>
+            </set>
+            <where>
+                bill_id = #{id} AND jcxm_id = 'ws'
+            </where>
+        </if>
+        <if test="WS_ID == 0">
+            insert into bill_zpktcstktc_hd_goods(id,bill_id,device_no,jcxm_id,jcxm_val,jcxm_name) 
+            values (BILL_ZPKTCSTKTC_HD_GOODS_S.Nextval,#{id},#{deviceNo},'ws',#{WS},'卫生')
+        </if>
+	</insert>
+	
+	<insert id="updataZD" parameterType="hashmap">
+        <selectKey keyProperty="ZD_ID" resultType="int" order="BEFORE">
+            select count(*) as ZD_ID from bill_zpktcstktc_hd_goods where bill_id = #{id} and jcxm_id = 'zd'
+        </selectKey>
+        <if test="ZD_ID > 0">
+            update bill_zpktcstktc_hd_goods
+            <set>
+            	
+               <if test="deviceNo != null" >  
+                    device_no= #{deviceNo},
+               </if>
+               <if test="ZD != null" >  
+                    jcxm_val= #{ZD},
+               </if>
+            </set>
+            <where>
+                bill_id = #{id} AND jcxm_id = 'zd'
+            </where>
+        </if>
+        <if test="ZD_ID == 0">
+            insert into bill_zpktcstktc_hd_goods(id,bill_id,device_no,jcxm_id,jcxm_val,jcxm_name) 
+            values (BILL_ZPKTCSTKTC_HD_GOODS_S.Nextval,#{id},#{deviceNo},'zd',#{ZD},'制动')
+        </if>
+	</insert>
+	
+	<insert id="updataZJ" parameterType="hashmap">
+        <selectKey keyProperty="ZJ_ID" resultType="int" order="BEFORE">
+            select count(*) as ZJ_ID from bill_zpktcstktc_hd_goods where bill_id = #{id} and jcxm_id = 'zj'
+        </selectKey>
+        <if test="ZJ_ID > 0">
+            update bill_zpktcstktc_hd_goods
+            <set>
+            	
+               <if test="deviceNo != null" >  
+                    device_no= #{deviceNo},
+               </if>
+               <if test="ZJ != null" >  
+                    jcxm_val= #{ZJ},
+               </if>
+            </set>
+            <where>
+                bill_id = #{id} AND jcxm_id = 'zj'
+            </where>
+        </if>
+        <if test="ZJ_ID == 0">
+            insert into bill_zpktcstktc_hd_goods(id,bill_id,device_no,jcxm_id,jcxm_val,jcxm_name) 
+            values (BILL_ZPKTCSTKTC_HD_GOODS_S.Nextval,#{id},#{deviceNo},'zj',#{ZJ},'支脚')
+        </if>
+	</insert>
+	
+	<insert id="updataMHQ" parameterType="hashmap">
+        <selectKey keyProperty="MHQ_ID" resultType="int" order="BEFORE">
+            select count(*) as MHQ_ID from bill_zpktcstktc_hd_goods where bill_id = #{id} and jcxm_id = 'mhq'
+        </selectKey>
+        <if test="MHQ_ID > 0">
+            update bill_zpktcstktc_hd_goods
+            <set>
+            	
+               <if test="deviceNo != null" >  
+                    device_no= #{deviceNo},
+               </if>
+               <if test="MHQ != null" >  
+                    jcxm_val= #{MHQ},
+               </if>
+            </set>
+            <where>
+                bill_id = #{id} AND jcxm_id = 'mhq'
+            </where>
+        </if>
+        <if test="MHQ_ID == 0">
+            insert into bill_zpktcstktc_hd_goods(id,bill_id,device_no,jcxm_id,jcxm_val,jcxm_name) 
+            values (BILL_ZPKTCSTKTC_HD_GOODS_S.Nextval,#{id},#{deviceNo},'mhq',#{MHQ},'灭火器')
+        </if>
+	</insert>
+	
+	<insert id="updataQCD" parameterType="hashmap">
+           insert into bill_zpktcstktc_hd_goods(id,bill_id,device_no,jcxm_id,jcxm_val,jcxm_name) 
+           values (BILL_ZPKTCSTKTC_HD_GOODS_S.Nextval,#{id},#{deviceNo},'qcd',#{QCD},'取车地')
+	</insert>
+	
+	<insert id="updataSCD" parameterType="hashmap">
+           insert into bill_zpktcstktc_hd_goods(id,bill_id,device_no,jcxm_id,jcxm_val,jcxm_name) 
+           values (BILL_ZPKTCSTKTC_HD_GOODS_S.Nextval,#{id},#{deviceNo},'scd',#{SCD},'送车地')
+	</insert>
+</mapper>

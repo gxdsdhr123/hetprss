@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.workflow.dao.LogisticDao">
+	<select id="getListData" resultType="com.alibaba.fastjson.JSONObject">
+		<if test="kindMainId!=null and kindMainId!=''">
+			select r.id,r.restype, r.reskind,r.typename,
+			DBMS_LOB.SUBSTR(NVL(WM_CONCAT(W.DISPLAY_NAME), ' '), 4000, 1) as "WORKFLOW"
+			from dim_reskind k
+			left join dim_restype r on k.reskind =r.reskind
+			left join wf_process w on r.reskind = w.JOB_KIND
+			and r.restype= w.job_type where
+			k.id=#{kindMainId} and r.id is not null
+			group by r.reskind,
+			r.restype,r.id,r.typename
+		</if>
+	</select>
+
+	<select id="getTypeId" resultType="String">
+		select dim_restype_s.nextval
+		from dual
+	</select>
+	<select id="getKindId" resultType="String">
+		select dim_reskind_s.nextval
+		from dual
+	</select>
+
+	<select id="getAllReskind" resultType="com.alibaba.fastjson.JSONObject">
+		select ID,reskind,kindname
+		from dim_reskind
+	</select>
+
+	<delete id="deleteKind" parameterType="String">
+		delete from dim_reskind
+		where id=#{reskind}
+	</delete>
+
+	<delete id="deleteTypeByKindId" parameterType="String">
+		delete from
+		dim_restype r where r.RESKIND in(select k.RESKIND from dim_reskind k
+		where
+		k.id= #{reskind})
+	</delete>
+
+	<delete id="deleteType" parameterType="String">
+		delete from dim_restype
+		where id=#{reskind}
+	</delete>
+
+	<insert id="saveKind" parameterType="String">
+		insert into
+		dim_reskind(id,reskind,kindname,depid,depname,tabname)
+		values
+		(#{kindid},#{reskind},#{kindname},#{deptId},#{depname},#{tab})
+	</insert>
+
+	<update id="updateKind" parameterType="String">
+		update
+		dim_reskind set
+		reskind=#{reskind},
+		kindname=#{kindname},
+		depid=#{deptId},
+		depname=#{depname},
+		tabname=#{tab} where id=#{kindid}
+	</update>
+
+	<update id="updateType" parameterType="String">
+		update
+		dim_restype set
+		reskind=#{kindcode},
+		restype=#{restype},
+		typename=#{typename},
+		BIND_CONF=#{bindCar}
+		 where
+		id=#{typeid}
+	</update>
+	<insert id="saveType" parameterType="String">
+		insert into
+		dim_restype(id,reskind,restype,typename,BIND_CONF)
+		values
+		(#{typeid},#{kindcode},#{restype},#{typename},#{bindCar})
+	</insert>
+
+	<select id="getTypeByTypeid" parameterType="String"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select k.reskind,k.kindname,r.typename,r.restype,r.bind_conf from
+		dim_restype r
+		left join
+		dim_reskind k on r.reskind=k.reskind
+		where
+		r.id=#{typeId} and
+		rownum=1
+	</select>
+
+	<select id="getKindByKindid" parameterType="String"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select
+		reskind,kindname,depid,depname,TABNAME from
+		dim_reskind
+		where
+		id=#{kindId} and rownum=1
+	</select>
+
+	<select id="vaildOnlyRestype" parameterType="String"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select
+		* from
+		dim_restype
+		where
+		restype=#{restype}
+	</select>
+	<select id="vaildOnlyReskind" parameterType="String"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select
+		* from
+		dim_reskind
+		where
+		reskind=#{reskind}
+	</select>
+
+	<select id="getDeptHasNoSon" parameterType="String"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select s.id, s.name
+		from sys_office s
+		where s.type = '2'
+		and
+		s.id not in (select parent_id from sys_office where del_flag='0') and
+		del_flag='0'
+	</select>
+
+	<select id="getWorkFlowByTypeid" parameterType="String"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select distinct w.display_name as
+		"name"
+		from
+		dim_reskind k
+		left join
+		dim_restype r
+		on
+		k.reskind =
+		r.reskind
+		left join
+		wf_process w on
+		r.reskind = w.JOB_KIND
+		and r.restype
+		= w.job_type where r.id =
+		#{typeMainId} and w.display_name is not null
+	</select>
+	
+	<update id="insertOfficeLimit" parameterType="String">
+		merge into am_office_limit_conf a
+		using (select #{officeId} as OFFICE_ID from dual) b
+		on (a.OFFICE_ID = b.OFFICE_ID)
+		when not MATCHED then
+		  insert (OFFICE_ID,JX_LIMIT,JW_LIMIT,HS_LIMIT) values (b.office_id,0,0,0)
+	</update>
+</mapper>

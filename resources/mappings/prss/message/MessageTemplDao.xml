@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.message.dao.MessageTemplDao">
+
+	<resultMap type="com.neusoft.prss.message.entity.MessageTemplVO" id="ent">
+		<result property="id" column="id" />
+		<result property="mtype" column="mtype" />
+		<result property="mtitle" column="mtitle" />
+		<result property="mtime" column="mtime" />
+		<result property="mtext" column="mtext" />
+		<result property="fiotype" column="fiotype" />
+		<result property="tempname" column="tempname" />
+		<result property="ifreply" column="ifreply" />
+		<result property="ifflight" column="ifflight" />
+		<result property="defreply" column="defreply" />
+		<result property="ifsound" column="ifsound" />
+		<result property="soundtxt" column="soundtxt" />
+		<result property="ifspeak" column="ifspeak" />
+		<result property="mftype" column="mftype" />
+		<result property="mnumb" column="mnumb" />
+		<result property="mttypecn" column="mttypecn" />
+		<result property="extact" column="extact" />
+		<result property="issys" column="issys" />
+		<result property="ifpopm" column="ifpopm" />
+		<result property="eventid" column="eventid" />
+		<result property="eventname" column="eventname" />
+		<result property="varcols" column="varcols"/>
+		<result property="fiotypename" column="fiotypename" />
+		<result property="senddef" column="senddef"/>
+		<result property="rownum" column="rownum" />
+		<result property="eventRecord" column="eventrecord" />
+		
+		
+	</resultMap>
+	
+	<resultMap type="com.neusoft.prss.message.entity.MessageTemplFromVO" id="sender">
+		<result property="id" column="id" />
+		<result property="mid" column="mid" />
+		<result property="mfromtype" column="mfromtype" />
+		<result property="mfromer" column="mfromer" />
+		<result property="mfromername" column="mfromername" />
+		<result property="ifprocfrom" column="ifprocfrom" />
+		<result property="proceclsfrom" column="proceclsfrom" />
+		<result property="procdefparamfrom" column="procdefparamfrom" />
+	</resultMap>
+	 
+	<resultMap type="com.neusoft.prss.message.entity.MessageTemplToVO" id="reciver">
+		<result property="id" column="id" />
+		<result property="mid" column="mid" />
+		<result property="mtotype" column="mtotype" />
+		<result property="mtoer" column="mtoer" />
+		<result property="ifprocto" column="ifprocto" />
+		<result property="proceclsto" column="proceclsto" />
+		<result property="procdefparamto" column="procdefparamto" />
+		<result property="iftrans" column="iftrans" />
+		<result property="transtemplid" column="transtemplid" />
+		<result property="transtemplname" column="transtemplname" />
+		<result property="mtoername" column="mtoername" />
+		<result property="iftoallrole" column="iftoallrole" />
+		<result property="ifsms" column="ifsms" />
+		<result property="condition" column="text" />
+		<result property="drl_str" column="drlStr" />
+		<result property="colids" column="colids" />
+		<result property="drools" column="drools" />
+	</resultMap>
+	
+	<resultMap type="com.neusoft.prss.message.entity.SRListVO" id="srlist">
+	    <result property="ischg" column="ischg" />
+		<result property="no" column="no" />
+		<result property="name" column="name" />
+		<result property="tempname" column="tempname" />
+		<result property="remark" column="remark" />
+	</resultMap>
+	<!-- add -->
+	<insert id="insertItem"
+		parameterType="com.neusoft.prss.message.entity.MessageTemplVO">
+		insert into MM_TEMPLATE
+		(ID,ifpopm,MTYPE,MTITLE,MTIME,MTEXT,FIOTYPE,TEMPNAME,IFREPLY,IFFLIGHT,DEFREPLY,IFSOUND,SOUNDTXT,IFSPEAK,
+		MFTYPE,MNUMB,extact,eventid,varcols,ifpopup,senddef,eventRecord)
+		values
+		(#{id},#{ifpopm},#{mtype},#{mtitle},sysdate,#{mtext},#{fiotype},#{tempname},#{ifreply},#{ifflight},#{defreply},#{ifsound},#{soundtxt},#{ifspeak},
+		#{mftype},#{mnumb},#{extact},#{eventid},#{varcols},#{ifpopup},#{senddef},#{eventRecord})
+	</insert>
+
+ 
+	<!-- update -->
+	<update id="updateItem"
+		parameterType="com.neusoft.prss.message.entity.MessageTemplVO">
+		update MM_TEMPLATE set
+		ID=#{id},ifpopm=#{ifpopm},MTYPE=#{mtype},MTITLE=#{mtitle},MTEXT=#{mtext},FIOTYPE=#{fiotype},TEMPNAME=#{tempname},IFREPLY=#{ifreply},
+		IFFLIGHT=#{ifflight},DEFREPLY=#{defreply},IFSOUND=#{ifsound},SOUNDTXT=#{soundtxt},IFSPEAK=#{ifspeak},MFTYPE=#{mftype},MNUMB=#{mnumb},
+		extact=#{extact},eventid=#{eventid},varcols=#{varcols},ifpopup=#{ifpopup},senddef=#{senddef},eventRecord=#{eventRecord}
+		where id = #{id}
+	</update>
+
+	<!--    -->
+	<select id="selectOne" parameterType="HashMap" resultMap="ent">
+		SELECT A.*, NVL(C.EVENT_NAME, '') EVENTNAME, NVL(T.TEXT, '') FIOTYPENAME
+		  FROM MM_TEMPLATE A
+		  LEFT JOIN SYS_EVENT C
+		    ON A.EVENTID = C.EVENT_ID
+		  LEFT JOIN DIM_COMMON_DICT T
+		    ON T.TYPE = 'ioType'
+		   AND A.FIOTYPE = T.VALUE
+		WHERE A.ID =#{id}
+	</select>
+	
+	<!--  取得记录数 -->
+	<select id="getListCount" parameterType="HashMap" resultType="int">
+		SELECT count(*) as cou FROM  (select rownum ,t.*,t1.tname as mttypecn from MM_TEMPLATE t,MM_TYPE t1  
+		<![CDATA[ where t.mtype=t1.id(+) and (mtype =#{mtype} or '0'= #{mtype})  ]]>
+		<if test="q != null and q != ''">
+			and (
+				t.mtitle like '%${q}%'
+			)
+		</if>
+		)
+	</select>
+	<!--  检索所有方法  -->
+	<select id="getList" parameterType="HashMap" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT * FROM (SELECT A.*, rownum r FROM (select t.mtitle,t.mftype,t.mtext,t.ifflight,t.issys,t.id,t.ifpopm,
+		to_char(t.mtime,'yyyy-MM-dd hh24:mi:ss') mtime,t.tempname ,t1.tname as mttypecn from MM_TEMPLATE t,MM_TYPE t1  
+		
+		where t.mtype=t1.id(+) and (mtype =#{mtype} or '0'= #{mtype}) 
+			<if test="q != null and q != ''">
+				and (
+					t.mtitle like '%${q}%'
+				)
+			</if>
+			order by ${sortName} ${sortOrder} 
+			)A 
+		<![CDATA[ 
+		WHERE rownum <= #{end} ) B WHERE r > #{begin}
+		]]>
+	</select>
+	
+	
+	
+	
+	<select id="getParam" resultType="com.neusoft.prss.message.entity.CommonVO">
+		select "1" as code ,"name" as name from dual 
+	</select>
+	
+	<!-- 发送人类型  -->
+	<select id="getSenderType" resultType="com.neusoft.prss.message.entity.CommonVO">
+		select a.TCODE code,a.TNAME name from MM_TYPE a
+	</select>
+    <!-- 	发送人范围表格 -->
+	<select id="getSenderList" parameterType="HashMap" resultMap="sender">
+		SELECT A.*,
+	       DECODE(A.MFROMTYPE,
+	              '0',
+	              '个人',
+	              '1',
+	              '角色',
+	              '2',
+	              '部门',
+	              '9',
+	              '系统',
+	              '') MFROMTYPENAME,
+	       DECODE(A.IFPROCFROM, '0', '否', '1', '是', '') IFPROCFROMNAME
+	  FROM MM_TEMPLATE_FROM A
+	  where a.tid =#{id}
+	</select>
+	
+	 <!--接收人范围 -->
+	<select id="getReciverList" parameterType="HashMap" resultMap="reciver">
+		 SELECT A.ID,
+           TID,
+           MTOTYPE,
+           MTOER,
+           IFPROCTO,
+           PROCECLSTO,
+           PROCDEFPARAMTO,
+           TRANSTEMPLID,
+           D.MTITLE TRANSTEMPLNAME,
+           MTOERNAME,
+           IFTOALLROLE,
+           IFSMS,
+           RULEID,
+           A.IFTRANS,
+           NVL(C.PROC_CN, '') PROCECLSTONAME,
+           DECODE(A.MTOTYPE,
+                  '0',
+                  '个人',
+                  '1',
+                  '角色',
+                  '2',
+                  '部门',
+                  '8',
+                  '作业人',
+                  '') MTOTYPENAME,
+           DECODE(A.IFTRANS, '0', '否', '1', '是', '') IFTRANSNAME,
+           DECODE(A.IFPROCTO, '0', '否', '1', '是', '') IFPROCTONAME,
+           B.COLIDS,
+           B.DRL_STR,
+           B.TEXT,
+           B.RULE DROOLS
+      FROM MM_TEMPLATE_TO A
+      LEFT JOIN DIM_PROCVARS C
+        ON A.PROCECLSTO = C.ID
+      LEFT JOIN RM_RULE_INFO B
+        ON A.RULEID = B.ID
+      LEFT JOIN MM_TEMPLATE D
+       ON A.TRANSTEMPLID = D.ID       
+		where a.tid =#{id}
+	</select>
+	
+	<!--角色列表 -->
+	<select id="getRoleList" parameterType="HashMap" resultMap="srlist">
+		 select rownum,a.id no,a.name name from SYS_ROLE a where 1=1 AND a.del_flag =0 AND a.useable=1 ORDER BY  a.ID
+	</select>
+	<!--事件列表 -->
+	<select id="searchEvent" parameterType="HashMap" resultMap="srlist">
+		 SELECT A.EVENT_ID NO, A.EVENT_NAME NAME, A.REMARK REMARK
+		  FROM SYS_EVENT A
+		  WHERE 1=1 
+<!-- 		  <if test="type !=null and type !='' "> -->
+<!-- 		  	AND A.EVENT_TYPE = #{type} -->
+<!-- 		  </if> -->
+<!-- 		 WHERE A.EVENT_ID NOT IN -->
+<!-- 		       (SELECT B.EVENTID ID FROM MM_TEMPLATE B WHERE B.EVENTID IS NOT NULL) -->
+<!-- 		       AND EVENT_TYPE = #{type} -->
+		 ORDER BY A.EVENT_ID
+
+	</select>
+	
+	 <!--人员列表 -->
+	<select id="getUserList" parameterType="HashMap" resultMap="srlist">
+		 select rownum,a.id no,a.name name from sys_user a where 1=1 AND a.del_flag =0 AND a.login_flag=1 ORDER BY  a.ID
+	</select>
+	
+	<!--模板列表 -->
+	<select id="getmMessageList" parameterType="HashMap" resultType="HashMap">
+		 SELECT ROWNUM, A.ID NO, A.MTITLE, A.MTEXT, A.TEMPNAME NAME, A.VARCOLS,a.MFTYPE
+  			FROM MM_TEMPLATE A 
+  			WHERE 1=1
+  			<if test="mftype !=null and mftype !=''">
+  				AND a.MFTYPE = ${mftype}
+  			</if>
+	</select>
+	
+	<select id="getDepTree" resultType="com.alibaba.fastjson.JSONObject">
+		 select a.ID as "id",a.PARENT_ID as "pId",a.NAME  as "name" from sys_office a WHERE a.del_flag = 0 AND a.useable=1
+  	</select>
+  	
+     <!--add发送人范围 -->
+	<insert id="inserSender">
+	insert all
+	<foreach collection="tabdata" item="tabdata" index="index">
+		into MM_TEMPLATE_FROM (id,tid,mfromtype,mfromer,mfromername,ifprocfrom,proceclsfrom,procdefparamfrom)
+		Values
+		(MM_TEMPLATE_FROM_S.nextval,#{id},#{tabdata.mfromtype},#{tabdata.mfromer},#{tabdata.mfromername},#{tabdata.ifprocfrom},#{tabdata.proceclsfrom},#{tabdata.procdefparamfrom})
+	</foreach>
+	select 1 from dual
+	</insert>
+
+	
+	<!--add接收人范围 -->
+	<insert id="insertReciver">
+		insert all 
+		<foreach collection="tabdata1" item="tabdata1" index="index">
+		into MM_TEMPLATE_TO (id,tid,mtotype,mtoer,ifprocto,proceclsto,procdefparamto,iftrans,
+		transtemplid,transtemplname,mtoername,ifsms,ruleId) 
+		Values (
+	        MM_TEMPLATE_TO_S.nextval,#{id},#{tabdata1.mtotype},#{tabdata1.mtoer},#{tabdata1.ifprocto},#{tabdata1.proceclsto},#{tabdata1.procdefparamto},#{tabdata1.iftrans},
+	        #{tabdata1.transtemplid},#{tabdata1.transtemplname},#{tabdata1.mtoername},#{tabdata1.ifsms},#{tabdata1.ruleId}
+	         ) 
+             </foreach>
+		select 1 from dual
+	</insert>
+    	
+	<!-- del 模板-->
+	<delete id="deleteItem" parameterType="string">
+		delete from MM_TEMPLATE where id in (${ids})
+	</delete>
+	
+	<!-- del发送人范围 -->
+	<delete id="deleteSender" parameterType="string">
+		delete from MM_TEMPLATE_FROM where tid in (${ids})
+	</delete>
+	<!-- del 接收人范围-->
+	<delete id="deleteReciver" parameterType="string">
+		delete from MM_TEMPLATE_TO where tid in (${ids})
+	</delete>	
+    <!-- 处理类 -->
+	<select id="getProcvars" resultType="com.neusoft.prss.message.entity.CommonVO">
+	select a.ID as code,a.proc_cn as name from DIM_PROCVARS a
+	</select>
+	<insert id="insertAutoRule">
+		insert all 
+		<foreach collection="tabdata1" item="vo" index="index">
+		insert into
+		RM_RULE_INFO (ID,COLIDS,RULE,IF_MANUAL,IF_VALID,CREATE_TIME,CREATE_USER,TEXT,DRL_STR) 
+		Values 
+	    (#{vo.ruleId},#{vo.colids},#{vo.drools},0,1,sysdate,${vo.userId},#{vo.condition},#{vo.drlStr})
+        </foreach>
+		select 1 from dual
+	</insert>
+
+
+	<update id="updateAutoRule" >
+		update RM_RULE_INFO
+		set COLIDS = #{vo.colids},RULE = #{vo.drools},UPDATE_TIME= sysdate,
+		UPDATE_USER=#{vo.userId},TEXT=#{vo.condition},DRL_STR = #{vo.expression}
+		where ID =
+		#{vo.ruleId}
+	</update>
+
+
+	<delete id="deleteAutoRuleList" parameterType="string">
+		DELETE FROM RM_RULE_INFO
+		WHERE ID IN (SELECT RULE_ID FROM TM_SEND_AUTO
+		WHERE ID IN
+		<foreach item="id" index="index" collection="array" open="("
+			separator="," close=")">
+			#{id}
+		</foreach>
+		)
+	</delete>
+	
+	<delete id="deleteReciverRule">
+		DELETE FROM RM_RULE_INFO
+		 WHERE ID IN (SELECT A.RULEID
+		                FROM MM_TEMPLATE_TO A
+		               WHERE A.TID = #{id}
+		                 AND A.RULEID IS NOT NULL)
+
+	</delete>
+	
+	<insert id="insertReciverRule">
+		insert into
+		RM_RULE_INFO (ID,
+		<if test="colids != null and colids != ''">COLIDS,</if>
+		RULE,IF_MANUAL,IF_VALID,CREATE_TIME,CREATE_USER,TEXT,DRL_STR)
+		values
+		(#{ruleId},
+		<if test="colids != null and colids != ''">#{colids},</if>
+		#{drools},0,1,sysdate,#{userId},#{condition},#{drlStr})
+	</insert>
+	
+	<select id="getTemplCount" resultType="com.alibaba.fastjson.JSONObject" parameterType="String">
+		SELECT COUNT(*) NUM, ID, NAME
+		  FROM (SELECT T.ID, B.MTITLE NAME
+		          FROM (
+		          	SELECT MTEMPLID ID FROM MM_SUBSCRIBE T WHERE T.MTEMPLID = ${id}
+		          	UNION
+		          	SELECT A.TRANSTEMPLID ID FROM MM_TEMPLATE_TO A WHERE A.TRANSTEMPLID = ${id}
+		          	UNION 
+		          	SELECT NOTIFY_MSG ID FROM WF_NODE T WHERE T.NOTIFY_MSG = ${id}
+					UNION 
+					SELECT ALARM_MSG_LV1 ID FROM WF_NODE T WHERE T.ALARM_MSG_LV1 = ${id}
+					UNION 
+					SELECT ALARM_MSG_LV2 ID FROM WF_NODE T WHERE T.ALARM_MSG_LV2 = ${id}
+					UNION 
+					SELECT ALARM_MSG_LV3 ID FROM WF_NODE T WHERE T.ALARM_MSG_LV3 = ${id}
+					UNION 
+					SELECT ALARM_MSG_LV4 ID FROM WF_NODE T WHERE T.ALARM_MSG_LV4 = ${id}
+					UNION 
+					SELECT ALARM_MSG_LV5 ID FROM WF_NODE T WHERE T.ALARM_MSG_LV5 = ${id}
+					UNION 
+					SELECT RELEASE_ALARM_MSG ID FROM WF_PROCESS T WHERE T.RELEASE_ALARM_MSG = ${id}
+					UNION 
+					SELECT SURROGATE_ALARM_MSG ID FROM WF_PROCESS T WHERE T.SURROGATE_ALARM_MSG = ${id}
+					UNION 
+					SELECT TERMINATION_ALARM_MSG ID FROM WF_PROCESS T WHERE T.TERMINATION_ALARM_MSG = ${id}
+					UNION 
+					SELECT START_MSG ID FROM WF_PROCESS T WHERE T.START_MSG = ${id}
+					UNION 
+					SELECT CANCEL_MSG ID FROM WF_PROCESS T WHERE T.CANCEL_MSG = ${id}
+		          ) T
+		          LEFT JOIN MM_TEMPLATE B
+		            ON T.ID = B.ID) A
+		 GROUP BY ID, NAME
+	</select>
+	
+	<select id="getKindJob" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT A.RESKIND AS "id", '' AS "pId", A.KINDNAME AS "name"
+		  FROM DIM_RESKIND A
+		UNION
+		SELECT A.RESTYPE AS "id",
+		       A.RESKIND AS "pId",
+		       B.KINDNAME || '【' || A.TYPENAME||'】' AS "name"
+		  FROM DIM_RESTYPE A
+		  LEFT JOIN DIM_RESKIND B
+		    ON A.RESKIND = B.RESKIND
+
+  	</select>
+  	
+  	<select id="filterTemplate" parameterType="map" resultType="int">
+  	     select count(*) from mm_template where TEMPNAME = '${tempname}'
+  	     <if test="id != null and id != ''">
+  	         and id &lt;&gt; ${id}
+  	     </if>
+  	</select>
+</mapper>

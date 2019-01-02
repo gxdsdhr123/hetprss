@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.produce.dao.BillSpecialDao">
+
+	 <select id="getDataList" resultType="com.alibaba.fastjson.JSONObject">
+		 SELECT
+			A.ID,
+			A.FLTID,
+			A.FLIGHT_DATE,
+			A.FLIGHT_NUMBER,
+			A.ALN_2CODE,
+			A.ALN_3CODE,
+			A.ACTTYPE_CODE,
+			A.AIRCRAFT_NUMBER,
+			A.STATION,
+			A.ARRIVAL_TM,
+			A.DEPART_TM,
+			A.PROPERTY_CODE,
+			A.SERVICE_POS,
+			A.UNIT_PRICE,
+			A.DURATION,
+			A.ALL_PRICE,
+			A.REMARK,
+			A.UPDATE_TM,
+			C.AIRLINE_SHORTNAME,
+			D.DESCRIPTION_CN PROPERTY,
+			E.NAME OPERATOR
+		FROM
+			BILL_SPECIAL_SERVICE A
+			LEFT JOIN DIM_AIRLINES C ON A.ALN_3CODE = C.ICAO_CODE
+			LEFT JOIN DIM_TASK D ON A.PROPERTY_CODE = D.TODB_TASK_CODE
+			LEFT JOIN SYS_USER E ON A.OPERATOR=E.ID
+		WHERE A.DEL_FLAG='0' and 1=1 
+		<if test="searchDate != null and searchDate != ''">
+			AND A.FLIGHT_DATE=#{searchDate}
+		</if>
+		<if test="searchStr != null and searchStr != ''">
+			and (A.FLIGHT_NUMBER like '%${searchStr}%' or A.PROPERTY_CODE like '%${searchStr}%' or C.AIRLINE_SHORTNAME like '%${searchStr}%' or E.NAME like '%${searchStr}%')
+		</if>
+		ORDER BY A.FLIGHT_DATE DESC ,C.AIRLINE_SHORTNAME,A.SERVICE_POS
+		
+	 </select>
+	 <select id="getDataTotal" resultType="map">
+	 	 SELECT
+			A.ID,
+			A.FLTID,
+			A.FLIGHT_DATE,
+			A.FLIGHT_NUMBER,
+			A.ALN_2CODE,
+			A.ALN_3CODE,
+			A.ACTTYPE_CODE,
+			A.AIRCRAFT_NUMBER,
+			A.STATION,
+			A.ARRIVAL_TM,
+			A.DEPART_TM,
+			A.PROPERTY_CODE,
+			A.SERVICE_POS,
+			A.UNIT_PRICE,
+			A.DURATION,
+			A.ALL_PRICE,
+			A.REMARK,
+			A.UPDATE_TM,
+			C.AIRLINE_SHORTNAME,
+<!-- 			D.DESCRIPTION_CN PROPERTY, -->
+			A.PROPERTY_CODE PROPERTY,
+			E.NAME OPERATOR
+		FROM
+			BILL_SPECIAL_SERVICE A
+			LEFT JOIN DIM_AIRLINES C ON A.ALN_3CODE = C.ICAO_CODE
+<!-- 			LEFT JOIN DIM_TASK D ON A.PROPERTY_CODE = D.TODB_TASK_CODE -->
+			LEFT JOIN SYS_USER E ON A.OPERATOR=E.ID
+		<where>
+			A.DEL_FLAG=0 
+			<if test="startDate!=null and startDate!='' and endDate!=null and endDate!=''">
+				AND A.FLIGHT_DATE BETWEEN #{startDate} AND #{endDate}
+			</if>
+		</where>
+		ORDER BY A.FLIGHT_DATE DESC ,C.AIRLINE_SHORTNAME,A.SERVICE_POS
+	 
+	 </select>
+	 
+	 <select id="getResType" resultType="com.alibaba.fastjson.JSONObject">
+	 	select restype id ,typename text from dim_restype where reskind='JWGSHETJW'
+	 </select>
+	 
+	 <select id="getSysUser" resultType="com.alibaba.fastjson.JSONObject">
+	 	SELECT ID,NAME TEXT FROM SYS_USER
+	 </select>
+	 
+	 <select id="getFltInfo" resultType="com.alibaba.fastjson.JSONObject" parameterType="Map">
+	 	SELECT A.*,B.AIRLINE_SHORTNAME ,C.DESCRIPTION_CN PROPERTY_NAME FROM FD_FLT_INFO A
+	 	LEFT JOIN DIM_AIRLINES B ON A.ALN_3CODE=B.ICAO_CODE
+	 	LEFT JOIN DIM_TASK C on A.PROPERTY_CODE=C.TODB_TASK_CODE
+	 	<where>
+	 		<if test="flightDate !=null and flightDate !='' ">
+	 			AND FLIGHT_DATE =#{flightDate}
+	 		</if>
+	 		<if test="flightNumber !=null and flightNumber !='' ">
+	 			AND FLIGHT_NUMBER =#{flightNumber}
+	 		</if>
+	 		<if test="inOutFlag !=null and inOutFlag !='' ">
+	 			AND IN_OUT_FLAG LIKE '%${inOutFlag}%'
+	 		</if>
+	 	</where>
+	 </select>
+	 <insert id="saveAdd" parameterType="com.neusoft.prss.produce.entity.BillSpecialEntity">
+		INSERT INTO bill_special_service(
+			ID,
+			FLTID,
+			FLIGHT_DATE,
+			FLIGHT_NUMBER,
+			ALN_2CODE,
+			ALN_3CODE,
+			ACTTYPE_CODE,
+			AIRCRAFT_NUMBER,
+			STATION,
+			ARRIVAL_TM,
+			DEPART_TM,
+			PROPERTY_CODE,
+			SERVICE_POS,
+			UNIT_PRICE,
+			DURATION,
+			ALL_PRICE,
+			OPERATOR,
+			OPERATOR_NAME,
+			REMARK,
+			UPDATE_TM,
+			DEL_FLAG,
+			CREATE_USER,
+			IN_OUT_FLAG,
+			SIGN_REMARK
+		) VALUES (
+			bill_special_service_s.nextval,
+			#{fltid},
+			#{flightDate},
+			#{flightNumber},
+			#{aln2code},
+			#{aln3code},
+			#{acttypeCode},
+			#{aircraftNumber},
+			#{station},
+			#{arrivalTime},
+			#{departTime},
+			#{propertyCode},	
+			#{servicePos},
+			#{unitPrice},
+			#{duration},
+			#{allPrice},
+			#{operator},
+			#{operatorName},
+			#{remark},
+			to_date(#{updateTime},'yyyy-MM-dd HH24:mi:ss'),
+			'0',
+			#{createUser},
+			#{inOutFlag},
+			#{signRemark}
+		)
+	 </insert>
+	 
+	 <select id="getBillById" resultType="com.alibaba.fastjson.JSONObject">
+			SELECT
+				A.ID,
+				A.FLTID,
+				A.FLIGHT_DATE,
+				A.FLIGHT_NUMBER,
+				A.ALN_2CODE,
+				A.ALN_3CODE,
+				A.ACTTYPE_CODE,
+				A.AIRCRAFT_NUMBER,
+				A.STATION,
+				A.ARRIVAL_TM,
+				A.DEPART_TM,
+				A.PROPERTY_CODE,
+				A.SERVICE_POS,
+				A.UNIT_PRICE,
+				A.DURATION,
+				A.ALL_PRICE,
+				A.OPERATOR,
+				A.OPERATOR_NAME,
+				A.SIGN,
+				A.REMARK,
+				TO_CHAR(A.UPDATE_TM, 'YYYY-MM-DD HH24:MI:SS') UPDATE_TM ,
+				C.AIRLINE_SHORTNAME,
+				D.DESCRIPTION_CN PROPERTY_NAME,
+				A.IN_OUT_FLAG,
+				A.SIGN_REMARK
+			FROM
+				BILL_SPECIAL_SERVICE A
+				LEFT JOIN DIM_AIRLINES C ON A.ALN_3CODE = C.ICAO_CODE
+				LEFT JOIN DIM_TASK D ON A.PROPERTY_CODE = D.TODB_TASK_CODE
+			WHERE
+				A.DEL_FLAG=0 AND A.ID=#{id}
+	 </select>
+	 <update id="saveEdit" parameterType="com.neusoft.prss.produce.entity.BillSpecialEntity">
+	 	UPDATE BILL_SPECIAL_SERVICE SET 
+		 	SERVICE_POS=#{servicePos},
+		 	UNIT_PRICE=#{unitPrice},
+		 	DURATION=#{duration},
+		 	ALL_PRICE=#{allPrice},
+		 	PROPERTY_CODE=#{propertyCode},
+		 	REMARK=#{remark},
+		 	UPDATE_TM=TO_DATE(#{updateTime},'yyyy-MM-dd HH24:mi:ss'),
+		 	CREATE_USER=#{createUser},
+		 	SIGN_REMARK=#{signRemark}
+	 	WHERE ID=#{id}
+	 </update>
+	 <update id="delBillById">
+	 	UPDATE BILL_SPECIAL_SERVICE  SET DEL_FLAG=1 WHERE ID=#{id}
+	 </update>
+	 
+	 <select id="getExportWordData" resultType="com.alibaba.fastjson.JSONObject">
+			SELECT
+				A.FLIGHT_DATE,
+				A.FLIGHT_NUMBER,
+				A.AIRCRAFT_NUMBER,
+				A.STATION,
+				A.ARRIVAL_TM,
+				A.DEPART_TM,
+				B.TYPENAME SERVICE_POS,
+				A.UNIT_PRICE,
+				A.DURATION,
+				A.ALL_PRICE,
+				E.NAME OPERATOR,
+				A.SIGN,
+				A.REMARK,
+				TO_CHAR(A.UPDATE_TM, 'YYYY-MM-DD HH24:MI:SS') UPDATE_TM ,
+				C.AIRLINE_SHORTNAME,
+				A.PROPERTY_CODE PROPERTY_NAME,
+<!-- 				D.DESCRIPTION_CN PROPERTY_NAME, -->
+				NVL2(A.IN_OUT_FLAG,DECODE(SUBSTR(A.IN_OUT_FLAG, 0, 1), 'A', '进港','D','出港'),'')IN_OUT_FLAG,
+				A.SIGN_REMARK
+			FROM
+				BILL_SPECIAL_SERVICE A
+				LEFT JOIN DIM_RESTYPE B ON A.SERVICE_POS=B.RESTYPE
+				LEFT JOIN DIM_AIRLINES C ON A.ALN_3CODE = C.ICAO_CODE
+<!-- 				LEFT JOIN DIM_TASK D ON A.PROPERTY_CODE = D.TODB_TASK_CODE -->
+				LEFT JOIN SYS_USER E ON A.OPERATOR=E.ID
+			WHERE
+				A.DEL_FLAG=0 AND A.ID=#{id}
+	 </select>
+</mapper>

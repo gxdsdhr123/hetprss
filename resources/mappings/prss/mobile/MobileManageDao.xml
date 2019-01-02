@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.mobile.dao.MobileManageDao">
+
+	<select id="getMobileManageDate" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT P.ID "pdaId",
+			O.NAME "officeId",
+			P.PDA_NO "pdaNo",
+			P.IMEI "imei",
+			D.TEXT "pdaStatus",
+			U.NAME "updateUser",
+			to_char(P.CREATE_TIME,'yyyy-mm-dd hh24:mi') "createTime"
+		FROM SYS_PDA P,
+			SYS_OFFICE O,
+			SYS_USER U,
+			(SELECT VALUE, TEXT FROM DIM_COMMON_DICT WHERE TYPE = 'padStatus') D
+		WHERE O.ID(+) = P.OFFICE_ID
+			AND U.ID(+) = P.UPDATE_USER
+			AND D.VALUE(+) = P.PDA_STATUS
+		ORDER BY P.PDA_NO
+	</select>
+	
+	<delete id="delPDA">
+		DELETE FROM sys_pda WHERE ID = #{id}
+	</delete>
+	
+	<select id="getPADStatus" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT VALUE "value", TEXT "text" FROM DIM_COMMON_DICT WHERE TYPE = 'padStatus'
+	</select>
+	
+	<select id="getPDAInfo" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT  P.ID         "id",
+				P.OFFICE_ID  "office",
+       			O.NAME       "officeName",
+       			P.PDA_NO     "pdaNo",
+       			P.IMEI       "imei",
+       			P.PDA_STATUS "status"
+  		FROM SYS_PDA P, SYS_OFFICE O
+ 		WHERE P.OFFICE_ID = O.ID(+) 
+ 		 and p.ID = #{id}
+	</select>
+	
+	<update id="updatePDA">
+		UPDATE sys_pda SET pda_no=#{pdaNo}, office_id=#{officeId}, imei=#{imei}, pda_status=#{status}, update_user=#{userId}, update_time=sysdate WHERE id = #{id}
+	</update>
+	
+	<select id="getId" resultType="String">
+		SELECT sys_pda_s.nextval FROM DUAL
+	</select>
+	
+	<insert id="addPDA">
+		INSERT INTO sys_pda (id, pda_no, office_id, imei, pda_status, create_user, create_time, update_user, update_time, pda_usestatus) VALUES (#{id}, #{pdaNo}, #{officeId}, #{imei}, #{status}, #{userId}, sysdate, #{userId}, sysdate, '2' )
+	</insert>
+	
+	<insert id="addLog">
+		INSERT INTO SYS_PDA_OPERATE_LOG (log_id, pda_id, pda_no, office_id, imei, pda_status, oper_user, oper_time) VALUES (SYS_PDA_OPERATE_LOG_s.nextval, #{id}, #{pdaNo}, #{officeId}, #{imei}, #{status}, #{userId}, sysdate )
+	</insert>
+	
+	<select id="getLog" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT  TO_CHAR(L.OPER_TIME, 'yyyy-mm-dd hh24:mi') "operTime",
+       			U.NAME "operUser",
+       			D.TEXT "pdaStatus",
+       			L.PDA_NO "pdaNo",
+       			L.IMEI "imei"
+  		FROM SYS_PDA_OPERATE_LOG L,
+       			SYS_USER U,
+       			(SELECT VALUE, TEXT FROM DIM_COMMON_DICT WHERE TYPE = 'padStatus') D
+ 		WHERE U.ID(+) = L.OPER_USER
+   			AND D.VALUE(+) = L.PDA_STATUS
+   			AND L.PDA_ID = #{id}
+ 		ORDER BY l.oper_time DESC
+	</select>
+
+</mapper>

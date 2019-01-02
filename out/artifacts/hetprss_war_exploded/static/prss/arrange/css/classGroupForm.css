@@ -1,0 +1,30 @@
+
+#leftDiv,#rightDiv,#middleDiv{
+	float:left;
+	height:100%;
+}
+#leftTitle,#rightTitle{
+	height:53px;
+	width:242px;
+}
+
+#leftTitle label,#rightTitle label{
+	padding: 0px;
+	margin: 0px;
+}
+#leftTitle > div,#rightTitle > div {
+	padding: 3px 0px;
+}
+#leftDiv ul,#rightDiv .sortable{
+	height: calc(100% - 45px);
+	width: 242px;
+	overflow:auto;
+	border: 1px solid #006DC0;
+	border-radius: 5px;
+	box-shadow: 0px 0px 10px -6px;
+	margin:0px;
+}
+
+
+
+

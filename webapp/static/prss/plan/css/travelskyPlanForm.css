@@ -1,0 +1,63 @@
+html,body{
+	width:100% !important;
+	height:100% !important;
+	overflow:auto;
+}
+#tables{
+	width: 100%;
+	height: calc(100% - 45px);
+	overflow: auto;
+}
+#table{
+	width:100%;
+	height:100%;
+}
+#flightWeek{
+	padding: 5px 20px;
+}
+#flightDate{
+	padding: 20px 20px 0px 20px;
+}
+.flightDate{
+	display:inline-block !important;
+	width:45% !important;
+}
+.dao{
+	display:inline-block;
+	width:10%;
+	text-align:center;
+}
+#createToolBox{
+	padding:5px 10px;
+}
+#createToolBox button{
+	width:100px;
+}
+#createForm {
+	padding-bottom: 0px !important;
+}
+#createForm .layui-form-label {
+	width: 142px;
+	padding-top:5px;
+	padding-bottom:5px;
+}
+#createForm .layui-form-item .layui-input-inline {
+	width: 140px;
+}
+#createForm input{
+	height: 30px !important;
+}
+#createForm .layui-form-item{
+	display:flex;
+	margin-bottom: 13px;
+}
+#addTypeForm,#addNumForm,#addAirportForm,#addAirlineForm{
+	padding-top:10px;
+}
+.layui-layer-page .layui-layer-content {
+	overflow: auto !important;
+}
+#fileList{
+	display:none;
+	padding:10px;
+}

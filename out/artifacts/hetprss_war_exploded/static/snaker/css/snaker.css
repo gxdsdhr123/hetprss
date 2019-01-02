@@ -1,0 +1,124 @@
+body {
+	margin: 0;
+	pading: 0;
+	text-align: left;
+	font-family: Arial, sans-serif, Helvetica, Tahoma;
+	font-size: 12px;
+	line-height: 1.5;
+	color: black;
+}
+
+#snakerflow {
+	display:inline-block;
+}
+#toolbox hr{
+	margin-top:0px;
+	border:1px solid #0066B6;
+}
+.node {
+	margin-left:5px;
+	padding-left:10px;
+	padding-top:3px;
+	padding-bottom:3px;
+	width: 250px;
+	text-align: left;
+	vertical-align: middle;
+	cursor: pointer;
+	margin-bottom:5px;
+	background: #1E4E91;
+	border-radius:5px 5px 5px 5px;
+}
+
+.mover {
+	background-color: #2867BC;
+	border-radius:5px 5px 5px 5px;
+}
+
+.selected {
+	background-color: #2867BC;
+}
+
+.state {
+	background-repeat: no-repeat;
+	background-position: center;
+}
+
+#pointer {
+	background-repeat: no-repeat;
+	background-position: center;
+}
+
+#path {
+	background-repeat: no-repeat;
+	background-position: center;
+}
+
+#task {
+	background-repeat: no-repeat;
+	background-position: center;
+}
+
+#state {
+	background-repeat: no-repeat;
+	background-position: center;
+}
+
+#toolbox {
+	top:0px;
+    border:1px solid #006DC0;
+	position: absolute;
+	z-Index:999999;
+	/*background-color: #fff;*/
+	width: 270px;
+	cursor: default;
+	padding: 3px;
+	float:left;
+}
+#toolbox_handle {
+	border:0px solid #9AC3E1;
+	margin-top:0px;
+	margin-bottom:0px;
+	width:100%;
+	align:center;
+	font-weight: bold;
+	background-color: #0066B6;
+	cursor: move;
+}
+#properties {
+    border:1px solid #9AC3E1;
+	position: absolute;
+	top: 400;
+	right: 10;
+	width: 560px;
+	padding: 3px;
+}
+#properties_handle {
+	border:1px solid #9AC3E1;
+	margin-top:1px;
+	font-weight: bold;
+	align:center;
+	text-align:left;
+	background-color: #CDF07F;
+}
+.properties_all {
+	border-right:1px solid #9AC3E1;
+	width:100%;
+	text-align:left;
+	font-family: Arial, sans-serif, Helvetica, Tahoma;
+	font-size: 12px;
+}
+.properties_name {
+	background-color:#CDF07F;
+	border-left:1px solid #9AC3E1;
+	border-bottom:1px solid #9AC3E1;
+	color:#000;
+	font-weight: bold;
+	text-align:left;
+	width:100px;
+}
+.properties_value {
+	border-left:1px solid #9AC3E1;
+	border-bottom:1px solid #9AC3E1;
+	height: 24px;
+	width:460px;
+}

@@ -1,0 +1,48 @@
+h4 {
+	font-size: 18px;
+}
+
+.car_text {
+	line-height: 25px;
+}
+
+.car_text h4 {
+	font-size: 20px;
+	margin-bottom:10px;
+}
+
+.progress {
+	margin: 0;
+}
+
+#personOccupy .row {
+	margin: 10px 0;
+}
+
+#personOccupy div[class*='col-sm'] {
+	margin: 5px 0;
+}
+
+.box-body{
+	line-height: 200%;
+}
+
+.rate-container{
+	text-align: center;
+}
+
+.rate-container h4{
+	margin:10px 0;
+}
+
+#monitor {
+	padding:20px;
+}
+
+#personOccupy{
+	height:580px;
+}
+
+.illegal-body{
+	height:360px;
+}

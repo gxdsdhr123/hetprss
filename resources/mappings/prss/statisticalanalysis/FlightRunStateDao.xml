@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.statisticalanalysis.dao.FlightRunStateDao">
+	
+	<select id="getPageData" parameterType="string" resultType="hashMap" >
+		SELECT nvl(sum(XH_NUM),0) XH_NUM,
+		       nvl(sum(DHBY_NUM),0) DHBY_NUM,
+		       nvl(sum(BGS_NUM),0) BGS_NUM,
+		       nvl(sum(GWJ_NUM),0) GWJ_NUM,
+		       nvl(sum(GNQW_NUM),0) GNQW_NUM,
+		       nvl(sum(GNFX_NUM),0) GNFX_NUM,
+		       nvl(sum(GJQW_NUM),0) GJQW_NUM,
+		       nvl(sum(GWJBZ_NUM),0) GWJBZ_NUM
+		  FROM SA_FLTSTAT_HB_DAY@Prss2prssp
+		 WHERE STAT_DAY = #{beginTime}
+		 group by STAT_DAY
+	</select>
+	
+	<select id="getHighTime" parameterType="string" resultType="int" >
+		select HOUR
+		  from (SELECT HOUR
+		          FROM SA_FLTSTAT_HB_DAY@Prss2prssp
+		         WHERE STAT_DAY = #{beginTime}
+		         ORDER BY PEOPLE_NUM DESC, HOUR)
+		 where rownum = 1
+	</select>
+	
+	<select id="getHighData" parameterType="hashMap" resultType="hashMap" >
+		SELECT nvl(XH_NUM,0) XH_NUM,
+		       nvl(DHBY_NUM,0) DHBY_NUM,
+		       nvl(BGS_NUM,0) BGS_NUM,
+		       nvl(GWJ_NUM,0) GWJ_NUM,
+		       nvl(GNQW_NUM,0) GNQW_NUM,
+		       nvl(GNFX_NUM,0) GNFX_NUM,
+		       nvl(GJQW_NUM,0) GJQW_NUM,
+		       nvl(GWJBZ_NUM,0) GWJBZ_NUM,
+		       nvl(PEOPLE_NUM,0) PEOPLE_NUM
+          FROM SA_FLTSTAT_HB_DAY@Prss2prssp
+         WHERE STAT_DAY = #{beginTime} and HOUR = #{highTime}
+	</select>
+	
+	<select id="getImageData" parameterType="string" resultType="hashMap" >
+		select HOUR,nvl(IN_NUM,0) IN_NUM,nvl(OUT_NUM,0) OUT_NUM,nvl(IN_NUM,0)+nvl(OUT_NUM,0) TOTAL 
+		from SA_FLTSTAT_HB_DAY@Prss2prssp
+		where STAT_DAY = #{beginTime}
+	</select>
+	
+</mapper>

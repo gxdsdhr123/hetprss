@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.message.dao.MessageDao">
+
+	<sql id="unredsql">
+		SELECT
+			t.ID,t.MTYPE,t.MTITLE,t.MTIME,t.MTEXT,SENDER,SENDERDEP,SENDUID,t.IFFLIGHT,RFID,FLIGHTNUMBER,IFAUTOSEND,AUTOSENDTIME,ISSENDED,
+			IFPROC,PROCPARAM,MTEMPLID,t.IFREPLY,t.IFSOUND,t.SOUNDTXT,ISALLREPLYED,to_char(SENDTIME,'yyyy-MM-dd
+			hh24:mi:ss') SENDTIME,
+			SENDERCN,REALTIME,MFROMTYPE,t2.iftrans,t2.isrepled,to_char(t2.replytime,'yyyy-MM-dd
+			hh24:mi:ss') REPLYTIME ,
+			t2.REPLYTEXT,t2.ISTRANSED,t2.TRANSTEMPL,t2.id
+			MTOID,decode(t3.num,null,0,t3.num) FILESLEN,MESSTYPE,t4.TEMPNAME,DECODE(a.mid,NULL,0,1) FAVORITE
+			FROM MM_OFFLINE_INFO M
+                  LEFT JOIN MM_INFO T
+                    ON M.MID = T.ID
+                  LEFT JOIN MM_INFO_TO T2
+                    ON M.MID = T2.MID
+                   AND M.MTOID = T2.ID
+                   AND T.ID = T2.MID
+                  LEFT JOIN (SELECT COUNT(ID) NUM, MID
+                              FROM MM_FILEINFO
+                             GROUP BY MID) T3
+                    ON T3.MID = T2.MID
+                  LEFT JOIN MM_TEMPLATE T4
+                    ON T.MTEMPLID = T4.ID
+                  LEFT JOIN mm_info_favorite a 
+                  	ON t.id = a.mid 
+					and type = 1
+					<if test="jobKind==null or jobKind == ''">
+						and jobKind is null
+					</if>
+					<if test="jobKind!=null and jobKind != ''">
+						and jobKind = '${jobKind}' 
+					</if>
+			WHERE m.USERID = 'P_${userId}'
+				AND (m.cpmsgid = t2.cpmsgid or m.cpmsgid is null)
+				AND (ISREPLED = 0 OR (T2.ISREPLED = 1 AND T2.IFTRANS = 1 AND ISTRANSED = 0))
+				<if test="messtype!=null and messtype !=''">
+					AND T.MESSTYPE = '${messtype}'
+				</if>
+			UNION
+			SELECT
+			distinct
+			t.ID,t.MTYPE,t.MTITLE,t.MTIME,t.MTEXT,SENDER,SENDERDEP,SENDUID,t.IFFLIGHT,RFID,FLIGHTNUMBER,IFAUTOSEND,AUTOSENDTIME,ISSENDED,
+			IFPROC,PROCPARAM,MTEMPLID,t.IFREPLY,t.IFSOUND,t.SOUNDTXT,ISALLREPLYED,to_char(SENDTIME,'yyyy-MM-dd
+			hh24:mi:ss') SENDTIME,
+			SENDERCN,REALTIME,MFROMTYPE,t2.iftrans,t2.isrepled,to_char(t2.replytime,'yyyy-MM-dd
+			hh24:mi:ss') REPLYTIME ,
+			t2.REPLYTEXT,t2.ISTRANSED,t2.TRANSTEMPL,t2.id
+			MTOID,decode(t3.num,null,0,t3.num) FILESLEN,MESSTYPE,t4.TEMPNAME,DECODE(a.mid,NULL,0,1) FAVORITE
+			FROM MM_INFO T
+                  LEFT JOIN MM_INFO_TO T2
+                    ON T.ID = T2.MID
+                   AND T.ISSENDED = 1
+                  	<if test="messtype!=null and messtype !=''">
+					AND T.MESSTYPE = '${messtype}'
+					</if>
+                  LEFT JOIN (SELECT COUNT(ID) NUM, MID
+                               FROM MM_FILEINFO
+                              GROUP BY MID) T3
+                    ON T3.MID = T2.MID
+                  LEFT JOIN MM_TEMPLATE T4
+                    ON T.MTEMPLID = T4.ID
+                  LEFT JOIN mm_info_favorite a 
+                  	ON t.id = a.mid 
+					and type = 1
+					<if test="jobKind==null or jobKind == ''">
+						and jobKind is null
+					</if>
+					<if test="jobKind!=null and jobKind != ''">
+						and jobKind = '${jobKind}' 
+					</if>
+			WHERE 1=1 
+			AND
+			( (t2.mtotype=0 AND t2.mtoer ='${userId}')
+			OR (t2.mtotype=1 AND t2.mtoer in ('${roleIds}'))
+			OR (t2.mtotype=2 AND t2.mtoer ='${officeId}')
+			OR (t2.mtotype=8 AND t2.mtoer ='${userId}') )
+			AND	(ISREPLED=0 OR (t2.isrepled=1 AND t2.iftrans = 1 and ISTRANSED = 0))
+	</sql>
+	<!-- 获取未读消息 -->
+	<select id="getMessageInfo" resultType="com.alibaba.fastjson.JSONObject"
+		parameterType="HashMap">
+		SELECT * FROM (
+			SELECT T.*,ROWNUM NUM FROM (
+				<include refid="unredsql"></include>
+				ORDER BY SENDTIME DESC
+			) T 
+		) T where NUM &lt;= ${end} 
+	       		and NUM &gt; ${begin}
+	       		
+	</select>
+	<select id="getTemplate" resultType="com.alibaba.fastjson.JSONObject"
+		parameterType="HashMap">
+		<if test="ioFlag==null or ioFlag=='' ">
+			<if test="userType!=null and userType ==1">
+				SELECT t.id,t.mtitle,FIOTYPE,SENDDEF FROM mm_template t WHERE 1=1 AND t.MFTYPE = 0
+<!-- 				AND t.MFTYPE = ${mftype} -->
+				<if test="ifflight !=null">
+					and t.IFFLIGHT=1
+				</if>
+				<if test="text!=null">
+					and t.mtitle like '%${text}%'
+				</if>
+				ORDER BY t.mtype
+			</if>
+			<if test="userType == null or userType != 1">
+				select id ,mtitle,FIOTYPE,SENDDEF,case when num>0 then num else 0 end num
+				from (
+				SELECT t.id,t.mtitle,T.TEMPNAME,T.FIOTYPE,SENDDEF FROM mm_template t
+				WHERE 1=1
+				<if test="ifflight !=null">
+					and t.IFFLIGHT=1
+				</if>
+				<if test="text!=null">
+					and t.mtitle like '%${text}%'
+				</if>
+<!-- 				AND t.MFTYPE = ${mftype} -->
+				AND t.id IN(
+				SELECT tid FROM mm_template_from t WHERE 1=1
+				AND
+				(t.mfromtype=0 AND t.mfromer ='${userId}')
+				OR (t.mfromtype=1 AND t.mfromer in ('${roleIds}'))
+				OR (t.mfromtype=2 AND t.mfromer ='${officeId}')
+				OR (t.mfromtype=9 AND t.mfromtype = ${mfromtype})
+				)
+				) m
+				left join (select templateId,num from MM_REL_TEMPL t
+				 where userid = '${userId}') n
+				on m.id = n.templateId
+				ORDER BY NUM DESC ,m.TEMPNAME
+				ASC
+			</if>
+		</if>
+		<if test="ioFlag!=null and ioFlag!=''">
+			select t.id, t.mtitle,t.SENDDEF
+			from mm_template t
+			left join
+			mm_template_from f on t.id = f.tid
+			where t.fiotype = #{fiotype} 
+			and t.ifpopm =1 
+			AND t.ifflight =1
+			AND t.MFTYPE = 0
+			<if test="text!=null">
+				and t.mtitle like '%${text}%'
+			</if>
+			and ((f.mfromtype = 0 and f.mfromer = '${userId}')
+			or (f.mfromtype = 1 and f.mfromer in ('${roleIds}'))
+			or (f.mfromtype = 2 and f.mfromer = '${officeId}')
+			or (f.mfromtype = 9 and f.mfromtype = ${mfromtype})) order by MNUMB
+		</if>
+	</select>
+
+	<!-- 页面接收人展示 -->
+	<select id="getTemplateToList" resultType="com.alibaba.fastjson.JSONObject"
+		parameterType="HashMap">
+
+		SELECT t.mtotype,t.mtoer,t.id,t.tid,CASE WHEN t.mtotype =0 THEN
+		(SELECT a.name FROM Sys_User a WHERE a.id = t.mtoer)
+		WHEN t.mtotype =1
+		THEN (SELECT b.name FROM Sys_role b WHERE b.id =
+		t.mtoer)
+		WHEN t.mtotype
+		=2 THEN (SELECT c.name FROM Sys_Office c WHERE c.id =
+		t.mtoer)
+		<!-- WHEN t.mtotype =3 THEN '' -->
+		END NAME FROM mm_template_to t WHERE t.tid = ${tid}
+	</select>
+
+	<select id="getTemplateById" resultType="com.alibaba.fastjson.JSONObject"
+		parameterType="HashMap">
+		select * from mm_template where id = ${tid}
+	</select>
+
+	<!-- 获取已发消息 -->
+	<select id="getSendMessage" resultType="com.alibaba.fastjson.JSONObject"
+		parameterType="HashMap">
+		select * from (
+			SELECT t.*,ROWNUM NUM  FROM (
+				SELECT
+					T.ID,MTYPE,MTITLE,MTIME,MTEXT,SENDER,SENDERDEP,SENDUID,IFFLIGHT,RFID,FLIGHTNUMBER,IFAUTOSEND,AUTOSENDTIME,ISSENDED,IFPROC,PROCPARAM,
+					MTEMPLID,IFREPLY,IFSOUND,SOUNDTXT,ISALLREPLYED,to_char(SENDTIME,'yyyy-MM-dd
+					hh24:mi:ss') SENDTIME,ISPROCED,SENDERCN,REALTIME,MFROMTYPE,
+					MFROMER,PROCECLS,EXTACT,TRANSSUBID,PUSHFLAG,DECODE(a.mid,NULL,0,1) FAVORITE
+				FROM mm_info t 
+				LEFT JOIN mm_info_favorite a ON t.id = a.mid 
+				and type = 2
+				<if test="jobKind==null or jobKind == ''">
+					and jobKind is null
+				</if>
+				<if test="jobKind!=null and jobKind != ''">
+					and jobKind = '${jobKind}' 
+				</if>
+				WHERE
+				((t.mfromtype = 0 and t.mfromer = #{userId})
+                or (t.mfromtype = 1 and t.mfromer in ('${roleIds}') )
+                or (t.mfromtype = 2 and t.mfromer = #{officeId})
+				) 
+				AND t.isallreplyed =0 
+				and t.ISSENDED=1 
+				ORDER BY t.SENDTIME DESC
+			) t 
+		) t where NUM &lt;= ${end} 
+	       		and NUM &gt; ${begin} 
+	</select>
+
+	<!-- 发送消息附件上传 -->
+	<insert id="insertMessageFile">
+		insert into MM_FILEINFO(ID,MID,FILENAME,CREATETIME,FILEID)
+		<if test="type == null">
+			values
+			(mm_fileinfo_s.nextval,${mid},'${fileName}',sysdate,'${fileId}')
+		</if>
+	</insert>
+
+	<select id="getFilesInfo" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT t.* FROM mm_fileinfo
+		t WHERE t.FILEID = #{fileid}
+	</select>
+
+	<delete id="deleteOfflineMessage" parameterType="com.alibaba.fastjson.JSONObject">
+		delete from
+		MM_OFFLINE_INFO where MTOID = ${MTOID} and USERID = '${USERID}'
+	</delete>
+	
+	<delete id="deleteOfflineMessageByMsgId" parameterType="com.alibaba.fastjson.JSONObject">
+		delete from
+		MM_OFFLINE_INFO where CPMSGID = #{msgid} and USERID = #{token}
+	</delete>
+
+	<select id="getUserList" parameterType="com.alibaba.fastjson.JSONObject"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select * from (
+		<if test="vo.mtotype !=null and vo.mtotype ==0 ">
+			SELECT a.id ,a.name,a.phone FROM Sys_User a WHERE a.id =
+			#{vo.mtoer}
+		</if>
+		<if test="vo.mtotype !=null and vo.mtotype ==1 ">
+			SELECT a.id ,a.name,a.phone FROM Sys_User a,sys_user_role
+			b WHERE a.id = b.user_id AND b.role_id = #{vo.mtoer}
+		</if>
+		<if test="vo.mtotype !=null and vo.mtotype ==2 ">
+			SELECT a.id ,a.name,a.phone FROM Sys_User a WHERE
+			a.OFFICE_ID = #{vo.mtoer}
+		</if>
+		<if test="vo.mtotype !=null and vo.mtotype ==8 ">
+			SELECT a.id ,a.name,a.phone FROM Sys_User a WHERE a.id =
+			#{vo.mtoer}
+		</if>
+		)
+	</select>
+	
+	<select id="getDelay" resultType="com.alibaba.fastjson.JSONObject">
+		select * from tm_delay_code
+	</select>
+	
+	<select id="getUnReadNum" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT COUNT(9) NUM,MESSTYPE,
+			CASE
+	         WHEN MESSTYPE = 'SUBS' THEN
+	          '待办订阅'
+	         WHEN MESSTYPE = 'EVENT' THEN
+	          '待办事件'
+	         WHEN MESSTYPE = 'WARN' THEN
+	          '待办预警'
+	       END TYPENAME
+        FROM (
+			<include refid="unredsql"></include>
+		) t GROUP BY t.messtype 
+		union 
+		SELECT
+		count(9) NUM ,'FEEDBACK' MESSTYPE,'待反馈' TYPENAME
+		FROM mm_info t WHERE
+		((t.MFROMTYPE = 1 AND t.MFROMER IN ('${roleIds}')) OR
+         (t.MFROMTYPE = 2 AND t.MFROMER = #{officeId}) OR
+         (t.MFROMTYPE = 0 AND t.MFROMER = #{userId}))
+		AND t.isallreplyed =0 and
+		t.ISSENDED=1
+	</select>
+	<!-- 添加收藏 -->
+	<insert id="insertFavorite">
+		insert into MM_INFO_FAVORITE(ID,MID,JOBKIND,TYPE)
+		values (MM_INFO_FAVORITE_S.nextval,#{mid, jdbcType=INTEGER},#{jobKind, jdbcType=VARCHAR},#{type, jdbcType=INTEGER})
+	</insert>
+	<!-- 取消收藏 -->
+	<delete id="deleteFavorite">
+		delete from MM_INFO_FAVORITE where mid = #{mid, jdbcType=INTEGER} and type = #{type, jdbcType=INTEGER}
+	</delete>
+</mapper>

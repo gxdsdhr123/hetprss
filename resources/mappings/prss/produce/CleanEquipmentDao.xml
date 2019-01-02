@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.produce.dao.CleanEquipmentDao">
+	
+	<select id="getListCount" resultType="int" parameterType="Map">
+		SELECT COUNT(9) NUM
+			  FROM BILL_VEHICLE_BOUND H
+			  LEFT JOIN JM_DEVICE A
+			    ON H.VEHICLE_NUMBER = A.INNER_NUMBER
+			  JOIN JM_DEVICE_TYPE B
+			    ON A.TYPE_ID = B.TYPE_ID
+			   AND B.RESKIND = 'JWQCSBZ'
+			  LEFT JOIN SYS_USER J
+			    ON H.OPER_ID = J.ID
+			  LEFT JOIN DIM_RESKIND K
+			    ON B.RESKIND = K.RESKIND
+				WHERE 1=1 
+				<if test="beginTime !=null and beginTime !=''">
+				<![CDATA[ 
+				 AND to_char(h.oper_bound_date,'yyyymmdd')>=to_date('${beginTime}','yyyymmdd')
+				 ]]>
+				</if>
+				<if test="endTime !=null and endTime !=''">
+				<![CDATA[ 
+				 AND to_char(h.oper_bound_date,'yyyymmdd')<=to_date('${endTime}','yyyymmdd')
+				 ]]>
+				</if>
+	</select>
+	
+	<select id="getList" resultType="Map" parameterType="Map">
+		SELECT * FROM (
+			SELECT TO_CHAR(H.OPER_BOUND_DATE, 'yyyy-mm-dd HH24:mi:ss') BOUND_DATE,
+			       K.KINDNAME,
+			       A.INNER_NUMBER,
+			       H.ID,
+			       A.TYPE_ID,
+			       B.TYPE_NAME,
+			       J.NAME,
+			       M.SC_PERSON,
+			       ROW_NUMBER() OVER(ORDER BY H.ID DESC) NUM
+			  FROM BILL_VEHICLE_BOUND H
+			  LEFT JOIN JM_DEVICE A
+			    ON H.VEHICLE_NUMBER = A.INNER_NUMBER
+			  JOIN JM_DEVICE_TYPE B
+			    ON A.TYPE_ID = B.TYPE_ID
+			   AND B.RESKIND = 'JWQCSBZ'
+			  LEFT JOIN SYS_USER J
+			    ON H.OPER_ID = J.ID
+			  LEFT JOIN DIM_RESKIND K
+			    ON B.RESKIND = K.RESKIND
+			  LEFT JOIN BILL_CLJC_INS M
+			    ON H.ID = M.BOUND_ID
+			   AND M.INS_TYPE = 1
+				WHERE 1=1 
+				<if test="beginTime !=null and beginTime !=''">
+					<![CDATA[ 
+					 AND to_char(h.oper_bound_date,'yyyymmdd')>=to_date('${beginTime}','yyyymmdd')
+					 ]]>
+				</if>
+				<if test="endTime !=null and endTime !=''">
+					<![CDATA[ 
+					 AND to_char(h.oper_bound_date,'yyyymmdd')<=to_date('${endTime}','yyyymmdd')
+					 ]]>
+				</if>
+		 ORDER BY NUM )
+		 WHERE <![CDATA[NUM>#{begin} AND NUM<=#{end}]]>
+	</select>
+	<sql id="getUpdateSql">
+		SELECT H.VEHICLE_NUMBER,
+		       J.NAME,
+		       A.ID INSID,
+		       H.ID BOUNDID,
+		       A.GL_NUM VALUE1,
+		       A.XS_NUM VALUE2,
+		       A.RY_NUM VALUE3,
+		       A.JY_NUM VALUE4,
+		       A.INS_TYPE,
+		       A.SC_PERSON,
+		       CASE
+		         WHEN C.TYPE_ID = 18 THEN
+		          '污水车'
+		         WHEN C.TYPE_ID = 19 THEN
+		          '清水车'
+		         WHEN C.TYPE_ID = 20 THEN
+		          '垃圾车'
+		       END TYPENAME,
+		       C.DEVICE_MODEL,
+		       TO_CHAR(H.OPER_BOUND_DATE, 'yyyy-mm-dd') OPER_DATE,
+		       TO_CHAR(H.OPER_BOUND_DATE, 'hh24:mi') OPER_BOUND_DATE,
+		       TO_CHAR(H.OPER_UNBOUND_DATE, 'hh24:mi') OPER_UNBOUND_DATE,
+		       WM_CONCAT(B.JCXM_NAME) JCXM_NAME
+		  FROM BILL_VEHICLE_BOUND H
+		  LEFT JOIN BILL_CLJC_INS A
+		    ON H.ID = A.BOUND_ID
+		  LEFT JOIN BILL_CLJC_JCXM_INS B
+		    ON A.ID = B.CLJC_ID
+		   AND B.JCXM_VAL = '2'
+		  LEFT JOIN JM_DEVICE C
+		    ON H.VEHICLE_NUMBER = C.INNER_NUMBER
+		    AND C.TYPE_ID IN (18,19,20)
+		  LEFT JOIN SYS_USER J
+		    ON A.OPERATOR_ID = J.ID
+		 WHERE 1 = 1
+		 	 AND H.ID = #{id}
+		 GROUP BY H.VEHICLE_NUMBER,
+		          C.INNER_NUMBER,
+		          A.ID,
+		          H.ID,
+		          J.NAME,
+		          A.GL_NUM,
+		          A.XS_NUM,
+		          A.RY_NUM,
+		          A.JY_NUM,
+		          C.DEVICE_MODEL,
+		          A.INS_TYPE,
+		          A.SC_PERSON,
+		      	  C.TYPE_ID,
+		          TO_CHAR(H.OPER_BOUND_DATE, 'yyyy-mm-dd'),
+		          TO_CHAR(H.OPER_BOUND_DATE, 'hh24:mi'),
+		          TO_CHAR(H.OPER_UNBOUND_DATE, 'hh24:mi')
+		 ORDER BY A.INS_TYPE
+	</sql>
+	<sql id="queryData">
+		SELECT B.FLIGHT_NUMBER,
+		       B.AIRCRAFT_NUMBER,
+		       B.ACTSTAND_CODE,
+		       SUBSTR(B.ETA, 12, 5) ETA,
+		       SUBSTR(B.STD, 12, 5) STD,
+		       IN_OUT_FLAG,
+		       SUBSTR(A.ACT_ARRANGE_TM, 12, 5) ACT_ARRANGE_TM,
+               <if test="typeId!=null and typeId==19">
+				<!-- 清水车 -->
+		       SUBSTR("清水车到位_FINISH_TIME", 12, 5) AS TIME1,
+		       SUBSTR("清水车开始操作_FINISH_TIME", 12, 5) AS TIME2,
+		       SUBSTR("清水车完成_FINISH_TIME", 12, 5) AS TIME3,
+       		   L.WATER,
+		       </if>
+               <if test="typeId!=null and typeId==18">
+				<!-- 污水车 -->
+		       SUBSTR("污水车到位_FINISH_TIME", 12, 5) AS TIME1,
+		       SUBSTR("污水车开始操作_FINISH_TIME", 12, 5) AS TIME2,
+		       SUBSTR("污水车完成_FINISH_TIME", 12, 5) AS TIME3,
+		       </if>
+               <if test="typeId!=null and typeId==20">
+				<!-- 垃圾车 -->
+		       SUBSTR("垃圾车到位_FINISH_TIME", 12, 5) AS TIME1,
+		       SUBSTR("垃圾车开始操作_FINISH_TIME", 12, 5) AS TIME2,
+		       SUBSTR("垃圾车完成_FINISH_TIME", 12, 5) AS TIME3,
+		       </if>
+		       H.ID,
+		       B.FLTID,
+		       TO_CHAR(K.RECEIVTIME, 'hh24:mi') TIME4,
+		       (SELECT COUNT(0) NUM
+		          FROM JM_EXCEPTIONAL_ATTA T1, JM_EXCEPTIONAL_INFO T, JM_TASK T1
+		         WHERE T1.INFO_ID = T.ID
+		           AND T.OFFICE_ID = '7b5cc1423aa94054978213a9accf2df0'
+		           AND T.FLTID = A.FLTID
+		           AND T.FLTID = T1.FLTID
+		           AND T1.JOB_KIND = 'JWQCSBZ'
+		           <if test="typeId!=null and typeId==19">
+		           AND T1.JOB_TYPE ='JWQCSBZqsc'
+		           </if>
+		           <if test="typeId!=null and typeId==18">
+		           AND T1.JOB_TYPE ='JWQCSBZwsc'
+		           </if>
+		           <if test="typeId!=null and typeId==20">
+		           AND T1.JOB_TYPE ='JWQCSBZljc'
+		           </if>
+		           ) NUM,
+		       (SELECT NVL(WM_CONCAT(T.INFO_DESC), '')
+		          FROM JM_EXCEPTIONAL_ATTA T1, JM_EXCEPTIONAL_INFO T, JM_TASK T1
+		         WHERE T1.INFO_ID = T.ID
+		           AND T.OFFICE_ID = '7b5cc1423aa94054978213a9accf2df0'
+		           AND T.FLTID = A.FLTID
+		           AND T.FLTID = T1.FLTID
+		           AND T1.JOB_KIND = 'JWQCSBZ'
+		           <if test="typeId!=null and typeId==19">
+		           AND T1.JOB_TYPE ='JWQCSBZqsc'
+		           </if>
+		           <if test="typeId!=null and typeId==18">
+		           AND T1.JOB_TYPE ='JWQCSBZwsc'
+		           </if>
+		           <if test="typeId!=null and typeId==20">
+		           AND T1.JOB_TYPE ='JWQCSBZljc'
+		           </if>
+		           ) INFO_DESC
+		  FROM JM_TASK A,
+		       FD_FLT_INFO B,
+		       (SELECT *
+		          FROM (SELECT T.FLTID, T.FINISH_TIME, T.NODENAME
+		                  FROM WF_TASKNODE_FINALTIME_V T
+		                 WHERE 1 = 1
+		                   <if test="typeId!=null and typeId==19">
+							<!-- 清水车 -->
+		                   AND T.NODENAME IN
+		                       ('清水车到位', '清水车完成', '清水车开始操作')) PIVOT(MIN(FINISH_TIME) AS FINISH_TIME FOR NODENAME IN('清水车到位' AS
+		                                                                                                          "清水车到位",
+		                                                                                                          '清水车完成' AS
+		                                                                                                          "清水车完成",
+		                                                                                                          '清水车开始操作' AS
+		                                                                                                          "清水车开始操作")
+		                   </if> 
+		                   <if test="typeId!=null and typeId==18">
+							<!-- 污水车 -->
+		                   AND T.NODENAME IN
+		                       ('污水车到位', '污水车完成', '污水车开始操作')) PIVOT(MIN(FINISH_TIME) AS FINISH_TIME FOR NODENAME IN('污水车到位' AS
+		                                                                                                          "污水车到位",
+		                                                                                                          '污水车完成' AS
+		                                                                                                          "污水车完成",
+		                                                                                                          '污水车开始操作' AS
+		                                                                                                          "污水车开始操作")
+		                   </if> 
+		                   <if test="typeId!=null and typeId==20">
+							<!-- 垃圾车 -->
+		                   AND T.NODENAME IN
+		                       ('垃圾车到位', '垃圾车完成', '垃圾车开始操作')) PIVOT(MIN(FINISH_TIME) AS FINISH_TIME FOR NODENAME IN('垃圾车到位' AS
+		                                                                                                          "垃圾车到位",
+		                                                                                                          '垃圾车完成' AS
+		                                                                                                          "垃圾车完成",
+		                                                                                                          '垃圾车开始操作' AS
+		                                                                                                          "垃圾车开始操作")
+		                   </if> 
+		                ) ) E,
+		       BILL_VEHICLE_BOUND H,
+		       WF_ORDER_MSG_LOG J,
+		       <if test="typeId!=null and typeId==19">
+		       FD_FLT_INFO_PLUS L,
+		       </if>
+		       MM_INFO_TO K
+		 WHERE A.FLTID = B.FLTID
+		   AND A.OPERATOR = H.OPER_ID
+		   AND A.JOB_KIND = 'JWQCSBZ'
+		   AND E.FLTID = A.FLTID
+		   AND A.ID = J.JOB_TASK_ID
+		   <if test="typeId!=null and typeId==19">
+		    AND A.FLTID = L.FLTID(+)
+		   </if>
+		   AND J.MID = K.MID
+		   AND K.MTOER = A.OPERATOR
+		   AND H.ID = #{id}
+
+	</sql>
+	
+	<sql id="queryDataTP">
+	  SELECT NVL(WM_CONCAT(C.FILE_PATH), '') FILE_PATH
+<!-- 	  , INS_TYPE -->
+	    FROM BILL_VEHICLE_BOUND T
+	    JOIN BILL_CLJC_INS A
+	      ON T.ID = A.BOUND_ID
+	    JOIN BILL_CLGZ_INS B
+	      ON A.ID = B.CLJC_ID
+	    JOIN BILL_JCGZ_ATTA_INS C
+	      ON B.ID = C.CLGZ_ID
+	   WHERE T.ID = #{id}
+<!-- 	   GROUP BY A.INS_TYPE -->
+	</sql>
+	
+	<select id="getDataList" resultType="com.alibaba.fastjson.JSONObject" 
+		parameterType="com.alibaba.fastjson.JSONObject">
+		<if test="insType != null and insType == 99">
+			<include refid="getUpdateSql"></include>
+		</if>
+		<if test="insType != null and insType == 1">
+			<include refid="queryData"></include>
+		</if>
+		<if test="insType != null and insType == 2">
+			<include refid="queryDataTP"></include>
+		</if>
+	</select>
+	
+	<update id="updateJCSql" parameterType="com.alibaba.fastjson.JSONObject">
+		UPDATE BILL_CLJC_INS T
+		   SET GL_NUM ='${jc_value1}', XS_NUM ='${jc_value2}', RY_NUM ='${jc_value3}', JY_NUM ='${jc_value4}'
+		 WHERE ID =${jc_id}
+	</update>
+	<update id="updateSCSql" parameterType="com.alibaba.fastjson.JSONObject">
+		UPDATE BILL_CLJC_INS T
+		   SET GL_NUM ='${sc_value1}', XS_NUM ='${sc_value2}', RY_NUM ='${sc_value3}', JY_NUM ='${sc_value4}'
+		 WHERE ID =${sc_id}
+	</update>
+	
+	<select id="getFileId" resultType="String" parameterType="com.alibaba.fastjson.JSONObject">
+		SELECT A.FILE_PATH
+		  FROM JM_EXCEPTIONAL_ATTA A, JM_EXCEPTIONAL_INFO T, JM_TASK T1
+		 WHERE A.INFO_ID = T.ID
+		   AND T.OFFICE_ID = 'c537d7d286744472a85189f0feef1bbc'
+		   AND T.FLTID = #{fltid}
+		   AND T.FLTID = T1.FLTID
+		   AND T1.JOB_KIND = 'JWQCSBZ'
+		   <if test="type != null and type == 1">
+		   AND T1.JOB_TYPE IN ('JWQYCblt', 'JWQYCygt')
+		   </if>
+		   <if test="type != null and type == 2">
+		   AND T1.JOB_TYPE IN ('JWQYCbltz', 'JWQYCygtz')
+		   </if>
+	
+	</select>
+	<select id="getFileName" resultType="String" parameterType="String">
+		SELECT file_name from sys_upload_file WHERE file_id = #{fileId}
+	</select>
+	
+</mapper>

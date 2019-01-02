@@ -1,0 +1,12 @@
+html,body{
+	width:100% !important;
+	height:100% !important;
+	overflow:auto;
+}
+#createForm {
+	margin-top: 10px;
+	height: 200px;
+}
+#createForm input{
+	width: 200px;
+}

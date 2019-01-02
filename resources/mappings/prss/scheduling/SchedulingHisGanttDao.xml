@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.scheduling.dao.SchedulingHisGanttDao">
+	<!-- 获取Y轴数据 -->
+	<select id="getSdYData" resultType="com.alibaba.fastjson.JSONObject">
+		select distinct area_name "id",
+	                    area_name "name",
+	                    '0' "pid",
+	                    '1' "level",
+	                    -1 sortNum0,
+	                    '' sortNum1
+	    from dim_area_conf@prssp2prss
+	    where limit_level = '1' and office_id = #{officeId}
+	    union all
+	    select "id", "name", "pid", "level", min(sortNum) sortNum0, max(etime1) sortNum1
+	      from (select a.worker_id "id",
+	                   to_char(s.name) "name",
+	                   nvl(b.area_name, '所有航空公司') "pid",
+	                   '2' "level",
+	                   0 as sortNum,
+	                   '' etime1
+	              from am_worker_plan@prssp2prss     a,
+	                   sys_user@prssp2prss           s,
+	                   am_division_info@prssp2prss   n,
+	                   am_division_limits@prssp2prss t,
+	                   dim_area_conf@prssp2prss      b
+	             where a.worker_id = s.id(+)
+	               and a.worker_id = n.worker_id(+)
+	               and n.id = t.id(+)
+	               and t.elements = b.id(+)
+	               and (t.limit_type = '2' or t.limit_type is null)
+	               and s.office_id = #{officeId}
+	               and a.pdate in (to_char(to_date(substr(#{hisDate},0,10), 'yyyy-mm-dd') - 1, 'yyyy-mm-dd'),to_char(to_date(substr(#{hisDate},0,10), 'yyyy-mm-dd'), 'yyyy-mm-dd'))
+	               and (to_char(to_date(#{hisDate}, 'yyyy-mm-dd HH24:mi:ss')-2, 'yyyy-mm-dd HH24:mi:ss') not between stime1 and etime1)
+	               and (to_char(to_date(#{hisDate}, 'yyyy-mm-dd HH24:mi:ss')-2, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00'))
+	               and (to_char(to_date(#{hisDate}, 'yyyy-mm-dd HH24:mi:ss')-2, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00'))
+	               and a.worker_id in (select operator from jm_task_his where job_state in (1, 2))
+	            union all
+	            select a.worker_id "id",
+	                   to_char(s.name) "name",
+	                   nvl(b.area_name, '所有航空公司') "pid",
+	                   '2' "level",
+	                   1 as sortNum,
+	                   a.etime1
+	              from am_worker_plan@prssp2prss     a,
+	                   sys_user@prssp2prss           s,
+	                   am_division_info@prssp2prss   n,
+	                   am_division_limits@prssp2prss t,
+	                   dim_area_conf@prssp2prss      b
+	             where a.worker_id = s.id(+)
+	               and a.worker_id = n.worker_id(+)
+	               and n.id = t.id(+)
+	               and t.elements = b.id(+)
+	               and (t.limit_type = '2' or t.limit_type is null)
+	               and s.office_id = #{officeId}
+	               and a.pdate in (to_char(to_date(substr(#{hisDate},0,10), 'yyyy-mm-dd') - 3, 'yyyy-mm-dd'), to_char(to_date(substr(#{hisDate},0,10), 'yyyy-mm-dd')-2, 'yyyy-mm-dd'), to_char(to_date(substr(#{hisDate},0,10), 'yyyy-mm-dd') - 1, 'yyyy-mm-dd'))
+	               and ((to_char(to_date(#{hisDate}, 'yyyy-mm-dd HH24:mi:ss')-2, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime1, '1990-01-01 00:00:00') and nvl(etime1, '1990-01-01 00:00:00')) or
+	                   (to_char(to_date(#{hisDate}, 'yyyy-mm-dd HH24:mi:ss')-2, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00')) or
+	                   (to_char(to_date(#{hisDate}, 'yyyy-mm-dd HH24:mi:ss')-2, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+	            union all
+	            select a.worker_id "id",
+	                   to_char(s.name) "name",
+	                   nvl(b.area_name, '所有航空公司') "pid",
+	                   '2' "level",
+	                   2 as sortNum,
+	                   '' etime1
+	              from am_worker_plan@prssp2prss     a,
+	                   sys_user@prssp2prss           s,
+	                   am_division_info@prssp2prss   n,
+	                   am_division_limits@prssp2prss t,
+	                   dim_area_conf@prssp2prss      b
+	             where a.worker_id = s.id(+)
+	               and a.worker_id = n.worker_id(+)
+	               and n.id = t.id(+)
+	               and t.elements = b.id(+)
+	               and (t.limit_type = '2' or t.limit_type is null)
+	               and s.office_id = #{officeId}
+	               and a.pdate in (to_char(to_date(substr(#{hisDate},0,10), 'yyyy-mm-dd')-2, 'yyyy-mm-dd'),
+	                               to_char(to_date(substr(#{hisDate},0,10), 'yyyy-mm-dd') - 1, 'yyyy-mm-dd'))
+	               and ((to_char(to_date(#{hisDate}, 'yyyy-mm-dd HH24:mi:ss')-2 + 1 / 12, 'yyyy-mm-dd HH24:mi:ss') between stime1 and etime1) or
+	                   (to_char(to_date(#{hisDate}, 'yyyy-mm-dd HH24:mi:ss')-2 + 1 / 12, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00')) or
+	                   (to_char(to_date(#{hisDate}, 'yyyy-mm-dd HH24:mi:ss')-2 + 1 / 12, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+	               and (to_char(to_date(#{hisDate}, 'yyyy-mm-dd HH24:mi:ss')-2, 'yyyy-mm-dd HH24:mi:ss') not between stime1 and etime1)
+	               and (to_char(to_date(#{hisDate}, 'yyyy-mm-dd HH24:mi:ss')-2, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00'))
+	               and (to_char(to_date(#{hisDate}, 'yyyy-mm-dd HH24:mi:ss')-2, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+	     group by "id", "name", "pid", "level"
+	  	 order by sortNum0, sortNum1 desc
+	</select>
+	<!-- 摆渡车 查询数据 -->
+	<select id="getSdData" parameterType="hashmap" resultType="com.alibaba.fastjson.JSONObject">
+		select a.proc_id "proc",
+		       a.id "id",
+		       a.fltid "fltid",
+		       c.in_fltid "in_fltid",
+		       c.out_fltid "out_fltid",
+		       b.status "fltStatus",
+		       a.job_type "type",
+		       case a.del_flag
+		         when 1 then
+		          'QX'
+		         else
+		          nvl(a.operator, 'DP')
+		       end "operator",
+		       a.node_state "icon",
+		       concat(a.name, b.flight_number) "text",
+		       nvl(a.start_tm, a.e_start_tm) "start",
+		       a.e_end_tm "eend",
+		       a.end_tm "end",
+		       case a.job_state
+		         when '0' then
+		          'gray'
+		         when '1' then
+		          'gray'
+		         when '2' then
+		          'blue'
+		         when '3' then
+		          'green'
+		         when '4' then
+		          'red'
+		         when '5' then
+		          'green'
+		         else
+		          'yellow'
+		       end "status"
+		  from jm_task_his a, fd_flt_info_his b, fd_flt_iorel_his c
+		 where a.fltid = b.fltid(+)
+		   and (a.fltid = c.in_fltid or a.fltid = c.out_fltid)
+		   and a.job_type = 'JWBDCbdc'
+	       and a.flt_date in (to_char(to_date(#{hisDate},'yyyy-mm-dd HH24:mi:ss')-1,'yyyymmdd'),
+                      to_char(to_date(#{hisDate},'yyyy-mm-dd HH24:mi:ss'),'yyyymmdd'),
+                      to_char(to_date(#{hisDate},'yyyy-mm-dd HH24:mi:ss')+1,'yyyymmdd'))
+	</select>
+</mapper>

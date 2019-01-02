@@ -1,0 +1,18 @@
+.chart-table{
+	position: absolute;bottom:0;right:15px;left:12%;
+}
+.bar-table{
+	position: absolute;bottom:0;right:5px;left:1%;
+}
+
+#lineBox > .col-sm-4{
+	padding-top:20px;
+}
+
+.car-illegal{
+	height:390px;
+}
+
+.person-illegal{
+	height:475px;
+}

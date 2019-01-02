@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.telegraph.dao.TelegraphAnalysisDao">
+
+	<select id="getAnalysisListCount" resultType="int"
+		parameterType="com.alibaba.fastjson.JSONObject">
+		SELECT count(0) NUM
+		  FROM FD_TELEGRAPH_UNMATCHED_LOG T, TM_ORIGINAL_XMLDATA A
+		 WHERE T.ORIGINALID = A.ID
+		<if test="aircraft != null and aircraft != ''">AND A.AIRCRAFT LIKE '%${aircraft}%'</if>
+		<if test="flightnumber != null and flightnumber != ''">AND A.FLIGHT_NUMBER LIKE '%${flightnumber}%'</if>
+		<if test="flightdate != null and flightdate != ''">AND A.FLIGHT_DATE = '${flightdate}'</if>
+
+	</select>
+
+	<select id="getAnalysisList" resultType="com.alibaba.fastjson.JSONObject"
+		parameterType="com.alibaba.fastjson.JSONObject">
+		SELECT *
+		FROM (SELECT T.*, ROWNUM NUM
+			FROM (select *
+				FROM ( SELECT T.ID,
+					       T.ORIGINALID,
+					       T.TYPE,
+					       A.FLIGHT_DATE,
+					       A.FLIGHT_NUMBER,
+					       A.AIRCRAFT,
+					       TO_CHAR(A.ACCEPT_TIME, 'yyyymmdd hh24:mi:ss') AS ACCEPT_TIME,
+					       TO_CHAR(A.SEND_TIME, 'yyyymmdd hh24:mi:ss') AS SEND_TIME
+					  FROM FD_TELEGRAPH_UNMATCHED_LOG T, TM_ORIGINAL_XMLDATA A
+					 WHERE T.ORIGINALID = A.ID
+					<if test="aircraft != null and aircraft != ''">AND A.AIRCRAFT LIKE '%${aircraft}%'</if>
+					<if test="flightnumber != null and flightnumber != ''">AND A.FLIGHT_NUMBER LIKE '%${flightnumber}%'</if>
+					<if test="flightdate != null and flightdate != ''">AND A.FLIGHT_DATE = '${flightdate}'</if>
+				) T order by ${sortName} ${sortOrder}
+			) t
+			WHERE 1=1 
+		        <![CDATA[AND ROWNUM <= ${end} ]]>
+		)
+		<![CDATA[ WHERE NUM >${begin}]]>
+	</select>
+	
+	<select id="getAnalysisById" resultType="com.alibaba.fastjson.JSONObject"
+		parameterType="string">
+		SELECT T.ID, A.XMLDATA
+		  FROM FD_TELEGRAPH_UNMATCHED_LOG T, TM_ORIGINAL_XMLDATA A
+		 WHERE T.ORIGINALID = A.ID
+		 AND T.ID = #{0}
+	</select>
+</mapper>

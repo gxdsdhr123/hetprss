@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.OSCARSecurityRep.dao.OSCARSecurityRepDao">
+	
+	
+	<!-- 获取进港货邮单  -->
+	<select id="getData" resultType="hashmap">
+		SELECT * FROM(
+			SELECT 
+				 ROWNUM NO
+				,boh.id SHOWID
+				,data1.FLIGHTDATE
+				,data1.INFLTID FLTID
+				,data1.INFLIGHTNUMBER
+				,data1.OUTFLIGHTNUMBER
+				,su.name INOSCARNAME
+				,su1.name OUTOSCARNAME
+				,data1.ACTSTANDCODE   <!-- 机位-->
+				,ffiav.AIRCRAFT_NUMBER AIRCRAFTNUMBER <!-- 机号-->
+				,ffiav.ACTTYPE_CODE ACTTYPECODE   <!-- 机型-->
+				,boh.STAND_TM STANDTM <!-- 入位-->
+				,boh.RELS_STAND_TM RELSSTANDTM  <!-- 离位-->
+				,boh.HTCH_CLO_TM HTCHCLOTM <!-- 客舱关门-->
+				,NVL(wtz2.ZKT2OSCARBZOUT_ARRIVE1_FTM, wtz3.ZKT3OSCARBZOUT_ARRIVE1_FTM) ZKTOSCARBZOUTARRIVE1FTM <!-- 机组允许登机-->
+			from
+				(
+					select 
+					flight_date FLIGHTDATE
+					,IN_FLTID INFLTID
+					,OUT_FLTID OUTFLTID
+					,in_flight_number INFLIGHTNUMBER
+					,out_flight_number OUTFLIGHTNUMBER
+					,ACTSTAND_CODE ACTSTANDCODE
+					from FD_FLT_IOREL_ALL_V FFIAV WHERE EXISTS(SELECT FLTID IN_FLTID FROM BILL_OSCARCHECK_HD WHERE FLTID = FFIAV.IN_FLTID)
+				) data1 
+				left join BILL_OSCARCHECK_HD boh on data1.INFLTID = boh.FLTID
+				left join sys_user su on su.id  = boh.operator
+				left join BILL_OSCARCHECK_HD bohd on bohd.fltid = data1.OUTFLTID
+				left join sys_user su1 on su1.id = bohd.operator
+				left join FD_FLT_INFO_ALL_V ffiav on ffiav.FLTID = data1.INFLTID
+<!-- 				left join FD_FLT_CLA_SAFEGUARDS ffcs on ffcs.FLTID = data1.INFLTID -->
+				left join wf_task_zkt2oscar wtz2 on wtz2.fltid = data1.INFLTID
+				left join wf_task_zkt3oscar wtz3 on wtz3.fltid = data1.INFLTID
+				where 1 = 1
+				<!-- 时间模糊查询 -->
+				<if test="null != startTime || null != endTime">
+					AND FLIGHTDATE 
+					<!-- 时间搜索 -->
+					<if test="null != startTime and bull != endTime">
+						BETWEEN  #{startTime} AND  #{endTime}
+					</if>
+					<if test="null != startTime and null == endTime ">
+						BETWEEN  #{startTime} AND  TO_CHAR(SYSDATE, 'yyyymmdd') 
+					</if>
+					<if test="null == startTime and null != endTime">
+						<![CDATA[  
+							<= 
+		  				]]>  
+						#{endTime} 
+					</if>
+				</if>
+				union all
+				
+				SELECT 
+				 ROWNUM NO
+				,boh.id SHOWID
+				,data1.FLIGHTDATE
+				,data1.INFLTID FLTID
+				,data1.INFLIGHTNUMBER
+				,data1.OUTFLIGHTNUMBER
+				,su.name INOSCARNAME
+				,su1.name OUTOSCARNAME
+				,data1.ACTSTANDCODE   <!-- 机位-->
+				,ffiav.AIRCRAFT_NUMBER AIRCRAFTNUMBER<!-- 机号-->
+				,ffiav.ACTTYPE_CODE    <!-- 机型-->
+				,boh.STAND_TM STAND_TM <!-- 入位-->
+				,boh.RELS_STAND_TM RELS_STAND_TM <!-- 离位-->
+				,boh.HTCH_CLO_TM  <!-- 客舱关门-->
+				,NVL(wtz2.ZKT2OSCARBZOUT_ARRIVE1_FTM, wtz3.ZKT3OSCARBZOUT_ARRIVE1_FTM) ZKTOSCARBZOUTARRIVE1FTM <!-- 机组允许登机-->
+			from
+				(
+					select 
+					flight_date FLIGHTDATE
+					,IN_FLTID INFLTID
+					,OUT_FLTID OUTFLTID
+					,in_flight_number INFLIGHTNUMBER
+					,out_flight_number OUTFLIGHTNUMBER
+					,ACTSTAND_CODE ACTSTANDCODE
+					from FD_FLT_IOREL_ALL_V FFIAV WHERE EXISTS(SELECT FLTID OUT_FLTID FROM BILL_OSCARCHECK_HD WHERE FLTID = FFIAV.OUT_FLTID)
+				) data1 
+				left join BILL_OSCARCHECK_HD boh on data1.OUTFLTID = boh.FLTID
+				left join sys_user su on su.id  = boh.operator
+				left join BILL_OSCARCHECK_HD bohd on bohd.fltid = data1.OUTFLTID
+				left join sys_user su1 on su1.id = bohd.operator
+				left join FD_FLT_INFO_ALL_V ffiav on ffiav.FLTID = data1.INFLTID
+<!-- 				left join FD_FLT_CLA_SAFEGUARDS ffcs on ffcs.FLTID = data1.INFLTID -->
+				left join wf_task_zkt2oscar wtz2 on wtz2.fltid = data1.INFLTID
+				left join wf_task_zkt3oscar wtz3 on wtz3.fltid = data1.INFLTID
+				where 1 = 1
+				<!-- 时间模糊查询 -->
+				<if test="null != startTime || null != endTime">
+					AND FLIGHTDATE 
+					<!-- 时间搜索 -->
+					<if test="null != startTime and bull != endTime">
+						BETWEEN  #{startTime} AND  #{endTime}
+					</if>
+					<if test="null != startTime and null == endTime ">
+						BETWEEN  #{startTime} AND  TO_CHAR(SYSDATE, 'yyyymmdd') 
+					</if>
+					<if test="null == startTime and null != endTime">
+						<![CDATA[  
+							<= 
+		  				]]>  
+						#{endTime} 
+					</if>
+				</if>
+		)
+		WHERE 1 = 1 
+		<if test="totalSize != 0">		
+		 	and NO BETWEEN #{begin} AND #{end} 
+		</if>
+		
+		<!-- 全模糊查询 -->
+		<if test="null != searchData">
+		AND
+			FLIGHTDATE like #{searchData} or
+			INFLIGHTNUMBER like #{searchData} or
+			OUTFLIGHTNUMBER like #{searchData} or
+			AIRCRAFTNUMBER like #{searchData} or
+			INOSCARNAME like #{searchData} or
+			OUTOSCARNAME like #{searchData}
+		</if>
+		<if test="null != searchId">
+			and FLTID = #{searchId}
+		</if>
+		
+	</select>
+	
+	<!-- 获取检查项目 -->
+	<select id="getItemData" resultType="hashmap">
+		select 
+			 rownum no
+			,nvl(boi.item_name, '0') ITEMNAME
+			,case bohg.item_val
+			 when '1' then '符合'
+			 when '0' then '不符合'
+			 end ITEMVAL
+			 ,boh.create_date CREATEDATE
+		from BILL_OSCARCHECK_HD boh 
+		left join BILL_OSCARCHECK_HD_GOODS bohg on bohg.bill_id = boh.id
+		left join BILL_OSCARCHECK_ITEM boi on boi.id = bohg.item_id and boi.item_status = '1'
+		where exists(select IN_FLTID INFLTID ,OUT_FLTID OUTFLTID from FD_FLT_IOREL_ALL_V where IN_FLTID = boh.fltid or OUT_FLTID = boh.fltid)
+		and boh.fltid = #{searchId}
+	</select>
+	
+	
+	
+	<!-- 获取备注 -->
+	<select id="getRemarkInfo" resultType="hashmap">
+			select 
+		        rownum no
+		       ,data1.REMARKTEXT
+		       ,boh.create_date CREATEDATE
+		       ,data1.fileType filetype
+		       ,data1.id remarkId
+		    from
+		     (select 
+		      bohr.id
+		     ,bohr.bill_id billId
+		     ,bohr.remark REMARKTEXT
+		     ,nvl(to_char(WMSYS.WM_CONCAT(boha.file_type)), '0') fileType
+		  from BILL_OSCARCHECK_HD_REMARK bohr 
+		  left join BILL_OSCARCHECK_HD_ATTA boha on bohr.id = boha.remark_id
+		  GROUP BY bohr.id, bohr.bill_id,bohr.remark
+		  ) data1 
+		  left join  BILL_OSCARCHECK_HD boh 
+		  on data1.billId = boh.id
+		    where exists(select IN_FLTID INFLTID ,OUT_FLTID OUTFLTID from FD_FLT_IOREL_ALL_V where IN_FLTID = boh.fltid or OUT_FLTID = boh.fltid)
+  
+		and boh.fltid = #{searchId}
+
+	</select>
+	
+	
+	<!-- 获取文件类型 -->
+	<select id="getDownloadFileType" resultType="string" parameterType="string">
+		select file_extension from sys_upload_file where file_id = #{fileId}
+	</select>
+	
+	<!-- 获取文件类型 -->
+	<select id="getRemarkShow"  parameterType="hashmap" resultType="hashmap">
+		select 
+			 boha.file_path FILEPATH
+			,boha.file_type FILETYPE
+		from BILL_OSCARCHECK_HD_ATTA boha
+		left join BILL_OSCARCHECK_HD_REMARK bohr on bohr.id = boha.remark_id
+		where 1 = 1
+		<if test="null != billId">
+			and bohr.bill_id = #{billId} 
+		</if>
+		<if test="null != fileType">
+			and boha.file_type = #{fileType}
+		</if>
+		<if test="null != remarkId">
+			and bohr.id = #{remarkId}
+		</if>
+	</select>
+
+
+
+	
+
+	
+
+	
+
+	
+</mapper>

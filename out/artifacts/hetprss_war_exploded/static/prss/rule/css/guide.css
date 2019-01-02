@@ -1,0 +1,70 @@
+body{
+	min-height: 10px
+}
+.layui-btn {
+	width: 60px;
+	margin: 4px 0px 0px 0px;
+	background-color: #0C4C7D;
+	font-size:12px;
+}
+
+.layui-table td {
+	padding: 1px;
+}
+
+.div_class, .span_class {
+	display: inline;
+	color: #3c8dbc;
+	padding-right: 5px; 
+	cursor: pointer;
+}
+
+#varLists {
+	overflow: auto;
+	height: 160px;;
+}
+
+#varLists input {
+	width: 100%;
+/* 	border-radius:2px; */
+	border: 0px rgb(244, 244, 244) solid;
+	white-space: normal;
+	padding:5px;
+	word-spacing: normal;
+}
+#varLists input:nth-child(odd){
+	background-color: #0C4C7D;
+}
+#varLists input:nth-child(even){
+	background-color: #002034;
+}
+.layui-table{
+	margin: 0px;
+}
+
+.node_select{
+	color: white;
+	background-color: #0C4C7D;
+}
+
+.pop-ul{
+    padding: 5px;
+    box-shadow: none;
+    background-color: rgba(5, 22, 59, 0.9);
+    width: 105px;
+    height: 60px;
+    color: #cfcfcf;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 1);
+    text-align: center;
+    vertical-align:middle;
+    cursor: pointer;
+    margin: 5px;
+}
+li{
+    padding: 2px 0px 2px 0px;;
+}
+li:hover {
+    font-size:15px;
+}   
+

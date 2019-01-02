@@ -1,0 +1,32 @@
+body{
+	margin:0;
+	padding:10px;
+}
+
+.bill-title{
+	font-size:24px; 
+	text-align: center;
+}
+
+.header_table{
+	width:70%;
+	margin-top:30px;
+}
+
+#inputTable{
+	margin-top:10px;
+	width:100%;
+	table-layout: fixed;
+}
+
+#inputTable td{
+	padding:7px 10px;
+	border:1px solid #0C4C7D;
+	background:#002034;
+	color:#c7c5c0;
+	text-align: center;
+}
+
+#inputTable input{
+	width:100%;
+}

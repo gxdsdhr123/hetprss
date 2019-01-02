@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.framework.modules.maintain.dao.MaintainDAO">
+    <resultMap id="tableResultMap" type="com.neusoft.framework.modules.maintain.entity.TableVO">
+    	<id property="maintainId" column="MAINTAIN_ID"/>
+    	<result property="maintainName" column="MAINTAIN_NAME"/>
+    	<result property="createUser" column="CREATE_USER"/>
+    	<result property="createTime" column="CREATE_TIME"/>
+    	<result property="maintainContent" column="MAINTAIN_CONTENT"/>
+    	<result property="dataTabName" column="DATA_TAB_NAME"/>
+    	<result property="queryTabName" column="QUERY_TAB_NAME"/>
+    	<result property="queryTabWhere" column="QUERY_TAB_WHERE"/>
+    	<result property="updateWhere" column="UPDATE_WHERE"/>
+    	<result property="operateButton" column="OPERATE_BUTTON"/>
+    	<result property="gridButton" column="GRID_BUTTON"/>
+    	<result property="addButton" column="ADD_BUTTON"/>
+    	<result property="pageNumber" column="PAGE_NUMBER"/>
+    	<result property="pageNumberList" column="PAGE_NUMBER_LIST"/>
+    	<!-- 列 -->
+    	<collection property="columnList" javaType="ArrayList" ofType="com.neusoft.framework.modules.maintain.entity.ColumnVO">
+    		<id property="colId" column="COL_ID"/>
+    		<result property="maintainId" column="MAINTAIN_ID"/>
+    		<result property="colDesc" column="COL_DESC"/>
+    		<result property="colNameEn" column="COL_NAME_EN"/>
+    		<result property="colNameCn" column="COL_NAME_CN"/>
+    		<result property="colUpdateExpress" column="COL_UPDATE_EXPRESS"/>
+    		<result property="colExpress" column="COL_EXPRESS"/>
+    		<result property="colQueryExpress" column="COL_QUERY_EXPRESS"/>
+    		<result property="colShowType" column="COL_SHOW_TYPE"/>
+    		<result property="colDataType" column="COL_DATA_TYPE"/>
+    		<result property="defaultValue" column="DEFAULT_VALUE"/>
+    		<result property="ifCond" column="IF_COND"/>
+    		<result property="ifNull" column="IF_NULL"/>
+    		<result property="ifOrder" column="IF_ORDER"/>
+    		<result property="ifPk" column="IF_PK"/>
+    		<result property="pkSequence" column="PK_SEQUENCE"/>
+    		<result property="colOrder" column="COL_ORDER"/>
+    		<result property="ifUpdate" column="IF_UPDATE"/>
+    		<result property="colStyle" column="COL_STYLE"/>
+    		<result property="insertDefautValue" column="INSERT_DEFAUT_VALUE"/>
+    		<result property="ifUnique" column="IF_UNIQUE"/>
+    		<result property="ifInsert" column="IF_INSERT"/>
+    		<result property="fileTypeId" column="FILE_TYPE_ID"/>
+    		<result property="colHeaderStyle" column="COL_HEADER_STYLE"/>
+    		<result property="ifModify" column="IF_MODIFY"/>
+    	</collection>
+    	<!-- 条件 -->
+    	<collection property="conditionList" javaType="ArrayList" ofType="com.neusoft.framework.modules.maintain.entity.ConditionVO">
+    		<id property="codeId" column="COND_ID"/>
+    		<result property="condType" column="COND_TYPE"/>
+    		<result property="condName" column="COND_NAME"/>
+    		<result property="condCode" column="COND_CODE"/>
+    		<result property="condRow" column="COND_ROW"/>
+    		<result property="condCol" column="COND_COL"/>
+    		<result property="condDefault" column="COND_DEFAUT"/>
+    		<result property="condStyle" column="COND_STYLE"/>
+    		<result property="condSQL" column="COND_STRING"/>
+    	</collection>
+    	<!-- 函数 -->
+    	<collection property="functionList" javaType="ArrayList" ofType="com.neusoft.framework.modules.maintain.entity.FunctionVO">
+    		<id property="functionid" column="FUNCTION_ID"/>
+    		<result property="maintainId" column="MAINTAIN_ID"/>
+    		<result property="functionName" column="FUNCTION_NAME"/>
+    		<result property="functionBody" column="FUNCTION_BODY"/>
+    		<result property="functionPosition" column="FUNCTION_POSITION"/>
+    		<result property="iconName" column="ICON_NAME"/>
+    		<result property="functionParam" column="FUNCTION_PARAM"/>
+    		<result property="functionDesc" column="FUNCTION_DESC"/>
+    	</collection>
+    </resultMap>
+    <!-- 获取tablevo -->
+    <select id="initTable" resultMap="tableResultMap" parameterType="java.util.Map">
+    	SELECT A.MAINTAIN_ID,
+		       A.MAINTAIN_NAME,
+		       A.CREATE_USER,
+		       A.CREATE_TIME,
+		       A.MAINTAIN_CONTENT,
+		       A.DATA_TAB_NAME,
+		       A.QUERY_TAB_NAME,
+		       A.QUERY_TAB_WHERE,
+		       A.UPDATE_WHERE,
+		       A.OPERATE_BUTTON,
+		       A.GRID_BUTTON,
+		       A.ADD_BUTTON,
+		       NVL(A.PAGE_NUMBER, 10) PAGE_NUMBER,
+		       NVL(A.PAGE_NUMBER_LIST, '10,15,20,50') PAGE_NUMBER_LIST,
+		       B.COL_ID,
+		       B.COL_DESC,
+		       B.COL_NAME_EN,
+		       B.COL_NAME_CN,
+		       B.COL_UPDATE_EXPRESS,
+		       B.COL_EXPRESS,
+		       B.COL_QUERY_EXPRESS,
+		       B.COL_SHOW_TYPE,
+		       B.COL_DATA_TYPE,
+		       B.DEFAULT_VALUE,
+		       B.IF_COND,
+		       B.IF_NULL,
+		       B.IF_ORDER,
+		       B.IF_PK,
+		       B.PK_SEQUENCE,
+		       B.COL_ORDER,
+		       B.IF_UPDATE,
+		       B.COL_STYLE,
+		       B.INSERT_DEFAUT_VALUE,
+		       B.IF_UNIQUE,
+		       B.IF_INSERT,
+		       B.FILE_TYPE_ID,
+		       B.COL_HEADER_STYLE,
+		       B.IF_MODIFY,
+		       C.COND_ID,
+		       C.COND_CODE,
+		       C.COND_NAME,
+		       C.COND_TYPE,
+		       C.COND_DEFAUT,
+		       C.COND_STRING,
+		       C.COND_ROW,
+		       C.COND_COL,
+		       C.COND_STYLE,
+		       D.FUNCTION_ID,
+		       D.FUNCTION_NAME,
+		       D.FUNCTION_BODY,
+		       D.FUNCTION_POSITION,
+		       D.ICON_NAME,
+		       D.FUNCTION_PARAM,
+		       D.FUNCTION_DESC
+		  FROM SYS_MAINTAIN  A
+		  	LEFT JOIN  SYS_MAINTAIN_COLUMN    B ON A.MAINTAIN_ID = B.MAINTAIN_ID
+       		LEFT JOIN  SYS_MAINTAIN_CONDITION C ON A.MAINTAIN_ID = C.MAINTAIN_ID
+       		LEFT JOIN  SYS_MAINTAIN_FUNCTION  D ON A.MAINTAIN_ID = D.MAINTAIN_ID
+ 		  WHERE  A.MAINTAIN_ID=#{tabId}
+ 		  ORDER BY B.COL_ORDER
+    </select>
+    <!-- 传入SQL，返回结果 -->
+    <select id="getDataList" parameterType="string" resultType="com.alibaba.fastjson.JSONObject">
+    	${sql}
+    </select>
+    <select id="getDataMap" parameterType="string" resultType="java.util.Map">
+    	${sql}
+    </select>
+    
+    <select id="getDataString" parameterType="string" resultType="string">
+    	${sql}
+    </select>
+    <!-- 传入SQL，执行update -->
+    <update id="doUpdate" parameterType="string">
+    	${sql}
+    </update>
+    <insert id="doInsert" parameterType="string">
+    	${sql}
+    </insert>
+    
+    <!-- 根据表名获取对应的缓存配置 -->
+    <select id="getCacheConfByTableName" parameterType="string" resultType="com.alibaba.fastjson.JSONObject">
+    	SELECT cache_name "cacheName"  FROM CACHE_CONF WHERE UPPER(SOURCE_TABLE)=UPPER(#{sourceTable})
+    </select>
+    
+    <insert id="doInsertLog"   parameterType="Map">
+		INSERT INTO sys_maintain_log(
+			maintain_id, 
+			table_name, 
+			old_value, 
+			new_value, 
+			oper_type, 
+			create_user, 
+			create_date
+		) VALUES (
+			#{MAINTAIN_ID}, 
+			#{TABLE_NAME}, 
+			#{OLD_VALUE}, 
+			#{NEW_VALUE}, 
+			#{OPER_TYPE}, 
+			#{CREATE_USER},
+			sysdate
+		)
+	</insert>
+	
+</mapper>

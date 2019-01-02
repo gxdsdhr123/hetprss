@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.telegraph.dao.TeleGraphTemplDao">
+
+	<select id="getTree" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT t.AIRLINE_CODE "id"
+		,t.AIRLINE_CODE||'/'|| t.description_cn "name"
+		FROM dim_airlines t
+		WHERE 1=1 
+<!-- 		t.d_or_i ='I'  -->
+    	ORDER BY t.airline_code
+	</select>
+
+	<select id="getTelegraphList" parameterType="Map"
+		resultType="com.alibaba.fastjson.JSONObject">
+		SELECT * FROM (select t.*,ROWNUM NUM from (SELECT T.TG_NAME,t.ID,
+		T.TG_TYPE_ID,
+		REPLACE(T.TG_TEXT,'？',' ') TG_TEXT,
+		TM.TG_SITE_ID,
+		TM.TG_SITE_TYPE,
+		T.CREATEUSER,
+		su.NAME USERNAME,
+		tt.TG_NAME TGTYPENAME,
+		ts.TG_ADDRESS,
+		to_char(T.CREATETIME,'yyyy-MM-dd hh24:mi:ss') CREATETIME,
+		t.priority
+		FROM
+		TM_TEMPLATE T left join TM_TEMPLATE_FROM TM
+		on t.id = tm.TG_TEMPL_ID
+		left join TM_TYPE tt
+		on t.TG_TYPE_ID = tt.ID
+		left join TM_SITE ts
+		on
+		tm.TG_SITE_ID = ts.id
+		left join sys_user su
+		on t.CREATEUSER = su.ID
+		WHERE 1=1
+		<if test="typeId != null and typeId != ''">
+			AND t.aln_2code='${typeId}'
+		</if>
+		order by ${sortName} ${sortOrder}
+		) T where 1=1 
+		 <![CDATA[AND ROWNUM <= ${end} ]]>
+		) t1
+		 
+		<![CDATA[ WHERE t1.num >${begin}]]>
+	</select>
+
+	<select id="getTelegraphListCount" resultType="int"
+		parameterType="Map">
+		select count(*) num
+		FROM TM_TEMPLATE T
+		WHERE 1=1
+		<if test="typeId != null and typeId != ''">
+			AND t.aln_2code='${typeId}'
+		</if>
+	</select>
+
+	<select id="queryTelegraphById" resultType="com.alibaba.fastjson.JSONObject">
+		select t.ID
+		,ALN_2CODE,TG_TYPE_ID,TG_NAME,TG_TEXT ,a.name
+		CREATEUSER,to_char(CREATETIME,'yyyy-MM-dd hh24:mi:ss') CREATETIME,
+		VARCOLS,FIO_TYPE,T.EVENT_ID ,B.EVENT_NAME,T.PRIORITY,T.IFANALYSIS
+		from TM_TEMPLATE t LEFT JOIN
+		Sys_User a ON t.createuser = a.id LEFT JOIN
+		Sys_Event b ON t.event_id =
+		b.event_id
+		where t.id = ${id}
+	</select>
+
+
+	<delete id="deleteTemplList" parameterType="string">
+		delete from TM_TEMPLATE where id =
+<!-- 		<foreach item="id" index="index" collection="array" open="(" -->
+<!-- 			separator="," close=")"> -->
+			${array}
+<!-- 		</foreach> -->
+	</delete>
+
+	<delete id="deleteTemplFromList" parameterType="string">
+		delete from TM_TEMPLATE_FROM where TG_TEMPL_ID =
+<!-- 		<foreach item="id" index="index" collection="array" open="(" -->
+<!-- 			separator="," close=")"> -->
+			${array}
+<!-- 		</foreach> -->
+	</delete>
+
+	<delete id="deleteTemplToList" parameterType="string">
+		delete from TM_TEMPLATE_TO where TG_TEMPL_ID =
+<!-- 		<foreach item="id" index="index" collection="array" open="(" -->
+<!-- 			separator="," close=")"> -->
+			${array}
+<!-- 		</foreach> -->
+	</delete>
+
+	<select id="getTypeList" resultType="com.alibaba.fastjson.JSONObject">
+		select * from TM_TYPE
+	</select>
+
+	<!-- 处理类 -->
+	<select id="getProcvars" resultType="com.neusoft.prss.message.entity.CommonVO">
+		select a.ID as
+		code,a.proc_cn as name from DIM_PROCVARS a
+	</select>
+
+	<select id="getTelegraphTemplById" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT T.*, A.TG_NAME||'【'||TG_CODE||'】' TYPENAME, B.TG_SITE_TYPE,a.TG_CODE
+		  FROM TM_TEMPLATE T
+		  LEFT JOIN TM_TYPE A
+		    ON T.TG_TYPE_ID = A.ID
+		  LEFT JOIN TM_TEMPLATE_FROM B
+		    ON T.ID = B.TG_TEMPL_ID
+		 WHERE 1=1
+		 <if test="id == null || id == ''">
+		 AND T.ID = 0
+		 </if>
+		 <if test="id != null and id != ''">
+		 AND T.ID = ${id}
+		 </if>
+		
+	</select>
+
+	<select id="getSiteList" parameterType="HashMap"
+		resultType="com.alibaba.fastjson.JSONObject">
+		SELECT T.ID NO,
+		       T.ALN_2CODE || '/' || A.DESCRIPTION_CN NAME,
+		       T.TG_ADDRESS,
+		       T.DESCRIPTION_CN DES
+		  FROM TM_SITE T
+		  LEFT JOIN DIM_AIRLINE A
+		    ON T.ALN_2CODE = A.AIRLINE_CODE
+		where 1=1
+		<if test="sitaType !=null and sitaType != '' ">
+			and t.tg_site_type = ${sitaType}
+		</if>
+		<if test="sitaType ==null or sitaType == '' ">
+			and t.tg_site_type = 0
+		</if>
+		<if test="ids !=null and ids != '' "> and t.id not in (${ids}) </if>
+		ORDER BY t.update_time
+	</select>
+
+	<select id="getTelegraphId" resultType="string">
+		select
+		TM_TEMPLATE_S.nextval from dual
+	</select>
+
+	<insert id="insertTelegraphInfo" parameterType="com.alibaba.fastjson.JSONObject">
+		insert into
+		TM_TEMPLATE(ID,ALN_2CODE,TG_TYPE_ID,TG_NAME,TG_TEXT,VARCOLS,CREATETIME,
+		CREATEUSER,FIO_TYPE,EVENT_ID,priority,ifanalysis)
+		values
+		(#{vo.id},#{vo.typeId},#{vo.tgType},#{vo.tg_name},REPLACE(#{vo.mtext},'？',' '),#{vo.varcols},sysdate,
+		#{vo.userId},#{vo.fiotype},#{vo.eventid},#{vo.priority},#{vo.ifanalysis}
+		)
+	</insert>
+
+	<insert id="insertReceiver">
+		insert all
+		<foreach collection="receiveArray" item="item" index="index">
+			into
+			TM_TEMPLATE_TO
+			(ID,TG_TEMPL_ID,TG_SITE_TYPE,TG_SITE_ID,IF_PROCFROM,PROC_ECLS,PROC_PARAM)
+			values
+			(TM_TEMPLATE_TO_S.nextval,#{vo.id},#{item.sitaType},#{item.tg_site_id},#{item.ifprocfrom},#{item.proceclsfrom},#{item.procdefparamfrom})
+		</foreach>
+		select 1 from dual
+	</insert>
+
+	<insert id="inserSender">
+		insert all
+		<foreach collection="sendArray" item="item" index="index">
+			into
+			TM_TEMPLATE_FROM
+			(ID,TG_TEMPL_ID,TG_SITE_TYPE,TG_SITE_ID,IF_PROCFROM,PROC_ECLS,PROC_PARAM)
+			values
+			(TM_TEMPLATE_FROM_S.nextval,#{vo.id},#{item.sitaType},#{item.tg_site_id},#{item.ifprocfrom},#{item.proceclsfrom},#{item.procdefparamfrom})
+		</foreach>
+		select 1 from dual
+
+	</insert>
+
+	<update id="updateTelegraphInfo">
+		update TM_TEMPLATE set ALN_2CODE =
+		#{vo.typeId},TG_TYPE_ID = #{vo.tgType},TG_NAME = #{vo.tg_name},TG_TEXT
+		= REPLACE(#{vo.mtext},'？',' '),
+		VARCOLS = #{vo.varcols},UPDATE_TIME =
+		sysdate,UPDATE_USER =
+		#{vo.userId},FIO_TYPE = #{vo.fiotype},EVENT_ID =
+		#{vo.eventid},priority = #{vo.priority},
+		ifanalysis = #{vo.ifanalysis}
+		where id
+		= #{vo.id}
+	</update>
+
+	<delete id="deleteReveiver">
+		delete from TM_TEMPLATE_TO t where t.TG_TEMPL_ID =
+		${id}
+	</delete>
+
+	<delete id="deleteSender">
+		delete from TM_TEMPLATE_FROM t where t.TG_TEMPL_ID =
+		${id}
+	</delete>
+
+	<select id="getListById" resultType="com.alibaba.fastjson.JSONObject">
+     SELECT t.TG_SITE_TYPE AS "sitaType",
+     Decode(t.TG_SITE_TYPE,1,'SITA',0,'邮件') AS "sitaTypeName",t.tg_site_id
+    AS "tg_site_id" ,
+    --a.description_cn AS "tg_site_name",
+    a.Tg_Address AS
+    "tg_address",t.if_procfrom AS
+    "ifprocfrom" ,DECODE(t.if_procfrom
+    ,1,'是',0,'否') AS "ifprocfromname",
+    t.proc_ecls AS "proceclsfrom"
+    ,b.proc_cn AS "proceclsfromname"
+    ,t.proc_param AS "procdefparamfrom"
+    ,t.tg_templ_id AS "tid",
+    c.airline_code||' / '||c.description_cn AS "tg_site_name"
+    FROM
+    <if test="flag != null and flag =='sender' ">tm_template_from</if>
+	<if test="flag != null and flag =='receiver' ">tm_template_to</if>
+    t
+    LEFT JOIN tm_site a ON t.tg_site_id = a.id
+    LEFT JOIN dim_procvars b ON t.proc_ecls = b.id
+    LEFT JOIN dim_airline c ON a.aln_2code = c.airline_code
+    WHERE 1=1
+    <if test="id != null and id != ''"> and t.tg_templ_id = ${id}</if>
+	<if test="id == null or id == '' "> and 1=0</if>
+	
+	</select>
+
+
+	<select id="getAddressByTempId" resultType="com.alibaba.fastjson.JSONObject">
+	SELECT y.tg_site_type, REPLACE(to_char(WM_CONCAT(S.TG_ADDRESS)), ',', ';') as address
+	FROM
+	TM_TEMPLATE T
+	left join TM_TEMPLATE_TO y on t.id = y.tg_templ_id
+	left join TM_SITE s on s.id = y.tg_site_id
+	WHERE 1=1
+		<if test="id != null and id != ''"> and tg_templ_id = ${id}</if>
+		group by y.tg_site_type
+	</select>
+
+	<select id="getTemplCount" resultType="com.alibaba.fastjson.JSONObject" parameterType="string">
+		SELECT COUNT(*) NUM, ID, NAME
+		  FROM (SELECT T.ID, B.TG_NAME NAME
+		          FROM (SELECT MTEMPLID ID FROM MM_SUBSCRIBE T WHERE T.MTEMPLID = #{id}) T
+		          LEFT JOIN TM_TEMPLATE B
+		            ON T.ID = B.ID) A
+		 GROUP BY ID, NAME
+
+	</select>
+
+	<select id="getPriorityList" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT VALUE ID,text NAME FROM dim_common_dict t WHERE t.type ='priority' ORDER BY SORT
+	</select>
+
+	<!-- 报文已读 -->
+	<update id="isRead" parameterType="Map">
+		<if test="type != null and type==1">
+			update TM_ORIGINAL_XMLDATA set ISREAD=1 where id=#{id}
+		</if>
+		<if test="type != null and type==2">
+			update TM_INFO set ISREAD=1 where id=#{id}
+		</if>
+	</update>
+	
+</mapper>

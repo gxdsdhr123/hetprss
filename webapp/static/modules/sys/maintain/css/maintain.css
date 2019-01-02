@@ -1,0 +1,13 @@
+#pageSizeSelect{
+	width:80px;
+	margin-top:10px;
+	border:1px solid #006DC0;
+}
+
+.layui-form-label{
+	width:auto;
+	padding:5px 10px
+}
+input[type="checkbox"]{
+	border:1px solid #006DC0;
+}

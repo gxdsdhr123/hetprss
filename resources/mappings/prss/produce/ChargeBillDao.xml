@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.produce.dao.ChargeBillDao">
+	<select id="getBillSeq" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT		
+		 <choose>
+		    <when test="_parameter=='ZPKTC'">
+		        bill_zpktczpfw_hd_goods_s.nextval 
+		    </when>
+		    <otherwise>
+		        bill_zpztzpfw_hd_goods_s.nextval 
+		    </otherwise>
+		</choose>		 
+		 as billId FROM dual
+	</select>
+	<select id="getChargeBillData" resultType="com.alibaba.fastjson.JSONObject">
+	     SELECT TO_CHAR(CREATE_DATE, 'YYYY-MM-DD') AS CREATE_DATE,
+     	  FLIGHT_NUMBER,
+      	  AIRCRAFT_NUMBER,
+          OPERATOR,FLTID,ID
+ 		 FROM 
+ 		<choose>
+		    <when test="flag=='ZPKTC'">
+		        BILL_ZPKTCZPFW_HD
+		    </when>
+		    <otherwise>
+		       BILL_ZPZTZPFW_HD
+		    </otherwise>
+		</choose>		 
+ 		 ORDER BY ID DESC	 	
+	</select>
+	<select id="getFightInfo" resultType="com.alibaba.fastjson.JSONObject">		
+	   SELECT FLTID, ACTSTAND_CODE, ACTTYPE_CODE, STA, ETA, ATA ,STD, ETD, ATD ,AIRCRAFT_NUMBER
+		  FROM FD_FLT_INFO
+		 WHERE FLIGHT_DATE = #{flightDate}
+		   AND FLIGHT_NUMBER = #{flightNumber}
+		   AND SUBSTR(IN_OUT_FLAG, 0, 1) = #{inOutFlag}
+	</select>
+	<select id="getChargeBillGoodsDetail" resultType="com.alibaba.fastjson.JSONObject">		
+	       SELECT XM_CODE, XM_VAL, XM_NAME, NUM, TASK_TIME
+		      FROM 
+		     <choose>
+		    <when test="flag=='ZPKTC'">
+		        BILL_ZPKTCZPFW_HD_GOODS 
+		    </when>
+		    <otherwise>
+		       BILL_ZPZTZPFW_HD_GOODS 
+		    </otherwise>
+		</choose>	
+		     WHERE BILL_ID = #{billId}
+		     ORDER BY ID
+	</select>
+	<select id="getFlightInfo" resultType="com.alibaba.fastjson.JSONObject">	
+		SELECT FLTID,
+	       ACTSTAND_CODE,
+	       ACTTYPE_CODE,
+	       STA,
+	       ETA,
+	       ATA,
+	       STD,
+	       ETD,
+	       ATD,
+	       AIRCRAFT_NUMBER,
+	       SUBSTR(IN_OUT_FLAG, 0, 1) AS IN_OUT_FLAG
+	  FROM FD_FLT_INFO
+	 where FLTID = #{fltId}
+	 union all
+	 SELECT FLTID,
+	       ACTSTAND_CODE,
+	       ACTTYPE_CODE,
+	       STA,
+	       ETA,
+	       ATA,
+	       STD,
+	       ETD,
+	       ATD,
+	       AIRCRAFT_NUMBER,
+	       SUBSTR(IN_OUT_FLAG, 0, 1) AS IN_OUT_FLAG
+	  FROM FD_FLT_INFO_HIS@PRSS2PRSSP
+	 where FLTID = #{fltId}
+		
+	      <!--  SELECT FLTID, ACTSTAND_CODE, ACTTYPE_CODE, STA, ETA, ATA ,STD, ETD, ATD ,AIRCRAFT_NUMBER ,SUBSTR(IN_OUT_FLAG, 0, 1) AS IN_OUT_FLAG 
+		   FROM FD_FLT_INFO where FLTID =#{fltId} -->
+		   
+	</select>
+	<select id="getChargeBillDetail" resultType="com.alibaba.fastjson.JSONObject">		
+	         SELECT ID,
+             FLTID,
+             FLIGHT_NUMBER,
+             ACT_TYPE,
+             AIRCRAFT_NUMBER,
+             OPERATOR,
+             CREATE_DATE,
+             SIGNATORY,
+             ACTSTAND_CODE,
+             FLIGHT_DATE,
+             ETD,
+             ETA,
+             POST,
+             SCHEDULER,
+             ATA,
+             ATD,
+             OPERATOR_NAME
+      		  FROM 
+      		   <choose>
+		    <when test="flag=='ZPKTC'">
+		        BILL_ZPKTCZPFW_HD
+		    </when>
+		    <otherwise>
+		       BILL_ZPZTZPFW_HD
+		    </otherwise>
+		    </choose>
+		     WHERE ID = #{billId}
+	</select>
+	<!-- 删除 BILL_ZPKTCZPFW_HDBILL_ZPKTCZPFW_HD-->
+	<delete id="delChargeBill" parameterType="string">
+		DELETE  FROM BILL_ZPKTCZPFW_HD where ID = #{billId}
+	</delete>
+	<!-- 删除 BILL_ZPKTCZPFW_HD_GOODS -->
+	<delete id="delChargeGoodsBill" parameterType="string">
+				DELETE FROM BILL_ZPKTCZPFW_HD_GOODS where BILL_ID = #{billId}
+	</delete>
+	<delete id="delZTChargeBill" parameterType="string">
+		DELETE  FROM BILL_ZPZTZPFW_HD where ID = #{billId}
+	</delete>
+	<delete id="delZTChargeGoodsBill" parameterType="string">
+				DELETE FROM BILL_ZPZTZPFW_HD_GOODS where BILL_ID = #{billId}
+	</delete>
+	<insert id="doAddZPKTCZPFW" parameterType="com.neusoft.prss.produce.entity.ChargeBillEntity">
+		INSERT INTO BILL_ZPKTCZPFW_HD
+		  (ID, FLTID, FLIGHT_NUMBER, ACT_TYPE, AIRCRAFT_NUMBER, OPERATOR, SIGNATORY,
+		  CREATE_DATE,ACTSTAND_CODE,FLIGHT_DATE,ETD,ETA,POST,SCHEDULER,ATA,ATD,OPERATOR_NAME)
+		VALUES
+		  (#{billId},	
+		   #{fltId},
+		   #{flightNumber},
+		   #{actTypeCode},
+		   #{aircraftNumber},
+		   #{operator},
+		   #{signatory},
+		   to_date(to_char(SYSDATE, 'yyyy-MM-dd'), 'yyyy-mm-dd'),
+		   #{actstandCode},
+		   #{flightDate},
+		   #{etd},
+		   #{eta},
+		   #{post},
+		   #{scheduler},
+		   #{ata},
+		   #{atd},
+		   #{operatorName}
+		   )
+	</insert>
+	<insert id="doAddZPZTZPFW" parameterType="com.neusoft.prss.produce.entity.ChargeBillEntity">
+		INSERT INTO BILL_ZPZTZPFW_HD
+		  (ID, FLTID, FLIGHT_NUMBER, ACT_TYPE, AIRCRAFT_NUMBER, OPERATOR, SIGNATORY,
+		  CREATE_DATE,ACTSTAND_CODE,FLIGHT_DATE,ETD,ETA,POST,SCHEDULER,ATA,ATD,OPERATOR_NAME)
+		VALUES
+		  (#{billId},	
+		   #{fltId},
+		   #{flightNumber},
+		   #{actTypeCode},
+		   #{aircraftNumber},
+		   #{operator},
+		   #{signatory},
+		   to_date(to_char(SYSDATE, 'yyyy-MM-dd'), 'yyyy-mm-dd'),
+		   #{actstandCode},
+		   #{flightDate},
+		   #{etd},
+		   #{eta},
+		   #{post},
+		   #{scheduler},
+		   #{ata},
+		   #{atd},
+		   #{operatorName}
+		   )
+	</insert>
+		<select id="getImgSrc" resultType="com.alibaba.fastjson.JSONObject">		
+              SELECT B.FILE_PATH, B.FILE_NAME, B.FILE_NEW_NAME,B.FILE_ID 
+            FROM		            
+		          <choose>
+			    <when test="flag=='ZPKTC'">
+			        BILL_ZPKTCZPFW_HD A
+			    </when>
+			    <otherwise>
+			       BILL_ZPZTZPFW_HD A
+			    </otherwise>
+			    </choose>
+             , SYS_UPLOAD_FILE B
+           WHERE A.SIGNATORY = B.FILE_ID
+             AND A.ID = #{billId} 
+
+	</select>
+	<insert id="doAddChargeBill" parameterType="java.util.List">
+		INSERT INTO BILL_ZPKTCZPFW_HD_GOODS
+		  (BILL_ID, XM_CODE, XM_VAL, XM_NAME, NUM, TASK_TIME, ID)
+		 SELECT A.bill_id,A.xm_code,A.xm_val,A.xm_name,A.num,A.task_num,bill_zpktczpfw_hd_goods_s.nextval id from (
+		 <foreach collection="list" item="item" index="index" separator="UNION ALL" > 
+		 SELECT	  
+		  #{item.billId} bill_id,
+		  #{item.xmCode} xm_code,
+		  #{item.xmVal} xm_val,
+		  #{item.xmName} xm_name,
+		   #{item.num} num,
+		  #{item.taskTime} task_num
+		   FROM dual 		   
+		    </foreach> 
+		    )A
+	</insert>
+	<insert id="doAddZTChargeBill" parameterType="java.util.List">
+		INSERT INTO BILL_ZPZTZPFW_HD_GOODS
+		  (BILL_ID, XM_CODE, XM_VAL, XM_NAME, NUM, TASK_TIME, ID)
+		 SELECT A.bill_id,A.xm_code,A.xm_val,A.xm_name,A.num,A.task_num,bill_zpztzpfw_hd_goods_s.nextval id from (
+		 <foreach collection="list" item="item" index="index" separator="UNION ALL" > 
+		 SELECT	  
+		  #{item.billId} bill_id,
+		  #{item.xmCode} xm_code,
+		  #{item.xmVal} xm_val,
+		  #{item.xmName} xm_name,
+		   #{item.num} num,
+		  #{item.taskTime} task_num
+		   FROM dual 		   
+		    </foreach> 
+		    )A
+	</insert>
+	<update id="updateChargeBill" parameterType="java.util.List">
+       <foreach collection="list" item="item" index="index" open="begin" close="end;" >
+            update BILL_ZPKTCZPFW_HD_GOODS set
+            XM_VAL = #{item.xmVal},  
+		                NUM = #{item.num},  
+		                TASK_TIME = #{item.taskTime}  
+            where BILL_ID = #{item.billId} AND XM_CODE=#{item.xmCode}  ;
+            </foreach>
+    </update>
+    <update id="updateZTChargeBill" parameterType="java.util.List">
+    <foreach collection="list" item="item" index="index" open="begin" close="end;" >
+            update BILL_ZPZTZPFW_HD_GOODS set
+            XM_VAL = #{item.xmVal},  
+		                NUM = #{item.num},  
+		                TASK_TIME = #{item.taskTime}  
+            where BILL_ID = #{item.billId} AND XM_CODE=#{item.xmCode}  ;
+            </foreach>
+    </update>
+</mapper>

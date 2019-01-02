@@ -1,0 +1,38 @@
+#searchBut{
+	border-color:#0C4C7D;
+	margin-left:20px;
+	display:inline;
+}
+#printBut{
+	border-color:#0C4C7D;
+	margin-left:20px;
+	display:inline;
+}
+#tool-box{
+	padding:10px 0px 0px 6px;
+}
+.layui-table{
+	text-align:center;
+	margin:0px;
+}
+#container{
+	text-align:center;
+	color:#c7c5c0;
+}
+#bottomDiv{
+	padding-top:50px;
+}
+.layui-input{
+	display:inline;
+}
+#containerTopDiv{
+	padding-top:50px;
+}
+.preDiv{
+	width:10%;
+	display:inline-block;
+}
+.selectDiv{
+	width:30%;
+	display:inline-block;
+}

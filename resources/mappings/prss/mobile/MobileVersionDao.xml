@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.mobile.dao.MobileVersionDao">
+	<select id="getMobileVersionDate" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT id "vsnId", updateversion "updateversion", updatedesc "updatedesc", to_char(to_date(updatetime,'yyyy/mm/dd hh24:mi'),'yyyy-mm-dd hh24:mi') "updatetime" FROM sys_mobile_version ORDER BY updateversion DESC
+	</select>
+	<select id="getMobileVersionById" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT id "id", updateversion "updateversion", to_char(to_date(updatetime,'yyyy/mm/dd hh24:mi'),'yyyy-mm-dd hh24:mi') "updatetime", updatedesc "updatedesc", updateurl "updateurl", serverurl "serverurl", pushurl "pushurl", downloadid "downloadid" FROM sys_mobile_version WHERE ID = #{id}
+	</select>
+	<select id="getMaxVersion" resultType="String">
+		SELECT MAX(updateversion) FROM sys_mobile_version
+	</select>
+	<delete id="delVersion">
+		DELETE FROM sys_mobile_version WHERE ID = #{id}
+	</delete>
+	<update id="saveVersion">
+		UPDATE sys_mobile_version SET updateversion = #{versionDate.updateversion}, updatedesc = #{versionDate.updatedesc}, updateurl = #{versionDate.updateurl}, serverurl = #{versionDate.serverurl}, pushurl = #{versionDate.pushurl} WHERE id = #{versionDate.id}
+	</update>
+	<insert id="insertVersion">
+		INSERT INTO sys_mobile_version (id, updateversion, updatedesc, updateurl, serverurl, pushurl, downloadid, updatetime ) VALUES (sys_mobile_version_s.nextval, #{versionDate.updateversion}, #{versionDate.updatedesc}, #{versionDate.updateurl}, #{versionDate.serverurl}, #{versionDate.pushurl}, #{id}, to_char(SYSDATE, 'yyyy/mm/dd hh24:mi'))
+	</insert>
+	<select id="getFileName" resultType="String">
+		SELECT file_name FROM Sys_Upload_File WHERE file_id = #{id}
+	</select>
+	<select id="getFileId" resultType="String">
+		SELECT downloadid FROM sys_mobile_version WHERE id = #{id}
+	</select>
+</mapper>

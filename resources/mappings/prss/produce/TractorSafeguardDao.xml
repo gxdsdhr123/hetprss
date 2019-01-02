@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.produce.dao.TractorSafeguardDao">
+	<select id="loadInfo" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT T.ID,
+		       T.DEVICE_ID,
+		       T.MODEL,
+		       T.PLATE_NUMBER,
+		       T.NOTE,
+		       A.TYPE_ID,
+		       T.APTUTUDE1,
+		       T.APTUTUDE2,
+		       T.JX_LIMIT1,
+		       T.JW_LIMIT1,
+		       T.JX_LIMIT2,
+		       T.JW_LIMIT2,
+		       T.HS_LIMIT1,
+		       T.HS_LIMIT2
+		  FROM AM_DIVICE_APTITUDE_CONF T
+		  JOIN JM_DEVICE A
+		    ON T.DEVICE_ID = A.INNER_NUMBER
+		   AND T.MODEL = A.DEVICE_MODEL
+		   AND T.PLATE_NUMBER = A.CAR_NUMBER
+		where T.id = #{id}
+	</select>
+	<!-- 机型 -->
+	<select id="loadAtcactype" resultType="Map">
+		SELECT TODB_ACTYPE_CODE code,DESCRIPTION_CN description FROM DIM_ACTYPE   ORDER BY CODE       
+	</select>
+	<!-- 航空公司 -->
+	<select id="loadAirline" resultType="Map">
+		select AIRLINE_CODE code, DESCRIPTION_CN||'【'||AIRLINE_CODE||'】' description from DIM_AIRLINES    ORDER BY description
+	</select>
+	<!-- 机位 -->
+	<select id="loadAircraft" resultType="Map">
+		SELECT T.BAY_CODE CODE, T.BAY_CODE  DESCRIPTION  FROM DIM_BAY T
+	</select>
+	
+	<select id="getListCount" resultType="int" parameterType="Map">
+		SELECT COUNT(9) NUM
+		  FROM AM_DIVICE_APTITUDE_CONF T
+		WHERE 1=1 
+		<if test="desc !=null and desc !=''"><![CDATA[ and NOTE like '%'||#{desc}||'%' ]]> </if>
+	</select>
+	
+	<select id="getList" resultType="Map" parameterType="Map">
+		SELECT * FROM (
+			SELECT T.ID,
+			       T.DEVICE_ID,
+			       T.MODEL,
+			       T.PLATE_NUMBER,
+			       T.NOTE,
+			       A.TYPE_NAME,
+			       ROW_NUMBER() OVER(ORDER BY T.ID DESC) NUM
+			  FROM AM_DIVICE_APTITUDE_CONF T
+			  JOIN JM_DEVICE A
+			    ON T.DEVICE_ID = A.INNER_NUMBER
+			   AND T.MODEL = A.DEVICE_MODEL
+			   AND T.PLATE_NUMBER = A.CAR_NUMBER
+		WHERE 1=1 
+		<if test="desc !=null and desc !=''"><![CDATA[ and NOTE like '%'||#{desc}||'%' ]]> </if>
+		 ORDER BY NUM )
+		 WHERE <![CDATA[NUM>#{begin} AND NUM<=#{end}]]>
+	</select>
+	
+	<insert id="insert" parameterType="com.alibaba.fastjson.JSONObject" useGeneratedKeys="true" keyProperty="id">
+		<selectKey keyProperty="id" resultType="String" order="BEFORE" >
+        	select AM_DIVICE_APTITUDE_CONF_S.NEXTVAL as id from dual
+		</selectKey>
+		INSERT INTO AM_DIVICE_APTITUDE_CONF (ID,
+									DEVICE_ID,
+									MODEL,
+									PLATE_NUMBER,
+									APTUTUDE1,
+									JX_LIMIT1,
+									JW_LIMIT1,
+									HS_LIMIT1,
+									APTUTUDE2,
+									JX_LIMIT2,
+									JW_LIMIT2,
+									HS_LIMIT2,
+									OPERATOR,
+									UPDATE_TIME,
+									NOTE
+									) 
+							VALUES (
+								#{id},
+								#{unitnumber, jdbcType=VARCHAR},
+								#{unitmodel, jdbcType=VARCHAR},
+								#{carNumber, jdbcType=VARCHAR},
+								#{aptutudelT1, jdbcType=VARCHAR},
+								#{airplaneTypeZ, jdbcType=VARCHAR},
+								#{seatZ, jdbcType=VARCHAR},
+								#{airplaneZ, jdbcType=VARCHAR},
+								#{aptutudelT2, jdbcType=VARCHAR},
+								#{airplaneTypeT, jdbcType=VARCHAR},
+								#{seatT, jdbcType=VARCHAR},
+								#{airplaneT, jdbcType=VARCHAR},
+								#{userId, jdbcType=VARCHAR},
+								sysdate,
+								#{desc, jdbcType=VARCHAR}
+								)
+	</insert>
+	
+	<update id="update" parameterType="com.neusoft.prss.rule.entity.RuleSetUpVO">
+		UPDATE AM_DIVICE_APTITUDE_CONF SET 
+			DEVICE_ID=#{unitnumber, jdbcType=VARCHAR},
+			MODEL=#{unitmodel, jdbcType=VARCHAR},
+			PLATE_NUMBER=#{carNumber, jdbcType=VARCHAR},
+			APTUTUDE1=#{aptutudelT1, jdbcType=VARCHAR},
+			JX_LIMIT1=#{airplaneTypeZ, jdbcType=VARCHAR},
+			JW_LIMIT1=#{seatZ, jdbcType=VARCHAR},
+			HS_LIMIT1=#{airplaneZ, jdbcType=VARCHAR},
+			APTUTUDE2=#{aptutudelT2, jdbcType=VARCHAR},
+			JX_LIMIT2=#{airplaneTypeT, jdbcType=VARCHAR},
+			JW_LIMIT2=#{seatT, jdbcType=VARCHAR},
+			HS_LIMIT2=#{airplaneT, jdbcType=VARCHAR},
+			NOTE=#{desc, jdbcType=VARCHAR}
+		where id = #{id}
+	</update>
+	
+	<delete id="delete" parameterType="String">
+		delete from AM_DIVICE_APTITUDE_CONF where id = #{id}
+	</delete>
+	
+	<select id="getDimData" parameterType="com.alibaba.fastjson.JSONObject" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT DISTINCT 
+		<if test="type != null and type == 1">
+			TYPE_ID CODE, TYPE_NAME NAME
+		</if>
+		<if test="type != null and type == 2">
+			DEVICE_MODEL CODE, DEVICE_MODEL NAME
+		</if>
+		<if test="type != null and type == 3">
+			INNER_NUMBER CODE, INNER_NUMBER NAME
+		</if>
+		<if test="type != null and type == 4">
+			CAR_NUMBER NAME
+		</if>
+		  FROM JM_DEVICE
+		 WHERE TYPE_ID IN (22, 21)
+		 <if test="type != null and type == 2">
+		 	AND TYPE_ID = #{typeId}
+		 </if>
+		 <if test="type != null and type == 3">
+		 	AND TYPE_ID = #{typeId}
+		 	AND DEVICE_MODEL = #{deviceModel}
+		 </if>
+		 <if test="type != null and type == 4">
+		 	AND TYPE_ID = #{typeId}
+		 	AND DEVICE_MODEL = #{deviceModel}
+		 	AND INNER_NUMBER = #{deviceNo}
+		 </if>
+		
+	</select>
+</mapper>

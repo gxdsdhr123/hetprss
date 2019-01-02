@@ -1,0 +1,1324 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.scheduling.dao.SchedulingGanttDao">
+	<!-- 获取Y轴数据 -->
+	<select id="getSdYData" resultType="com.alibaba.fastjson.JSONObject">
+		select distinct area_name "id",
+		                area_name "name",
+		                '0' "pid",
+		                '1' "level",
+		                '0' "inPlan",
+		                '' "car",
+		                -1 sortNum0,
+		                '' sortNum1
+		from dim_area_conf
+		where limit_level = '1' 
+		<if test="type!=null and type!=''">
+			and limit_type = #{type}
+		</if>
+		and office_id = #{officeId} 
+		union all
+    	select '未分配' "id",'未分配' "name",'0' "pid",'1' "level",'0' "inPlan",'' "car", -1 sortNum0,'' sortNum1 from dual
+		union all
+		select "id", "name", "pid", "level", max("inPlan") "inPlan", "car", min(sortNum) sortNum0, max(etime1) sortNum1
+		  from (select a.worker_id "id",
+		               to_char(s.name) "name",
+		               case when b.limit_level = 1 
+				       then nvl(b.area_name, '未分配') 
+				       else '未分配' end "pid",
+		               '2' "level",
+		               0 as sortNum,
+		               '0' "inPlan",
+		               c.vehicle_number "car",
+		               '' etime1
+		          from am_worker_plan     a,
+		               sys_user           s,
+		               am_division_info   n,
+		               am_division_limits t,
+		               dim_area_conf      b,
+		               (select * from bill_vehicle_bound where status = '1') c
+		         where a.worker_id = s.id(+)
+		           and a.worker_id = n.worker_id(+)
+		           and n.id = t.id(+)
+		           and t.elements = b.id(+)
+		           and a.worker_id = c.oper_id(+)
+		           and s.office_id = #{officeId}
+		           <if test="type!=null and type!=''">
+		           		and (b.limit_type = #{type} or b.limit_type is null)
+		           </if>
+		           and a.pdate in (to_char(sysdate - 1, 'yyyy-mm-dd'),to_char(sysdate, 'yyyy-mm-dd'))
+		           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between stime1 and etime1)
+		           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00'))
+		           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00'))
+		           and a.worker_id in (select operator from jm_task where job_state in (1, 2))
+		        union all
+		        select a.worker_id "id",
+		               to_char(s.name) "name",
+		               case when b.limit_level = 1 
+				       then nvl(b.area_name, '未分配') 
+				       else '未分配' end "pid",
+		               '2' "level",
+		               1 as sortNum,
+		               '1' "inPlan",
+		               c.vehicle_number "car",
+		               a.etime1
+		          from am_worker_plan     a,
+		               sys_user           s,
+		               am_division_info   n,
+		               am_division_limits t,
+		               dim_area_conf      b,
+		               (select * from bill_vehicle_bound where status = '1') c
+		         where a.worker_id = s.id(+)
+		           and a.worker_id = n.worker_id(+)
+		           and n.id = t.id(+)
+		           and t.elements = b.id(+)
+		           and a.worker_id = c.oper_id(+)
+		           and s.office_id = #{officeId}
+		           <if test="type!=null and type!=''">
+		           		and (b.limit_type = #{type} or b.limit_type is null)
+		           </if>
+		           and a.pdate in (to_char(sysdate - 1, 'yyyy-mm-dd'), to_char(sysdate, 'yyyy-mm-dd'), to_char(sysdate + 1, 'yyyy-mm-dd'))
+		           and ((to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime1, '1990-01-01 00:00:00') and nvl(etime1, '1990-01-01 00:00:00')) or
+		               (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00')) or
+		               (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+		        union all
+		        select a.worker_id "id",
+		               to_char(s.name) "name",
+					   case when b.limit_level = 1 
+				       then nvl(b.area_name, '未分配') 
+				       else '未分配' end "pid",
+		               '2' "level",
+		               2 as sortNum,
+		               '0' "inPlan",
+		               c.vehicle_number "car",
+		               '' etime1
+		          from am_worker_plan     a,
+		               sys_user           s,
+		               am_division_info   n,
+		               am_division_limits t,
+		               dim_area_conf      b,
+		               (select * from bill_vehicle_bound where status = '1') c
+		         where a.worker_id = s.id(+)
+		           and a.worker_id = n.worker_id(+)
+		           and n.id = t.id(+)
+		           and t.elements = b.id(+)
+		           and a.worker_id = c.oper_id(+)
+		           and s.office_id = #{officeId}
+		           <if test="type!=null and type!=''">
+		           		and (b.limit_type = #{type} or b.limit_type is null)
+		           </if>
+		           and a.pdate in (to_char(sysdate, 'yyyy-mm-dd'),
+		                           to_char(sysdate + 1, 'yyyy-mm-dd'))
+		           and ((to_char(sysdate + 1 / 24, 'yyyy-mm-dd HH24:mi:ss') between stime1 and etime1) or
+		               (to_char(sysdate + 1 / 24, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00')) or
+		               (to_char(sysdate + 1 / 24, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+		           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between stime1 and etime1)
+		           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00'))
+		           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00'))
+		 		union all
+				 select distinct s.id "id",
+		               to_char(s.name) "name",
+		               case when b.limit_level = 1 
+		           then nvl(b.area_name, '未分配') 
+		           else '未分配' end "pid",
+		               '2' "level",
+		               3 as sortNum,
+		               case when 
+		               ((to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime1, '1990-01-01 00:00:00') and nvl(etime1, '1990-01-01 00:00:00')) or
+		               (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00')) or
+		               (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+		               then '1' 
+		               else '0' end "inPlan",
+		               c.vehicle_number "car",
+		               '' etime1
+		          from am_worker_plan     a,
+		               sys_user           s,
+		               am_division_info   n,
+		               am_division_limits t,
+		               dim_area_conf      b,
+		               (select * from bill_vehicle_bound where status = '1') c
+		         where s.id in (select operator from jm_task where job_state in (1, 2))
+		           and s.id = a.worker_id(+)
+		           and s.id = n.worker_id(+)
+		           and n.id = t.id(+)
+		           and t.elements = b.id(+)
+		           and s.id = c.oper_id(+)
+		           <if test="type!=null and type!=''">
+						and b.limit_type = #{type}
+					</if>
+		           and s.office_id = #{officeId})
+		 group by "id", "name", "pid", "level", "car"
+		 order by sortNum0, sortNum1 desc ,"name" asc
+	</select>
+	<select id="getMonitorYData" resultType="com.alibaba.fastjson.JSONObject">
+		select t."id", t."name", t."pid", t."level"
+		  from (select a."id",
+		               a."name",
+		               a."pid",
+		               a."level",
+		               case
+		                 when b.operator is null then
+		                  NLSSORT(to_char(a."name"), 'NLS_SORT=SCHINESE_PINYIN_M')
+		                 else
+		                  NLSSORT(to_char(b.num), 'NLS_SORT=SCHINESE_PINYIN_M')
+		               end num
+		          from (select distinct "id", "name", "pid", "level"
+		                  from (select a.worker_id "id",
+		                               to_char(s.name) "name",
+		                               '所有航空公司' "pid",
+		                               '2' "level"
+		                          from am_worker_plan     a,
+		                               sys_user           s,
+		                               am_division_info   n,
+		                               am_division_limits t,
+		                               dim_area_conf      b
+		                         where a.worker_id = s.id(+)
+		                           and a.worker_id = n.worker_id(+)
+		                           and n.id = t.id(+)
+		                           and t.elements = b.id(+)
+		                           and s.office_id = #{officeId}
+		                           <if test="type!=null and type!=''">
+						           		and (b.limit_type = #{type} or b.limit_type is null)
+						           </if>
+		                           and a.pdate in (to_char(sysdate - 1, 'yyyy-mm-dd'),
+		                                to_char(sysdate, 'yyyy-mm-dd'))
+		                           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between
+		                               stime1 and etime1)
+		                           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between
+		                               nvl(stime2, '1990-01-01 00:00:00') and
+		                               nvl(etime2, '1990-01-01 00:00:00'))
+		                           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between
+		                               nvl(stime3, '1990-01-01 00:00:00') and
+		                               nvl(etime3, '1990-01-01 00:00:00'))
+		                           and a.worker_id in
+		                               (select operator
+		                                  from jm_task
+		                                 where job_state in (1, 2))
+		                        union all
+		                        select a.worker_id "id",
+		                               to_char(s.name) "name",
+		                               '所有航空公司' "pid",
+		                               '2' "level"
+		                          from am_worker_plan     a,
+		                               sys_user           s,
+		                               am_division_info   n,
+		                               am_division_limits t,
+		                               dim_area_conf      b
+		                         where a.worker_id = s.id(+)
+		                           and a.worker_id = n.worker_id(+)
+		                           and n.id = t.id(+)
+		                           and t.elements = b.id(+)
+		                           and s.office_id = #{officeId}
+		                           <if test="type!=null and type!=''">
+						           		and (b.limit_type = #{type} or b.limit_type is null)
+						           </if>
+		                           and a.pdate in (to_char(sysdate - 1, 'yyyy-mm-dd'),
+		                                to_char(sysdate, 'yyyy-mm-dd'),
+		                                to_char(sysdate + 1, 'yyyy-mm-dd'))
+		                           and ((to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between
+		                               nvl(stime1, '1990-01-01 00:00:00') and
+		                               nvl(etime1, '1990-01-01 00:00:00')) or
+		                               (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between
+		                               nvl(stime2, '1990-01-01 00:00:00') and
+		                               nvl(etime2, '1990-01-01 00:00:00')) or
+		                               (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between
+		                               nvl(stime3, '1990-01-01 00:00:00') and
+		                               nvl(etime3, '1990-01-01 00:00:00')))
+		                        union all
+		                        select a.worker_id "id",
+		                               to_char(s.name) "name",
+		                               '所有航空公司' "pid",
+		                               '2' "level"
+		                          from am_worker_plan     a,
+		                               sys_user           s,
+		                               am_division_info   n,
+		                               am_division_limits t,
+		                               dim_area_conf      b
+		                         where a.worker_id = s.id(+)
+		                           and a.worker_id = n.worker_id(+)
+		                           and n.id = t.id(+)
+		                           and t.elements = b.id(+)
+		                           and s.office_id = #{officeId}
+		                           <if test="type!=null and type!=''">
+						           		and (b.limit_type = #{type} or b.limit_type is null)
+						           </if>
+		                           and a.pdate in (to_char(sysdate, 'yyyy-mm-dd'),
+		                                to_char(sysdate + 1, 'yyyy-mm-dd'))
+		                           and ((to_char(sysdate + 1 / 24,
+		                                         'yyyy-mm-dd HH24:mi:ss') between
+		                               stime1 and etime1) or
+		                               (to_char(sysdate + 1 / 24,
+		                                         'yyyy-mm-dd HH24:mi:ss') between
+		                               nvl(stime2, '1990-01-01 00:00:00') and
+		                               nvl(etime2, '1990-01-01 00:00:00')) or
+		                               (to_char(sysdate + 1 / 24,
+		                                         'yyyy-mm-dd HH24:mi:ss') between
+		                               nvl(stime3, '1990-01-01 00:00:00') and
+		                               nvl(etime3, '1990-01-01 00:00:00')))
+		                           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between
+		                               stime1 and etime1)
+		                           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between
+		                               nvl(stime2, '1990-01-01 00:00:00') and
+		                               nvl(etime2, '1990-01-01 00:00:00'))
+		                           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between
+		                               nvl(stime3, '1990-01-01 00:00:00') and
+		                               nvl(etime3, '1990-01-01 00:00:00')))) a,
+		               (select operator, min(sortnum) num
+		                  from (select operator, min('1' || start_tm) sortnum
+		                          from jm_task
+		                         where start_tm is not null
+		                           and end_tm is null
+		                         group by operator
+		                        union all
+		                        select operator, min('2' || e_start_tm) sortnum
+		                          from jm_task
+		                         where start_tm is null
+		                           and end_tm is null
+		                         group by operator
+		                        union all
+		                        select operator, max('3' || end_tm) sortnum
+		                          from jm_task
+		                         where end_tm is not null
+		                         group by operator)
+		                 where operator is not null
+		                 group by operator
+		                 order by num) b
+		         where a."id" = b.operator(+)
+		         order by num) t
+	</select>
+	<!-- 摆渡车 查询数据 -->
+	<select id="getSdData" parameterType="hashmap" resultType="com.alibaba.fastjson.JSONObject">
+		select a.proc_id "proc",
+           a.id "id",
+           a.fltid "fltid",
+           c.in_fltid "in_fltid",
+           c.out_fltid "out_fltid",
+           b.status "fltStatus",
+           a.job_type "type",
+           case a.del_flag
+             when 1 then
+              'QX'
+             else
+              nvl(a.operator, 'DP')
+           end "operator",
+           a.node_state "icon",
+           case b.in_out_flag 
+             when 'A1' then 
+             concat(a.name, '#'||c.in_flight_number||'#'||'/'||c.out_flight_number) 
+             when 'D1' then 
+             concat(a.name, c.in_flight_number||'/'||'#'||c.out_flight_number||'#') 
+             else 
+             concat(a.name, b.flight_number) 
+             end "text",
+           a.start_tm "start",
+           a.e_start_tm "estart",
+           a.e_end_tm "eend",
+           a.end_tm "end",
+           case a.job_state
+             when '0' then
+              'gray'
+             when '1' then
+              'gray'
+             when '2' then
+              'blue'
+             when '3' then
+              'green'
+             when '4' then
+              'red'
+             when '5' then
+              'green'
+             when '6' then
+              'blue'
+             else
+              'yellow'
+           end "status",
+           d.proc_inst_id as "order_id",
+           e.parent_task_id "ptId"
+      from jm_task a, fd_flt_info b, fd_flt_iorel c,jm_task_proc_inst d,wf_task e
+     where a.fltid = b.fltid(+)
+       and (a.fltid = c.in_fltid or a.fltid = c.out_fltid)
+       and a.id=d.task_id(+)
+       and d.proc_inst_id = e.order_id(+)
+		 <if test="jobKinds!=null and jobKinds!=''">
+		 	and a.job_kind in (${jobKinds})
+		 </if>
+	</select>
+	
+	<select id="getOnlineYData" resultType="com.alibaba.fastjson.JSONObject">
+		select distinct s.id "id",
+               s.name "name",
+               case when b.limit_level = 1 
+           then nvl(b.area_name, '未分配') 
+           else '未分配' end "pid",
+               '2' "level",
+               1 as sortNum,
+               case when 
+               ((to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime1, '1990-01-01 00:00:00') and nvl(etime1, '1990-01-01 00:00:00')) or
+               (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00')) or
+               (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+               then '1' 
+               else '0' end "inPlan",
+               c.vehicle_number "car",
+               '1' "online"
+          from am_worker_plan     a,
+               sys_user           s,
+               am_division_info   n,
+               am_division_limits t,
+               dim_area_conf      b,
+               (select * from bill_vehicle_bound where status = '1') c
+         where s.id in (${onlineStr})
+           and s.id = a.worker_id(+)
+           and s.id = n.worker_id(+)
+           and n.id = t.id(+)
+           and t.elements = b.id(+)
+           and a.worker_id = c.oper_id(+)
+           and s.office_id = '${officeId}'
+           and (a.pdate in (to_char(sysdate - 1, 'yyyy-mm-dd'), to_char(sysdate, 'yyyy-mm-dd'), to_char(sysdate + 1, 'yyyy-mm-dd')) 
+           		or a.pdate is null)
+	</select>
+	
+	<select id="getSdQCSBData" parameterType="hashmap" resultType="com.alibaba.fastjson.JSONObject">
+		select a.proc_id "proc",
+		       a.id "id",
+		       a.fltid "fltid",
+		       c.in_fltid "in_fltid",
+		       c.out_fltid "out_fltid",
+		       b.status "fltStatus",
+		       a.job_type "type",
+		       case a.del_flag
+		         when 1 then
+		          a.job_type||'QX'
+		         else
+		          a.job_type||nvl(a.operator, 'DP')
+		       end "operator",
+		       a.node_state "icon",
+		       concat(a.name, b.flight_number) "text",
+		       a.start_tm "start",
+		       a.e_start_tm "estart",
+		       a.e_end_tm "eend",
+		       a.end_tm "end",
+		       case a.job_state
+		         when '0' then
+		          'gray'
+		         when '1' then
+		          'gray'
+		         when '2' then
+		          'blue'
+		         when '3' then
+		          'green'
+		         when '4' then
+		          'red'
+		         when '5' then
+		          'green'
+		         when '6' then
+		          'blue'
+		         else
+		          'yellow'
+		       end "status"
+		  from jm_task a, fd_flt_info b, fd_flt_iorel c
+		 where a.fltid = b.fltid(+)
+		   and (a.fltid = c.in_fltid or a.fltid = c.out_fltid)
+		   <if test="jobKinds!=null and jobKinds!=''">
+		 	and a.job_kind in (${jobKinds})
+		 </if>
+	</select>
+	<select id="getSdQCCZData" parameterType="hashmap" resultType="com.alibaba.fastjson.JSONObject">
+		select a.proc_id "proc",
+		       a.id "id",
+		       a.fltid "fltid",
+		       c.in_fltid "in_fltid",
+		       c.out_fltid "out_fltid",
+		       b.status "fltStatus",
+		       a.job_type "type",
+		       case a.del_flag
+		         when 1 then
+		          a.job_type||'QX'
+		         else
+		          a.job_type||nvl(a.operator, 'DP')
+		       end "operator",
+		       a.node_state "icon",
+		       concat(a.name, b.flight_number) "text",
+		       a.start_tm "start",
+		       a.e_start_tm "estart",
+		       a.e_end_tm "eend",
+		       a.end_tm "end",
+		       case a.job_state
+		         when '0' then
+		          'gray'
+		         when '1' then
+		          'gray'
+		         when '2' then
+		          'blue'
+		         when '3' then
+		          'green'
+		         when '4' then
+		          'red'
+		         when '5' then
+		          'green'
+		         when '6' then
+		          'blue'
+		         else
+		          'yellow'
+		       end "status"
+		  from jm_task a, fd_flt_info b, fd_flt_iorel c
+		 where a.fltid = b.fltid(+)
+		   and (a.fltid = c.in_fltid or a.fltid = c.out_fltid)
+		   <if test="jobKinds!=null and jobKinds!=''">
+		 	and a.job_kind in (${jobKinds})
+		 </if>
+	</select>
+	
+	<select id="getSdQYCYData" resultType="com.alibaba.fastjson.JSONObject">
+		select distinct area_name "id",
+		                area_name "name",
+		                '0' "pid",
+		                '1' "level",
+		                -1 sortNum0,
+		                '' sortNum1
+		from dim_area_conf
+		where limit_level = '1' 
+		<if test="type!=null and type!=''">
+			and limit_type = #{type}
+		</if>
+		and office_id = #{officeId} 
+		union all
+		  select '未分配' "id",'未分配' "name",'0' "pid",'1' "level",-1 sortNum0,'' sortNum1 from dual
+		union all
+		select "id", "name", "pid", "level", min(sortNum) sortNum0, max(etime1) sortNum1
+		  from (select a.worker_id "id",
+		               to_char(s.name)||v.car_number "name",
+		               case when b.limit_level = 1 
+		           then nvl(b.area_name, '未分配') 
+		           else '未分配' end "pid",
+		               '2' "level",
+		               0 as sortNum,
+		               '' etime1
+		          from am_worker_plan     a,
+		               sys_user           s,
+		               am_division_info   n,
+		               am_division_limits t,
+		               dim_area_conf      b,
+		               (select c.oper_id,d.car_number from bill_vehicle_bound c,jm_device d where c.vehicle_id=d.device_id(+) and c.oper_unbound_date is null) v
+		         where a.worker_id = s.id(+)
+		           and a.worker_id = n.worker_id(+)
+		           and n.id = t.id(+)
+		           and t.elements = b.id(+)
+		           and a.worker_id = v.oper_id(+) 
+		           and s.office_id = #{officeId}
+		           <if test="type!=null and type!=''">
+		           		and (b.limit_type = #{type} or b.limit_type is null)
+		           </if>
+		           and a.pdate in (to_char(sysdate - 1, 'yyyy-mm-dd'),to_char(sysdate, 'yyyy-mm-dd'))
+		           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between stime1 and etime1)
+		           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00'))
+		           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00'))
+		           and a.worker_id in (select operator from jm_task where job_state in (1, 2))
+		        union all
+		        select a.worker_id "id",
+		               to_char(s.name)||v.car_number "name",
+		               case when b.limit_level = 1 
+		           then nvl(b.area_name, '未分配') 
+		           else '未分配' end "pid",
+		               '2' "level",
+		               1 as sortNum,
+		               a.etime1
+		          from am_worker_plan     a,
+		               sys_user           s,
+		               am_division_info   n,
+		               am_division_limits t,
+		               dim_area_conf      b,
+		               (select c.oper_id,d.car_number from bill_vehicle_bound c,jm_device d where c.vehicle_id=d.device_id(+) and c.oper_unbound_date is null) v
+		         where a.worker_id = s.id(+)
+		           and a.worker_id = n.worker_id(+)
+		           and n.id = t.id(+)
+		           and t.elements = b.id(+)
+		           and a.worker_id = v.oper_id(+)
+		           and s.office_id = #{officeId}
+		           <if test="type!=null and type!=''">
+		           		and (b.limit_type = #{type} or b.limit_type is null)
+		           </if>
+		           and a.pdate in (to_char(sysdate - 1, 'yyyy-mm-dd'), to_char(sysdate, 'yyyy-mm-dd'), to_char(sysdate + 1, 'yyyy-mm-dd'))
+		           and ((to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime1, '1990-01-01 00:00:00') and nvl(etime1, '1990-01-01 00:00:00')) or
+		               (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00')) or
+		               (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+		        union all
+		        select a.worker_id "id",
+		               to_char(s.name)||v.car_number "name",
+		         case when b.limit_level = 1 
+		           then nvl(b.area_name, '未分配') 
+		           else '未分配' end "pid",
+		               '2' "level",
+		               2 as sortNum,
+		               '' etime1
+		          from am_worker_plan     a,
+		               sys_user           s,
+		               am_division_info   n,
+		               am_division_limits t,
+		               dim_area_conf      b,
+		               (select c.oper_id,d.car_number from bill_vehicle_bound c,jm_device d where c.vehicle_id=d.device_id(+) and c.oper_unbound_date is null) v
+		         where a.worker_id = s.id(+)
+		           and a.worker_id = n.worker_id(+)
+		           and n.id = t.id(+)
+		           and t.elements = b.id(+)
+		           and a.worker_id = v.oper_id(+) 
+		           and s.office_id = #{officeId}
+		           <if test="type!=null and type!=''">
+		           		and (b.limit_type = #{type} or b.limit_type is null)
+		           </if>
+		           and a.pdate in (to_char(sysdate, 'yyyy-mm-dd'),
+		                           to_char(sysdate + 1, 'yyyy-mm-dd'))
+		           and ((to_char(sysdate + 1 / 24, 'yyyy-mm-dd HH24:mi:ss') between stime1 and etime1) or
+		               (to_char(sysdate + 1 / 24, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00')) or
+		               (to_char(sysdate + 1 / 24, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+		           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between stime1 and etime1)
+		           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00'))
+		           and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+		 group by "id", "name", "pid", "level"
+		 order by sortNum0, sortNum1 desc ,"name" asc
+	</select>
+	
+	<select id="getSdQCSBYData" resultType="com.alibaba.fastjson.JSONObject">
+    		select restype "id",typename "name",'0' "pid",'0' "level",-2 sortNum0,'' sortNum1 from dim_restype where reskind = 'JWQCSBZ'
+		    union all
+		      select restype||'DP' "id",'待排' "name",restype "pid",'1' "level",-1 sortNum0,'' sortNum1 from dim_restype
+		      where reskind = 'JWQCSBZ'
+		    union all
+		      select restype||'QX' "id",'取消' "name",restype "pid",'1' "level",-1 sortNum0,'' sortNum1 from dim_restype
+		      where reskind = 'JWQCSBZ'
+		    union all
+		    select distinct b.restype||a.area_name "id",
+		                    area_name "name",
+		                    b.restype "pid",
+		                    '1' "level",
+		                    -1 sortNum0,
+		                    '' sortNum1
+		    from dim_area_conf a,dim_restype b
+		    where limit_level = '1' 
+		    and b.reskind = 'JWQCSBZ'
+		    <if test="type!=null and type!=''">
+		      and limit_type = #{type}
+		    </if>
+		    and a.office_id = #{officeId}
+		    union all
+		      select restype||'未分配' "id",'未分配' "name",restype "pid",'1' "level",-1 sortNum0,'' sortNum1 from dim_restype
+		      where reskind = 'JWQCSBZ'
+		    union all
+		    select "id", "name", "pid", "level", min(sortNum) sortNum0, max(etime1) sortNum1
+		      from (select n.aptitude_id||a.worker_id "id",
+		                   to_char(s.name) "name",
+		                   case when b.limit_level = 1 
+		               then n.aptitude_id||nvl(b.area_name,'未分配') 
+		               else n.aptitude_id||'未分配' end "pid",
+		                   '2' "level",
+		                   0 as sortNum,
+		                   '' etime1
+		              from am_worker_plan     a,
+		                   sys_user           s,
+		                   am_division_info   n,
+		                   am_division_limits t,
+		                   dim_area_conf      b
+		             where a.worker_id = s.id(+)
+		               and a.worker_id = n.worker_id(+)
+		               and n.id = t.id(+)
+		               and t.elements = b.id(+)
+		               and s.office_id = #{officeId}
+		               <if test="type!=null and type!=''">
+		                   and (b.limit_type = #{type} or b.limit_type is null)
+		               </if>
+		               and a.pdate in (to_char(sysdate - 1, 'yyyy-mm-dd'),to_char(sysdate, 'yyyy-mm-dd'))
+		               and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between stime1 and etime1)
+		               and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00'))
+		               and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00'))
+		               and a.worker_id in (select operator from jm_task where job_state in (1, 2))
+		            union all
+		            select n.aptitude_id||a.worker_id "id",
+		                   to_char(s.name) "name",
+		                   case when b.limit_level = 1 
+		               then n.aptitude_id||nvl(b.area_name, '未分配') 
+		               else n.aptitude_id||'未分配' end "pid",
+		                   '2' "level",
+		                   1 as sortNum,
+		                   a.etime1
+		              from am_worker_plan     a,
+		                   sys_user           s,
+		                   am_division_info   n,
+		                   am_division_limits t,
+		                   dim_area_conf      b
+		             where a.worker_id = s.id(+)
+		               and a.worker_id = n.worker_id(+)
+		               and n.id = t.id(+)
+		               and t.elements = b.id(+)
+		               and s.office_id = #{officeId}
+		               <if test="type!=null and type!=''">
+		                   and (b.limit_type = #{type} or b.limit_type is null)
+		               </if>
+		               and a.pdate in (to_char(sysdate - 1, 'yyyy-mm-dd'), to_char(sysdate, 'yyyy-mm-dd'), to_char(sysdate + 1, 'yyyy-mm-dd'))
+		               and ((to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime1, '1990-01-01 00:00:00') and nvl(etime1, '1990-01-01 00:00:00')) or
+		                   (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00')) or
+		                   (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+		            union all
+		            select n.aptitude_id||a.worker_id "id",
+		                   to_char(s.name) "name",
+		             case when b.limit_level = 1 
+		               then n.aptitude_id||nvl(b.area_name, '未分配') 
+		               else n.aptitude_id||'未分配' end "pid",
+		                   '2' "level",
+		                   2 as sortNum,
+		                   '' etime1
+		              from am_worker_plan     a,
+		                   sys_user           s,
+		                   am_division_info   n,
+		                   am_division_limits t,
+		                   dim_area_conf      b
+		             where a.worker_id = s.id(+)
+		               and a.worker_id = n.worker_id(+)
+		               and n.id = t.id(+)
+		               and t.elements = b.id(+)
+		               and s.office_id = #{officeId}
+		               <if test="type!=null and type!=''">
+		                   and (b.limit_type = #{type} or b.limit_type is null)
+		               </if>
+		               and a.pdate in (to_char(sysdate, 'yyyy-mm-dd'),
+		                               to_char(sysdate + 1, 'yyyy-mm-dd'))
+		               and ((to_char(sysdate + 1 / 24, 'yyyy-mm-dd HH24:mi:ss') between stime1 and etime1) or
+		                   (to_char(sysdate + 1 / 24, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00')) or
+		                   (to_char(sysdate + 1 / 24, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+		               and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between stime1 and etime1)
+		               and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00'))
+		               and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+		     group by "id", "name", "pid", "level"
+		     order by sortNum0, sortNum1 desc ,"name" asc
+	</select>
+	<select id="getSdQCCZYData" resultType="com.alibaba.fastjson.JSONObject">
+    		select restype "id",typename "name",'0' "pid",'0' "level",-2 sortNum0,'' sortNum1 from dim_restype where reskind = 'JWQCCZZ'
+		    union all
+		      select restype||'DP' "id",'待排' "name",restype "pid",'1' "level",-1 sortNum0,'' sortNum1 from dim_restype
+		      where reskind = 'JWQCCZZ'
+		    union all
+		      select restype||'QX' "id",'取消' "name",restype "pid",'1' "level",-1 sortNum0,'' sortNum1 from dim_restype
+		      where reskind = 'JWQCCZZ'
+		    union all
+		    select distinct b.restype||a.area_name "id",
+		                    area_name "name",
+		                    b.restype "pid",
+		                    '1' "level",
+		                    -1 sortNum0,
+		                    '' sortNum1
+		    from dim_area_conf a,dim_restype b
+		    where limit_level = '1' 
+		    and b.reskind = 'JWQCCZZ'
+		    <if test="type!=null and type!=''">
+		      and limit_type = #{type}
+		    </if>
+		    and a.office_id = #{officeId}
+		    union all
+		      select restype||'未分配' "id",'未分配' "name",restype "pid",'1' "level",-1 sortNum0,'' sortNum1 from dim_restype
+		      where reskind = 'JWQCCZZ'
+		    union all
+		    select "id", "name", "pid", "level", min(sortNum) sortNum0, max(etime1) sortNum1
+		      from (select n.aptitude_id||a.worker_id "id",
+		                   to_char(s.name) "name",
+		                   case when b.limit_level = 1 
+		               then n.aptitude_id||nvl(b.area_name,'未分配') 
+		               else n.aptitude_id||'未分配' end "pid",
+		                   '2' "level",
+		                   0 as sortNum,
+		                   '' etime1
+		              from am_worker_plan     a,
+		                   sys_user           s,
+		                   am_division_info   n,
+		                   am_division_limits t,
+		                   dim_area_conf      b
+		             where a.worker_id = s.id(+)
+		               and a.worker_id = n.worker_id(+)
+		               and n.id = t.id(+)
+		               and t.elements = b.id(+)
+		               and s.office_id = #{officeId}
+		               <if test="type!=null and type!=''">
+		                   and (b.limit_type = #{type} or b.limit_type is null)
+		               </if>
+		               and a.pdate in (to_char(sysdate - 1, 'yyyy-mm-dd'),to_char(sysdate, 'yyyy-mm-dd'))
+		               and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between stime1 and etime1)
+		               and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00'))
+		               and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00'))
+		               and a.worker_id in (select operator from jm_task where job_state in (1, 2))
+		            union all
+		            select n.aptitude_id||a.worker_id "id",
+		                   to_char(s.name) "name",
+		                   case when b.limit_level = 1 
+		               then n.aptitude_id||nvl(b.area_name, '未分配') 
+		               else n.aptitude_id||'未分配' end "pid",
+		                   '2' "level",
+		                   1 as sortNum,
+		                   a.etime1
+		              from am_worker_plan     a,
+		                   sys_user           s,
+		                   am_division_info   n,
+		                   am_division_limits t,
+		                   dim_area_conf      b
+		             where a.worker_id = s.id(+)
+		               and a.worker_id = n.worker_id(+)
+		               and n.id = t.id(+)
+		               and t.elements = b.id(+)
+		               and s.office_id = #{officeId}
+		               <if test="type!=null and type!=''">
+		                   and (b.limit_type = #{type} or b.limit_type is null)
+		               </if>
+		               and a.pdate in (to_char(sysdate - 1, 'yyyy-mm-dd'), to_char(sysdate, 'yyyy-mm-dd'), to_char(sysdate + 1, 'yyyy-mm-dd'))
+		               and ((to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime1, '1990-01-01 00:00:00') and nvl(etime1, '1990-01-01 00:00:00')) or
+		                   (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00')) or
+		                   (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+		            union all
+		            select n.aptitude_id||a.worker_id "id",
+		                   to_char(s.name) "name",
+		             case when b.limit_level = 1 
+		               then n.aptitude_id||nvl(b.area_name, '未分配') 
+		               else n.aptitude_id||'未分配' end "pid",
+		                   '2' "level",
+		                   2 as sortNum,
+		                   '' etime1
+		              from am_worker_plan     a,
+		                   sys_user           s,
+		                   am_division_info   n,
+		                   am_division_limits t,
+		                   dim_area_conf      b
+		             where a.worker_id = s.id(+)
+		               and a.worker_id = n.worker_id(+)
+		               and n.id = t.id(+)
+		               and t.elements = b.id(+)
+		               and s.office_id = #{officeId}
+		               <if test="type!=null and type!=''">
+		                   and (b.limit_type = #{type} or b.limit_type is null)
+		               </if>
+		               and a.pdate in (to_char(sysdate, 'yyyy-mm-dd'),
+		                               to_char(sysdate + 1, 'yyyy-mm-dd'))
+		               and ((to_char(sysdate + 1 / 24, 'yyyy-mm-dd HH24:mi:ss') between stime1 and etime1) or
+		                   (to_char(sysdate + 1 / 24, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00')) or
+		                   (to_char(sysdate + 1 / 24, 'yyyy-mm-dd HH24:mi:ss') between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+		               and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between stime1 and etime1)
+		               and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime2, '1990-01-01 00:00:00') and nvl(etime2, '1990-01-01 00:00:00'))
+		               and (to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') not between nvl(stime3, '1990-01-01 00:00:00') and nvl(etime3, '1990-01-01 00:00:00')))
+		     group by "id", "name", "pid", "level"
+		     order by sortNum0, sortNum1 desc ,"name" asc
+	</select>
+	
+	<select id="getGanttInfo" resultType="com.alibaba.fastjson.JSONObject">
+		select a.name "taskName",
+		       case f.in_out_flag when 'A1' then
+	           nvl('#'||c.flight_number||'#','-') || '/' || nvl(d.flight_number,'-') 
+	           when 'D1' then 
+	           nvl(c.flight_number,'-') || '/' || nvl('#'||d.flight_number||'#','-') 
+	           when 'A0' then
+	           nvl('#'||c.flight_number||'#','-') || '/' || '-'
+	           when 'D0' then
+	           '-' || '/' || nvl('#'||d.flight_number||'#','-')
+	           else 
+	           nvl(c.flight_number,'-') || '/' || nvl(d.flight_number,'-') end "fltNum",
+		       f.aircraft_number "actNum",
+		       f.acttype_code "actType",
+		       f.actstand_code "stand",
+		       to_daytime(c.sta) "sta",
+		       to_daytime(c.eta) "eta",
+		       to_daytime(c.ata) "ata",
+		       to_daytime(d.std) "std",
+		       to_daytime(d.etd) "etd",
+		       to_daytime(d.atd) "atd",
+		       c.vip_flag "inVip",
+		       d.vip_flag "outVip",
+		       c.gate "inGate",
+		       d.gate "outGate",
+		       e.vehicle_number "carNum"
+		  from jm_task a, fd_flt_iorel b, fd_flt_info c, fd_flt_info d,(select oper_id,vehicle_number from bill_vehicle_bound where status = '1') e,fd_flt_info f 
+		 where (a.fltid = b.in_fltid or a.fltid = b.out_fltid)
+		   and b.in_fltid = c.fltid(+) 
+		   and b.out_fltid = d.fltid(+) 
+		   and a.operator = e.oper_id(+)
+		   and a.fltid = f.fltid
+		   and a.id = #{id}
+	</select>
+	
+	<select id="getGanttNodeTime" resultType="com.alibaba.fastjson.JSONObject">
+		select k.label "name",
+		       nvl(to_daytime(n.expire_time), '--') "etime",
+		       nvl(to_daytime(n.finish_time), '--') "atime"
+		  from (select e.node_id, e.sort_num
+		          from jm_task d, jm_rule_node_rel e
+		         where d.rule_proc_id = e.rule_proc_id
+		           and d.id = '${taskId}') m,
+		       (select c.node_id, c.display_name, c.expire_time, c.finish_time
+		          from jm_task a,
+		               jm_task_proc_inst b,
+		               (select p.order_id,
+		                       p.node_id,
+		                       p.display_name,
+		                       p.expire_time,
+		                       p.finish_time
+		                  from wf_task p
+		                union all
+		                select q.order_id,
+		                       q.node_id,
+		                       q.display_name,
+		                       q.expire_time,
+		                       q.finish_time
+		                  from wf_hist_task q) c
+		         where a.id = b.task_id
+		           and b.proc_inst_id = c.order_id
+		           and a.id = '${taskId}') n,
+		       wf_node k
+		 where m.node_id = n.node_id(+)
+		   and m.node_id = k.id
+		 order by m.sort_num
+	</select>
+	
+	<select id="getMembers" resultType="com.alibaba.fastjson.JSONObject">
+		select a.worker_id "id", b.name "name"
+		  from am_team_worker_rel a, sys_user b
+		 where a.worker_id = b.id
+		   and a.if_leader = 0
+		   and a.team_id =
+		       (select team_id from am_team_worker_rel where worker_id = #{id})
+		 order by b.name
+	</select>
+	
+	<update id="restoreTask">
+		update jm_task set operator = '',job_state = '0',ACT_ARRANGE_TM='',end_tm='',node_state='未',node_state_tm='' where id = #{id}
+	</update>
+	<!-- 取消未分人任务 -->
+	<update id="cancleTask">
+		update jm_task set del_flag = '1' where id = #{id}
+	</update>
+	<insert id="logCancleTask">
+		insert into jm_task_log (id,task_id,oper_type,termtyp,oper_user,oper_time)
+		values (jm_task_log_s.nextval,${id},10,1,#{user},sysdate)
+	</insert>
+	<!-- 分人启动流程前更改jm_task -->
+	<update id="allocationTask">
+		update jm_task set operator = #{actor},job_state = '1',ACT_ARRANGE_TM=to_char(sysdate,'yyyy-mm-dd hh24:mi:ss') where id = #{id}
+	</update>
+	<!-- 预排任务时手动拖回待排池 -->
+	<update id="wthResetTask">
+		update jm_task set operator = '',job_state = '0',ACT_ARRANGE_TM='' where id = #{id}
+	</update>
+	<select id="getTaskOperatorCount" resultType="integer">
+		select count(1)
+		from jm_task a left join jm_task b on a.fltid = b.fltid
+		where b.id = #{id} and a.operator = #{actor}
+	</select>
+	<select id="getTaskCount" resultType="integer">
+		select count(1) from jm_task where id=#{id} and operator is not null
+	</select>
+	
+	<select id="getOperatorCount" resultType="integer">
+		select count(1) from jm_task where operator = #{actor} and job_state in ('1','2')
+	</select>
+	
+	<select id="getLimitTypes" resultType="hashmap">
+		select distinct limit_type "type"
+		from dim_area_conf 
+		where office_id = #{officeId} 
+		order by limit_type
+	</select>
+	<!-- 获取客梯车保障区域列表 -->
+	<select id="getResGanttArea" resultType="com.alibaba.fastjson.JSONObject">
+		select a.id "id",
+		       a.area_name "name",
+		       case a.area_type
+		         when 0 then
+		          '机位'
+		         when 1 then
+		          '机型'
+		       end "attr",
+		       b.name "createUser",
+		       to_char(a.update_time, 'yyyy-MM-dd HH24:mi') "createTime"
+		  from am_device_area a, sys_user b
+		 where a.operator = b.id
+	</select>
+	<!-- 获取客梯车保障区域中未被选择过的机位 -->
+	<select id="getAllJW" resultType="com.alibaba.fastjson.JSONObject">
+		select *
+		  from (select '0' "pId", 'unknow' "id", '未知' "name"
+		          from dual
+		        union
+		        select distinct '0' "pId",
+		                        nvl(apron_code, nvl2(group_code,'P'||group_code,'unknow')) "id",
+		                        nvl(apron_code, nvl2(group_code,'P'||group_code,'未知')) "name"
+		          from dim_bay
+		         where bay_code in
+		               (select distinct bay_code
+		                  from dim_bay
+		                 where bay_code not in
+		                       (select element_code from am_device_area_element a,am_device_area b where a.id = b.id and b.area_type = 0))
+		        union all
+		        select nvl(apron_code, nvl2(group_code,'P'||group_code,'unknow')) "pId",
+		               bay_code "id",
+		               bay_code "name"
+		          from dim_bay
+		         where bay_code not in
+		               (select element_code from am_device_area_element e,am_device_area a where e.id = a.id and a.area_type = 0))
+		 order by "pId", "id"
+	</select>
+	<!-- 获取选中区域的机位信息 -->
+	<select id="getJWById" resultType="com.alibaba.fastjson.JSONObject">
+	    select *
+		  from (select distinct '0' "pId",
+		                        nvl(apron_code, nvl2(group_code,'P'||group_code,'unknow')) "id",
+		                        nvl(apron_code, nvl2(group_code,'P'||group_code,'未知')) "name"
+		          from dim_bay
+		         where apron_code in
+		               (select distinct apron_code
+		                  from dim_bay
+		                 where bay_code in (select a.element_code
+		                                      from am_device_area_element a,am_device_area b 
+		                                     where a.id = b.id and b.id = '${id}' and b.area_type = '0'))
+		        union all
+		        select nvl(apron_code, nvl2(group_code,'P'||group_code,'unknow')) "pId",
+		               bay_code "id",
+		               bay_code "name"
+		          from dim_bay
+		         where bay_code in (select a.element_code
+		                              from am_device_area_element a,am_device_area b
+		                             where a.id = b.id and b.id = '${id}' and b.area_type = '0'))
+		 order by "pId", "id"
+	</select>
+	<!-- 获取全部机型 -->
+	<select id="getAllJX" resultType="com.alibaba.fastjson.JSONObject">
+		select todb_actype_code "actype",description_cn||' ('||todb_actype_code||')' "actName" from dim_actype order by todb_actype_code
+	</select>
+	<!-- 获取选中区域的机型信息 -->
+	<select id="getJXById" resultType="com.alibaba.fastjson.JSONObject">
+		select c.todb_actype_code "actype",c.description_cn||' ('||todb_actype_code||')' "actName"
+		  from am_device_area_element a, am_device_area b, dim_actype c
+		 where a.id = b.id
+		   and a.element_code = c.todb_actype_code 
+		   and b.id = '${id}'
+		   and b.area_type = '1'
+		 order by element_code
+	</select>
+	<!-- 获取除选中机型之外的机型信息 -->
+	<select id="getJXExceptId" resultType="com.alibaba.fastjson.JSONObject">
+		select todb_actype_code "actype",description_cn||' ('||todb_actype_code||')' "actName" 
+		from dim_actype
+		where todb_actype_code not in
+		(select a.element_code
+		  from am_device_area_element a, am_device_area b
+		 where a.id = b.id
+		   and b.id = '${id}'
+		   and b.area_type = '1')
+		order by todb_actype_code
+	</select>
+	<!-- 保存客梯车保障区域 -->
+	<insert id="saveResGanttArea">
+		<selectKey resultType="java.lang.Long" order="BEFORE" keyProperty="areaId">
+        	select am_device_area_s.nextval from dual
+      	</selectKey>
+      	insert into am_device_area (id,area_name,area_type,office_id,operator) 
+      	values (${areaId},#{name},#{type},'${officeId}','${user}')
+	</insert>
+	<!-- 保存客梯车保障区域机位、机型信息 -->
+	<insert id="saveResGanttAreaEle" parameterType="hashmap">
+		insert all 
+		<foreach collection="data" index="index" item="item" open="" separator=" " close="">
+	    	into am_device_area_element (id,element_code) values (${id},'${item}')
+	    </foreach>
+	    select 1 from dual
+	</insert>
+	<!-- 修改客梯车保障区域 -->
+	<update id="updateResGanttArea">
+		update am_device_area set area_name = #{name},area_type = #{type},office_id = '${officeId}',operator = '${user}' 
+		where id = ${areaId}
+	</update>
+	<!-- 删除客梯车保障区域 -->
+	<delete id="deleteResGanttArea">
+		delete from am_device_area where id = ${id}
+	</delete>
+	<!-- 删除客梯车保障区域机位、机型信息 -->
+	<delete id="deleteResGanttAreaEle">
+		delete from am_device_area_element where id = ${id}
+	</delete>
+	
+	<!-- 获取客梯车保障区域 -->
+	<select id="getAreaByType"  resultType="com.alibaba.fastjson.JSONObject">
+		select id "id",area_name "name" from am_device_area where area_type = '${type}'
+	</select>
+	<!-- 获取客梯车保障设置列表 -->
+	<select id="getResGanttSet" resultType="com.alibaba.fastjson.JSONObject">
+		select b.type_name "name",b.inner_number "number",
+		case b.device_status when 1 then '可用' when 2 then '停用' when 3 then '维修中' end "status",
+		d.area_name "area",
+		f.area_name "areaDef",
+		a.jw_limit "areaCode",
+		a.jw_def_limit "areaDefCode",
+		a.jx_limit "actypeCode",
+		e.area_name "actype"
+		from am_device_aptitude_ktc a,jm_device b,jm_device_type c,am_device_area d,am_device_area e,am_device_area f
+		where a.inner_number(+) = b.inner_number 
+		and b.type_id = c.type_id 
+		and a.jw_limit = d.id(+)
+		and a.jx_limit = e.id(+)
+		and a.jw_def_limit = f.id(+)
+		and c.reskind = 'ZPKTC'
+		order by b.inner_number
+	</select>
+	<!-- 根据车辆自编号获取车辆可保障的机位 -->
+	<select id="getAreaByNum" resultType="string">
+		select jw_str from am_device_aptitude_ktc where inner_number = '${num}'
+	</select>
+	<select id="getDefAreaByNum" resultType="string">
+		select jw_def_str from am_device_aptitude_ktc where inner_number = '${num}'
+	</select>
+	<select id="getAreaByStands" resultType="com.alibaba.fastjson.JSONObject">
+		select distinct '0' "pId",nvl(apron_code,nvl2(group_code,'P'||group_code,'unknow')) "id",nvl(apron_code,nvl2(group_code,'P'||group_code,'未知')) "name" 
+		from dim_bay where bay_code in (${stands})
+		union all
+		select nvl(apron_code,nvl2(group_code,'P'||group_code,'unknow')) "pId",bay_code "id",bay_code "name" from dim_bay where bay_code in (${stands})
+	</select>
+	
+	<select id="getAreaInfoByNum" resultType="com.alibaba.fastjson.JSONObject">
+		select jw_limit "jw",jx_limit "jx",jw_str "stands", jw_def_limit "jw_def",jw_def_str "stands_def"
+		from am_device_aptitude_ktc where inner_number = '${num}'
+	</select>
+	
+	<delete id="deleteResSet">
+		delete from am_device_aptitude_ktc where inner_number = #{num}
+	</delete>
+	
+	<insert id="saveResSet" parameterType="hashmap">
+		insert into am_device_aptitude_ktc (inner_number,jw_limit,jw_def_limit,jw_str,jw_def_str,jx_limit,operator) 
+		values (#{num},#{area},#{area},#{nodeList},#{nodeList},#{actype},'${user}')
+	</insert>
+	
+	<update id="updateResSet"  parameterType="hashmap">
+		update am_device_aptitude_ktc
+		<set>
+			<if test="area != null">
+				jw_limit = #{area},
+			</if>
+			<if test="nodeList != null">
+				jw_str = #{nodeList},
+			</if>
+			<if test="actype != null">
+				jx_limit = #{actype},
+			</if>
+			<if test="areaDef != null">
+				jw_def_limit = #{areaDef},
+			</if>
+			<if test="nodeListDef != null">
+				jw_def_str = #{nodeListDef},
+			</if>
+		</set>
+		<where>
+			inner_number = #{num}
+		</where>
+	</update>
+	
+	<select id="getResGanttYData" resultType="com.alibaba.fastjson.JSONObject">
+		select 0 "pid",to_char(id) "id",area_name "name",'1' "level",'1' "carType",'0' "moved" from am_device_area where area_type = '0' 
+		union all
+		select id "pid",'DP'||id "id",'待排' "name",'2' "level",'1' "carType",'0' "moved" from am_device_area where area_type = '0' 
+		union all
+		select a.jw_limit "pId",a.inner_number "id",b.type_name||a.inner_number "name",'2' "level",
+		case c.type_id when 325 then '1' when 326 then '1' else '0' end "carType", 
+		case when a.jw_str != a.jw_def_str then '1' else '0' end "moved" 
+		from am_device_aptitude_ktc a,jm_device b,jm_device_type c
+		where a.inner_number = b.inner_number 
+		and b.type_id = c.type_id 
+		and b.device_status = 1
+		and c.reskind = 'ZPKTC'
+	</select>
+	
+	<select id="getStandsByArea" resultType="com.alibaba.fastjson.JSONObject">
+		select element_code "stand" from am_device_area_element where id = ${area}
+	</select>
+	
+	<update id="updateResCarArea" parameterType="hashmap">
+		update am_device_aptitude_ktc set jw_limit = ${area},jw_str = #{stands} where inner_number = #{num}
+	</update>
+	
+	<delete id="releaseTasks">
+		delete from jm_task_plus where attr_code in ('s_inner_number','s_car_typeid') and taskid in (${tasks})
+	</delete>
+	
+	<select id="manualSelectCars" resultType="com.alibaba.fastjson.JSONObject">
+		select distinct c.inner_number "cars"
+		  from am_device_area_element a,
+		       am_device_area         b,
+		       am_device_aptitude_ktc c,
+		       dim_actype             d
+		 where a.id = b.id
+		   and b.area_type = '1'
+		   and a.id = c.jx_limit
+		   and a.element_code = '${actType}'
+		   and c.jw_str like '%${stand}%'
+	</select>
+	
+	<select id="checkCar" resultType="com.alibaba.fastjson.JSONObject">
+		select * from jm_task_plus where attr_code = 's_inner_number' and taskid in (${kTaskId},${cTaskId})
+	</select>
+	
+	<insert id="insertCar" parameterType="hashmap">
+		insert into jm_task_plus (id,taskid,attr_code,attr_value) 
+		values (jm_task_plus_s.nextval,${taskId},'s_inner_number',#{car})
+	</insert>
+	
+	<update id="changeCar" parameterType="hashmap">
+		update jm_task_plus set attr_value = #{car} where attr_code = 's_inner_number' and taskid in (${kTaskId},${cTaskId})
+	</update>
+	
+	<select id="getResDefaultTimes" resultType="com.alibaba.fastjson.JSONObject">
+		select type "type",value "time" from dim_common_dict where type in ('resStart','resEnd')
+	</select>
+	
+	<update id="saveResDefaultStartTime">
+		update dim_common_dict set value = #{start} where type = 'resStart'
+	</update>
+	
+	<update id="saveResDefaultEndTime">
+		update dim_common_dict set value = #{end} where type = 'resEnd'
+	</update>
+	
+	<delete id="truncateTasks">
+		delete from jm_task_plus
+		 where attr_code in
+		       ('s_inner_number', 's_car_typeid')
+		   and taskid in
+		       (select b.id
+		          from jm_task_plus_v a, jm_task b, fd_flt_info c
+		         where b.id = a.taskid(+)
+		           and b.job_kind = 'ZPKTC'
+		           and b.fltid = c.fltid
+		           and ((in_out_flag in ('A0', 'A1') and
+		               STA between #{start} and #{end}) or
+		               (in_out_flag in ('D0', 'D1') and
+		               STD between #{start} and #{end})))
+	</delete>
+	
+	<update id="resetWithoutTask">
+		update am_device_aptitude_ktc set jw_limit = jw_def_limit,jw_str = jw_def_str where inner_number = '${id}'
+	</update>
+	
+	<update id="stopVehicle">
+		update jm_device 
+		set DEVICE_STATUS = 2 , REMARK = #{reason}
+		where DEVICE_ID = #{id}
+	</update>
+	
+	<update id="resumeVehicle">
+		update jm_device 
+		set DEVICE_STATUS = 1 , REMARK = ''
+		where DEVICE_ID = #{id}
+	</update>
+	
+	<select id="getVehicleFltCount" resultType="integer">
+		select count(1) from jm_ktc_car_v
+		where DEVICE_ID = #{id} and FLIGHT_NUMBER is not null
+	</select>
+	<select id="getCurrentBlockupWorker" resultType="String">
+		<![CDATA[
+		 select worker_id
+		   from am_worker_blockup
+		  where to_date(blockup_stime, 'yyyy-mm-dd hh24:mi:ss') <= sysdate
+		    and to_date(blockup_etime, 'yyyy-mm-dd hh24:mi:ss') >= sysdate
+		]]>
+	</select>
+	
+	<!--******************************** 任务预排甘特图 **************************************-->
+	<!-- 获取保障类型 -->
+	<select id="getReskind" resultType="String">
+		select reskind from dim_reskind where depid = '${officeId}'
+	</select>
+	<!-- 获取预排甘特图Y轴数据 -->
+	<select id="getWthYData" resultType="com.alibaba.fastjson.JSONObject">
+		select distinct area_name "id",
+		                area_name "name",
+		                '0' "pid",
+		                '1' "level",
+		                -1 sortNum0,
+		                '' sortNum1
+		from dim_area_conf
+		where limit_level = '1' 
+		<if test="type!=null and type!=''">
+			and limit_type = #{type}
+		</if>
+		and office_id = #{officeId} 
+		union all
+    	select '未分配' "id",'未分配' "name",'0' "pid",'1' "level",-1 sortNum0,'' sortNum1 from dual
+		union all
+		select "id", "name", "pid", "level", min(sortNum) sortNum0, max(etime1) sortNum1
+		  from (select a.worker_id "id",
+		               to_char(s.name) "name",
+		               case when b.limit_level = 1 
+				       then nvl(b.area_name, '未分配') 
+				       else '未分配' end "pid",
+		               '2' "level",
+		               0 as sortNum,
+		               '' etime1
+		          from am_worker_plan     a,
+		               sys_user           s,
+		               am_division_info   n,
+		               am_division_limits t,
+		               dim_area_conf      b
+		         where a.worker_id = s.id(+)
+		           and a.worker_id = n.worker_id(+)
+		           and n.id = t.id(+)
+		           and t.elements = b.id(+)
+		           and s.office_id = #{officeId}
+		           <if test="type!=null and type!=''">
+		           		and (b.limit_type = #{type} or b.limit_type is null)
+		           </if>
+		           and a.pdate in (to_char(sysdate - 1, 'yyyy-mm-dd'),to_char(sysdate, 'yyyy-mm-dd'),to_char(sysdate + 1, 'yyyy-mm-dd'))
+		           and to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') &lt; etime1
+		           and to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') &lt; nvl(etime2, '2500-01-01 00:00:00')
+		           and to_char(sysdate, 'yyyy-mm-dd HH24:mi:ss') &lt; nvl(etime3, '2500-01-01 00:00:00'))
+		 group by "id", "name", "pid", "level"
+		 order by sortNum0, sortNum1 desc ,"name" asc
+	</select>
+	<!-- 获取预排甘特图数据 -->
+	<select id="ganttWthData" resultType="com.alibaba.fastjson.JSONObject">
+		select a.proc_id "proc",
+	           a.id "id",
+	           a.fltid "fltid",
+	           c.in_fltid "in_fltid",
+	           c.out_fltid "out_fltid",
+	           b.status "fltStatus",
+	           a.job_type "type",
+	           case a.del_flag
+	             when 1 then
+	              'QX'
+	             else
+	              nvl(a.operator, 'DP')
+	           end "operator",
+	           a.node_state "icon",
+	           case b.in_out_flag 
+	             when 'A1' then 
+	             concat(a.name, '#'||c.in_flight_number||'#'||'/'||c.out_flight_number) 
+	             when 'D1' then 
+	             concat(a.name, c.in_flight_number||'/'||'#'||c.out_flight_number||'#') 
+	             else 
+	             concat(a.name, b.flight_number) 
+	             end "text",
+	           a.start_tm "start",
+	           a.e_start_tm "estart",
+	           a.e_end_tm "eend",
+	           a.end_tm "end",
+	           case a.job_state
+	             when '0' then
+	              'gray'
+	             when '1' then
+	              'gray'
+	             when '2' then
+	              'blue'
+	             else
+	              'yellow'
+	           end "status",
+	           proc_inst_id as "order_id"
+	      from jm_task a, fd_flt_info b, fd_flt_iorel c,jm_task_proc_inst d
+	     where a.fltid = b.fltid(+)
+	       and (a.fltid = c.in_fltid or a.fltid = c.out_fltid)
+	       and a.id=d.task_id(+)
+	       and (a.end_tm is null or to_date(a.end_tm,'yyyy-mm-dd hh24:mi:ss')>sysdate)
+	       and a.job_state in ('0','1')
+	       <if test="reskind!=null and reskind!=''">
+		 	and a.job_kind in (${jobKinds})
+		   </if>
+	</select>
+</mapper>

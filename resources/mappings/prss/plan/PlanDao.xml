@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.plan.dao.PlanDao">
+      
+      <resultMap type="com.alibaba.fastjson.JSONObject" id="getSelect2Source">
+        <result column="value" property="value"/>
+        <result column="text" property="text"/>
+      </resultMap>
+	  <select id="getSelect2Source" resultMap="getSelect2Source" parameterType="String">
+	       ${sql}
+	  </select>
+</mapper>

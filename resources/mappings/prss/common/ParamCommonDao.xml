@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.common.dao.ParamCommonDao">
+	
+	<select id="getColumn" resultType="com.alibaba.fastjson.JSONObject">
+		select * from sys_grid_column where id in(${colids})
+	</select>
+	
+	 <!--变量列表 -->
+	<select id="getVariable" parameterType="HashMap" resultType="com.alibaba.fastjson.JSONObject">
+         SELECT A.ID "no",
+		       A.COL_DESC "name",
+		       A.IS_CHG "ischg",
+		       LOWER(COL_ALIAS) "en"
+		  FROM SYS_GRID_COLUMN A, SYS_GRID_TABLE B
+		 WHERE 1 = 1
+		   AND A.TAB_ID = B.ID
+        <if test="schema != null and schema !='' ">
+		   AND b.schema_id = #{schema}
+		</if>
+		<if test="schema == null">
+			AND b.schema_id = 77
+			<!-- AND a.id NOT IN (190,191) -->
+		
+		</if>
+        <if test="text != null and text !='' ">
+			AND COL_DESC LIKE '%${text}%'
+		</if>
+		ORDER BY COL_DESC
+	</select>
+	
+	<select id="getAutoRuleId" resultType="string">
+		select
+		RM_RULE_INFO_S.nextval from dual
+	</select>
+	
+	<insert id="insertAutoRule" parameterType="com.alibaba.fastjson.JSONObject">
+		insert into
+		RM_RULE_INFO (ID,COLIDS,RULE,IF_MANUAL,IF_VALID,CREATE_TIME,CREATE_USER,TEXT,DRL_STR)
+		values
+		(#{vo.ruleId},#{vo.colids},#{vo.drools},0,1,sysdate,${vo.userId},#{vo.condition},#{vo.expression})
+	</insert>
+	
+	<update id="updateAutoRule" parameterType="com.alibaba.fastjson.JSONObject">
+		update RM_RULE_INFO
+		set COLIDS = #{vo.colids},RULE = #{vo.drools},UPDATE_TIME= sysdate,
+		UPDATE_USER=#{vo.userId},TEXT=#{vo.condition},DRL_STR = #{vo.expression}
+		where ID =
+		#{vo.ruleId}
+	</update>
+	
+	<delete id="deleteAutoRuleList" parameterType="string">
+		DELETE FROM RM_RULE_INFO
+		WHERE ID IN (SELECT RULE_ID FROM TM_SEND_AUTO
+		WHERE ID IN
+		<foreach item="id" index="index" collection="array" open="("
+			separator="," close=")">
+			#{id}
+		</foreach>
+		union 
+		SELECT RULEID FROM MM_SUBSCRIBE T 
+		WHERE ID IN
+		<foreach item="id" index="index" collection="array" open="("
+			separator="," close=")">
+			#{id}
+		</foreach>
+		)
+	</delete>
+	
+	<select id="getRuleList" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT T.NAME ,T.TEXT,T.ID FROM RM_RULE_INFO T where t.text is not null
+	</select>
+	
+	<select id="getRuleById" resultType="com.alibaba.fastjson.JSONObject" parameterType="string">
+		SELECT t.* FROM RM_RULE_INFO T WHERE ID = ${id}
+	</select>
+</mapper>

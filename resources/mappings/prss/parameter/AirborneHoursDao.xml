@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.parameter.dao.AirborneHoursDao">
+
+
+	<sql id="Base_Column_List">
+		ID, DEPART_APT3CODE, ARRIVAL_APT3CODE, ACTTYPE_CODE, STANDARD_FLT_TIME, DRIFT_VALUE, BEGIN_FLT_DATE, END_FLT_DATE,  OPER_USER, OPER_DATE
+	</sql>
+	
+	<sql id="Base_update_List">
+		DEPART_APT3CODE, ARRIVAL_APT3CODE, ACTTYPE_CODE, STANDARD_FLT_TIME, DRIFT_VALUE, BEGIN_FLT_DATE, END_FLT_DATE,  OPER_USER, OPER_DATE
+	</sql>
+	
+	<parameterMap id="sendMap" type="java.util.HashMap">    
+	    <parameter property="id"  jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>  
+	    <parameter property="i" jdbcType="INTEGER"  mode="OUT"/> 
+	</parameterMap> 
+	
+	<select id="getDataList" resultType="Map" parameterType="Map">
+		SELECT * FROM (
+		SELECT
+			A.ID,
+			A.DEPART_APT3CODE,
+			B.DESCRIPTION_CN,
+			CASE A.ACTTYPE_CODE
+			WHEN 'all' THEN '通用'
+			ELSE A.ACTTYPE_CODE
+			END ACTTYPE_CODE,
+			A.STANDARD_FLT_TIME,
+			A.DRIFT_VALUE,
+			A.BEGIN_FLT_DATE,
+			A.END_FLT_DATE,
+			A.CALC_FLT_TIME,
+			TO_CHAR(A.OPER_DATE,'yyyy-mm-dd hh24:mi:ss') OPER_DATE,
+			A.OPER_USER,
+			C.NAME,
+			CASE A.OPER_TYPE WHEN '1' THEN '手动' WHEN '2' THEN '系统' ELSE '' END OPER_TYPE,
+			ROW_NUMBER() OVER(ORDER BY A.ID DESC) NUM
+		FROM
+			DIM_FLT_TIME A
+			LEFT JOIN DIM_AIRPORT B ON A.DEPART_APT3CODE=B.AIRPORT_CODE
+			LEFT JOIN SYS_USER C ON A.OPER_USER=C.ID
+		<where>
+			<if test="airport !=null and airport !=''">
+				AND A.DEPART_APT3CODE in ('${airport}')
+			</if>
+			<if test="actType !=null and actType !=''">
+				AND A.ACTTYPE_CODE in ('${actType}')
+			</if>
+		</where>
+		ORDER BY A.ID DESC )
+		WHERE <![CDATA[NUM>#{begin} AND NUM<=#{end}]]>
+
+	</select>
+	
+	<select id="getListCount" resultType="int" parameterType="Map">
+		SELECT count(9) FROM (
+		SELECT
+			A.ID,
+			A.DEPART_APT3CODE,
+			A.ACTTYPE_CODE,
+			A.STANDARD_FLT_TIME,
+			A.DRIFT_VALUE,
+			A.BEGIN_FLT_DATE,
+			A.END_FLT_DATE,
+			A.CALC_FLT_TIME,
+			A.OPER_DATE,
+			A.OPER_USER,
+			A.OPER_TYPE
+		FROM
+			DIM_FLT_TIME A
+		<where>
+			<if test="airport !=null and airport !=''">
+				AND A.DEPART_APT3CODE in ('${airport}')
+			</if>
+			<if test="actType !=null and actType !=''">
+				AND A.ACTTYPE_CODE in ('${actType}')
+			</if>
+		</where>
+		 )
+
+	</select>
+	
+	<select id="getAirport" resultType="hashmap">
+		SELECT AIRPORT_CODE,DESCRIPTION_CN FROM DIM_AIRPORT
+	</select>
+	
+	<select id="getActType" resultType="hashmap">
+		SELECT TODB_ACTYPE_CODE, DESCRIPTION_CN FROM DIM_ACTYPE
+	</select>
+	<insert id="insertNewRecord" >
+		INSERT INTO DIM_FLT_TIME
+		(<include refid="Base_Column_List" />)
+		VALUES 
+		(DIM_FLT_TIME_S.NEXTVAL,#{departApt3Code},#{arrivalApt3Code},#{actType},#{standardFlightTime},#{driftValue},#{beginFlightDate},#{endFlightDate},#{operUser},SYSDATE)
+	</insert>
+	
+	<delete id="deleteRow">
+		DELETE FROM DIM_FLT_TIME WHERE ID IN
+		 <foreach item="e" collection="id" open="(" separator="," close=")">
+            #{e}
+        </foreach>
+	</delete>
+	
+    <select id="compute" statementType="CALLABLE" resultType="java.lang.String">  
+       {call  UPDATE_CALC_FLT_TIME_P@prss2prssp (#{id,mode=IN,jdbcType=VARCHAR},#{i,mode=OUT,jdbcType=INTEGER})} 
+    </select>  
+    
+    <select id="getRowById" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT * FROM DIM_FLT_TIME WHERE ID=#{id}
+	</select>
+	
+	<update id="editRecord">
+		UPDATE  DIM_FLT_TIME SET
+		DEPART_APT3CODE=#{departApt3Code},
+		ACTTYPE_CODE=#{actType}, 
+		STANDARD_FLT_TIME=#{standardFlightTime}, 
+		DRIFT_VALUE=#{driftValue}, 
+		BEGIN_FLT_DATE=#{beginFlightDate}, 
+		END_FLT_DATE=#{endFlightDate},  
+		OPER_USER=#{operUser}, 
+		OPER_DATE=SYSDATE,
+		CALC_FLT_TIME=#{calcFltTime},
+		OPER_TYPE=#{operType}
+		WHERE ID=#{id}
+	</update>
+
+	<update id="updateOperType">
+			UPDATE DIM_FLT_TIME SET OPER_TYPE='2'
+			WHERE ID IN
+			 <foreach item="e" collection="id" open="(" separator="," close=")">
+	            #{e}
+	        </foreach>
+	</update>
+
+</mapper>

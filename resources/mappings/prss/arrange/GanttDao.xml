@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.arrange.dao.GanttDao">
+	<select id="ganttData" resultType="hashmap">
+		select 'DP' "field",
+			   main_tab.in_fltno "inFltno",
+		       main_tab.out_fltno "outFltno",
+		       case
+		         when detail_tab.insta is null then
+		          to_char(to_date(to_char(sysdate, 'yyyy-mm-dd ') ||
+		                          detail_tab.outstd,
+		                          'yyyy-mm-dd hh24:mi') - 3 / 48,
+		                  'yyyy-mm-dd hh24:mi')
+		         else
+		          to_char(sysdate, 'yyyy-mm-dd ') || substr(detail_tab.insta, 0, 2) || ':' ||
+		          substr(detail_tab.insta, 3)
+		       end "start",
+		       case
+		         when detail_tab.outstd is null then
+		          to_char(to_date(to_char(sysdate, 'yyyy-mm-dd ') ||
+		                          detail_tab.insta,
+		                          'yyyy-mm-dd hh24:mi') + 1 / 24,
+		                  'yyyy-mm-dd hh24:mi')
+		         else
+		          to_char(sysdate, 'yyyy-mm-dd ') || substr(detail_tab.outstd, 0, 2) || ':' ||
+		          substr(detail_tab.outstd, 3)
+		       end "end"
+		  from pm_longterm_main main_tab,
+		       (SELECT NVL(in_tab.main_id, out_tab.main_id) main_id,
+		               in_tab.sta inSta,
+		               out_tab.std outStd
+		          FROM (SELECT *
+		                  FROM pm_longterm_detail
+		                 WHERE arrival_apt4code = '京'
+		                    or arrival_apt4code like '%北京%') in_tab
+		          FULL OUTER JOIN (SELECT *
+		                            FROM pm_longterm_detail
+		                           WHERE depart_apt4code = '京'
+		                              or depart_apt4code like '%北京%') out_tab ON in_tab.main_id =
+		                                                                         out_tab.main_id) detail_tab
+		 WHERE main_tab.id = detail_tab.main_id
+		 <if test="terminal != null and terminal != ''">
+		 	and main_tab.terminal_code = #{terminal}
+		 </if>
+		 <if test="week != null and week != ''">
+		 	and (main_tab.in_plan_week like '%${week}%' or main_tab.out_plan_week like '%${week}%')
+		 </if>
+	</select>
+</mapper>

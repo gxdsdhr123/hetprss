@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.produce.dao.BillPassengerNumDao">
+
+	 <select id="getDataList" resultType="com.alibaba.fastjson.JSONObject">
+		 SELECT
+			A.ID,
+			A.FLTID,
+			A.FLIGHT_DATE,
+			A.FLIGHT_NUMBER,
+			A.ALN_2CODE,
+			A.ALN_3CODE,
+			A.ACTTYPE_CODE,
+			A.AIRCRAFT_NUMBER,
+			A.CONTENT,
+			a.OFFICE_NAME,
+			A.REMARK,
+			A.SIGN,
+			C.DESCRIPTION_CN,
+			E.NAME OPERATOR
+		FROM
+			BILL_PSG_BRD_NUM A
+			LEFT JOIN DIM_AIRLINES C ON A.ALN_3CODE = C.ICAO_CODE
+			LEFT JOIN SYS_USER E ON A.OPERATOR=E.ID
+		WHERE A.DEL_FLAG=0
+		ORDER BY A.FLIGHT_DATE DESC ,C.AIRLINE_SHORTNAME
+	 </select>
+	 <select id="getDataTotal" resultType="map">
+	 	SELECT
+			A.ID,
+			A.FLTID,
+			A.FLIGHT_DATE,
+			A.FLIGHT_NUMBER,
+			A.ACTTYPE_CODE,
+			A.AIRCRAFT_NUMBER,
+			A.CONTENT,
+			A.OFFICE_NAME,
+			C.DESCRIPTION_CN,
+			E.NAME OPERATOR
+		FROM
+			BILL_PSG_BRD_NUM A
+			LEFT JOIN DIM_AIRLINES C ON A.ALN_3CODE = C.ICAO_CODE
+			LEFT JOIN SYS_USER E ON A.OPERATOR=E.ID
+		WHERE A.DEL_FLAG=0
+		ORDER BY A.FLIGHT_DATE DESC ,C.AIRLINE_SHORTNAME
+	 </select>
+	 
+	 <select id="getResType" resultType="com.alibaba.fastjson.JSONObject">
+	 	select restype id ,typename text from dim_restype where reskind='TC'
+	 </select>
+	 
+	 <select id="getSysUser" resultType="com.alibaba.fastjson.JSONObject">
+	 	SELECT ID,NAME TEXT FROM SYS_USER
+	 </select>
+	 
+	 <select id="getFltInfo" resultType="com.alibaba.fastjson.JSONObject" parameterType="Map">
+	 	SELECT A.*,B.AIRLINE_SHORTNAME ,C.DESCRIPTION_CN PROPERTY_NAME FROM FD_FLT_INFO A
+	 	LEFT JOIN DIM_AIRLINES B ON A.ALN_3CODE=B.ICAO_CODE
+	 	LEFT JOIN DIM_TASK C on A.PROPERTY_CODE=C.TODB_TASK_CODE
+	 	<where>
+	 		<if test="flightDate !=null and flightDate !='' ">
+	 			AND FLIGHT_DATE =#{flightDate}
+	 		</if>
+	 		<if test="flightNumber !=null and flightNumber !='' ">
+	 			AND FLIGHT_NUMBER =#{flightNumber}
+	 		</if>
+	 		<if test="inOutFlag !=null and inOutFlag !='' ">
+	 			AND IN_OUT_FLAG LIKE '%${inOutFlag}%'
+	 		</if>
+	 	</where>
+	 </select>
+	 <insert id="saveAdd" parameterType="com.neusoft.prss.produce.entity.BillPassengerNumEntity">
+		INSERT INTO BILL_PSG_BRD_NUM(
+			ID,
+			FLTID,
+			FLIGHT_DATE,
+			FLIGHT_NUMBER,
+			ALN_2CODE,
+			ALN_3CODE,
+			ACTTYPE_CODE,
+			AIRCRAFT_NUMBER,
+			CONTENT,
+			OFFICE_NAME,
+			PER_NUM,
+			KQ_TM,
+			OPERATOR,
+			OPERATOR_NAME,
+			REMARK,
+			UPDATE_TM,
+			DEL_FLAG,
+			CREATE_USER,
+			IN_OUT_FLAG
+		) VALUES (
+			bill_psg_brd_num_s.nextval,
+			#{fltid},
+			#{flightDate},
+			#{flightNumber},
+			#{aln2code},
+			#{aln3code},
+			#{acttypeCode},
+			#{aircraftNumber},
+			'旅客登机人数交接单',
+			'服务员',
+			#{perNum},
+			#{kqTime},
+			#{operator},
+			#{operatorName},
+			#{remark},
+			to_date(#{updateTime},'yyyy-MM-dd HH24:mi:ss'),
+			'0',
+			#{createUser},
+			#{inOutFlag}
+		)
+	 </insert>
+	 
+	 <select id="getBillById" resultType="com.alibaba.fastjson.JSONObject">
+			SELECT
+				A.ID,
+				A.FLTID,
+				A.FLIGHT_DATE,
+				A.FLIGHT_NUMBER,
+				A.ALN_2CODE,
+				A.ALN_3CODE,
+				A.ACTTYPE_CODE,
+				A.AIRCRAFT_NUMBER,
+				A.PER_NUM,
+				A.KQ_TM,
+				A.OPERATOR,
+				A.OPERATOR_NAME,
+				A.SIGN,
+				A.REMARK,
+				TO_CHAR(A.UPDATE_TM, 'YYYY-MM-DD HH24:MI:SS') UPDATE_TM ,
+				C.AIRLINE_SHORTNAME,
+				C.DESCRIPTION_CN,
+				A.IN_OUT_FLAG
+			FROM
+				BILL_PSG_BRD_NUM A
+				LEFT JOIN DIM_AIRLINES C ON A.ALN_3CODE = C.ICAO_CODE
+			WHERE
+				A.DEL_FLAG=0 AND A.ID=#{id}
+	 </select>
+	 <update id="saveEdit" parameterType="com.neusoft.prss.produce.entity.BillPassengerNumEntity">
+	 	UPDATE BILL_PSG_BRD_NUM SET 
+		 	PER_NUM=#{perNum},
+		 	KQ_TM=#{kqTime},
+		 	CONTENT=#{content},
+		 	OFFICE_NAME=#{officeName},
+<!-- 		 	OPERATOR=#{operator}, -->
+		 	REMARK=#{remark},
+		 	UPDATE_TM=TO_DATE(#{updateTime},'yyyy-MM-dd HH24:mi:ss'),
+		 	CREATE_USER=#{createUser}
+	 	WHERE ID=#{id}
+	 </update>
+	 
+	 <update id="delBillById">
+	 	UPDATE BILL_PSG_BRD_NUM  SET DEL_FLAG=1 WHERE ID=#{id}
+	 </update>
+	 
+	 <select id="getExportWordData" resultType="com.alibaba.fastjson.JSONObject">
+			SELECT
+				A.FLIGHT_DATE,
+				A.FLIGHT_NUMBER,
+				A.AIRCRAFT_NUMBER,
+				A.ACTTYPE_CODE,
+				A.PER_NUM,
+				A.KQ_TM,
+				E.NAME OPERATOR,
+				A.SIGN,
+				A.REMARK,
+				TO_CHAR(A.UPDATE_TM, 'YYYY-MM-DD HH24:MI:SS') UPDATE_TM ,
+				C.AIRLINE_SHORTNAME,
+				C.DESCRIPTION_CN,
+				NVL2(A.IN_OUT_FLAG,DECODE(SUBSTR(A.IN_OUT_FLAG, 0, 1), 'A', '进港','D','出港'),'')IN_OUT_FLAG
+			FROM
+				BILL_PSG_BRD_NUM A
+				LEFT JOIN DIM_AIRLINES C ON A.ALN_3CODE = C.ICAO_CODE
+				LEFT JOIN SYS_USER E ON A.OPERATOR=E.ID
+			WHERE
+				A.DEL_FLAG=0 AND A.ID=#{id}
+	 </select>
+</mapper>

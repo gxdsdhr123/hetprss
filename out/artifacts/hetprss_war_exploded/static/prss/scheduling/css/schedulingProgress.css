@@ -1,0 +1,62 @@
+#detailDiv {
+	display: none;
+	position: absolute;
+	z-index: 9999;
+	min-height: 200px;
+	min-width: 300px;
+	background: #2B3D6A;
+	border: 1px solid #006DC0;
+	border-radius:5px;
+}
+
+.box {
+	background: #05163B !important;
+}
+
+.task-list{
+	height:50px;
+	padding-top:5px;
+}
+
+.task-item {
+	position:relative;
+	padding: 5px 10px;
+	font-weight: bold;
+	margin-bottom: 4px;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+	border-radius: 3px;
+	min-height:30px;
+	margin-right:10px;
+	cursor: pointer;
+}
+
+#total2,#total3,#total4{
+	padding-right:15px;
+}
+
+.taskGrid {
+	width: 100%
+}
+
+.taskGrid tr td{
+	padding-right:5px;
+}
+.col-md-4,.col-sm-4,.col-xs-4{
+	padding-left:10px;
+	padding-right:10px;
+}
+.multi-items{
+	min-width:100px;
+	padding:4px;
+	width:auto;
+	border-bottom:1px solid #006DC0;
+}
+.ui-resizable-s {
+	cursor: s-resize;
+	height: 10px;
+	width: 98%;
+	bottom: -5px;
+	left: 0;
+	background: #006DC0;
+}

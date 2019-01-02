@@ -1,0 +1,394 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.produce.dao.BillDao">
+	  <sql id="alnBillCols">
+	    A.ID as  "id",
+	    FLTID as  "fltid",
+	    FLIGHT_NUMBER  as "flightNumber",
+	    ACT_TYPE  as "actType",
+	    AIRCRAFT_NUMBER  as "aircraftNumber",
+	    OPERATOR  as "operator",
+	    B.NAME  as "operatorName",
+	    SIGNATORY  as "signatory",
+	    TO_CHAR(A.CREATE_DATE, 'yyyy-mm-dd hh24:mi:ss') as "createDate",
+	    ACTSTAND_CODE  as "actstandCode",
+	    FLIGHT_DATE  as "flightDate",
+	    ETD  as "etd",
+	    ETA  as "eta",
+	    ATA  as "ata",
+	    ATD  as "atd",
+	    IN_FLIGHT_NUMBER  as "inFlightNumber",
+	    OUT_FLIGHT_NUMBER  as "outFlightNumber",
+	    IN_FLTID  as "inFltid",
+	    OUT_FLTID  as "outFltid",
+	    FLT_ATTR_CODE  as "fltAttrCode",
+	    ARRIVAL  as "arrival",
+	    TRANSIT  as "transit",
+	    NIGHTSTOP  as "nightstop",
+	    DEPARTURE  as "departure",
+	    RETURNTORAMP  as "returntoramp",
+	    OTHERS  as "others",
+	    TOWING_FROM  as "towingFrom",
+	    TOWING_TO  as "towingTo",
+	    OIL_UPLIFT_ONE  as "oilUpliftOne",
+	    OIL_UPLIFT_TWO  as "oilUpliftTwo",
+	    OIL_UPLIFT_THREE  as "oilUpliftThree",
+	    OIL_UPLIFT_FOUR  as "oilUpliftFour",
+	    OIL_UPLIFT_APU  as "oilUpliftApu",
+	    CSDOIL_UPLIFT_ONE  as "csdoilUpliftOne",
+	    CSDOIL_UPLIFT_TWO  as "csdoilUpliftTwo",
+	    CSDOIL_UPLIFT_THREE  as "csdoilUpliftThree",
+	    CSDOIL_UPLIFT_FOUR  as "csdoilUpliftFour",
+	    CSDOIL_UPLIFT_APU  as "csdoilUpliftApu",
+	    HYDRAULICOIL_UPLIFT_ONE  as "hydraulicoilUpliftOne",
+	    HYDRAULICOIL_UPLIFT_TWO  as "hydraulicoilUpliftTwo",
+	    HYDRAULICOIL_UPLIFT_THREE  as "hydraulicoilUpliftThree",
+	    HYDRAULICOIL_UPLIFT_FOUR  as "hydraulicoilUpliftFour",
+	    HYDRAULICOIL_UPLIFT_APU  as "hydraulicoilUpliftApu",
+	    ENGINEOIL_STOCK  as "engineoilStock",
+	    ENGINEOIL_QTY  as "engineoilQty",
+	    HYD_STOCK  as "hydStock",
+	    HYD_QTY  as "hydQty",
+	    APUOIL_STOCK  as "apuoilStock",
+	    APUOIL_QTY  as "apuoilQty",
+	    AIRCRAFT_PUSHOUT  as "aircraftPushout",
+	    AIRCRAFT_TOWING  as "aircraftTowing",
+	    WATER_SERVICING  as "waterServicing",
+	    TOILET_SERVICING  as "toiletServicing",
+	    GROUND_POWER_UNIT  as "groundPowerUnit",
+	    AIR_CONDITIONG_UNIT  as "airConditiongUnit",
+	    GAS_TURBINE_STARTER_UNIT  as "gasTurbineStarterUnit",
+	    OXYGEN_CHARGING  as "oxygenCharging",
+	    NITROGEN_CHARGING  as "nitrogenCharging",
+	    MAINTENANCE_STEPS  as "maintenanceSteps",
+	    MAINT_PLATFORM  as "maintPlatform",
+	    WHEEL_JACKS  as "wheelJacks",
+	    EQUIPMENT_TOW_TUG  as "equipmentTowTug",
+        STD  as "std",
+        STA  as "sta",
+	    SIGN as "sign"
+	  </sql>
+	  <select id="getAlnBillInfo" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+	    select 
+	    <include refid="alnBillCols" />
+	    from BILL_JWHXBZ_FEE A
+	    left join sys_user B
+	    on OPERATOR = b.id
+	    where A.ID = #{id}
+	  </select>
+	  
+	  
+	<select id="getFeeTable" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT type_code, (SELECT kindNAME FROM dim_reskind WHERE RESKIND = job_kind) job_kind, (SELECT typeNAME FROM dim_restype WHERE REStype = job_type) job_type, data_table FROM bill_type_conf WHERE job_kind = (SELECT reskind FROM dim_reskind WHERE depid = #{officeId})
+	</select>
+	
+	<select id="getFeeTableByJobKind" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT DISTINCT JOB_KIND, B.KINDNAME, DATA_TABLE
+		  FROM BILL_TYPE_CONF A, DIM_RESKIND B
+		 WHERE A.JOB_KIND = #{jobkind}
+		   AND A.JOB_KIND = B.RESKIND
+	</select>
+	
+	<select id="getBillData" resultType="com.alibaba.fastjson.JSONObject">
+		${sql}
+	</select>
+	<select id="getAlnBillData" resultType="com.alibaba.fastjson.JSONObject">
+		select id,flight_date,
+		       flight_number,
+		       aircraft_number,
+		       (SELECT NAME FROM Sys_User WHERE ID = OPERATOR) OPERATOR
+		from bill_jwhxbz_fee
+	</select>
+	<select id="getBillDataDouxf" resultType="java.util.Map">
+		${sql}
+	</select>
+	
+	<select id="getTableName" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT (select TYPENAME from dim_restype where RESTYPE = job_type) job_type, data_table FROM bill_type_conf WHERE type_code = #{type}
+	</select>
+	
+	<select id="getTableNameDou" resultType="java.util.Map">
+		SELECT (select TYPENAME from dim_restype where RESTYPE = job_type) job_type, data_table FROM bill_type_conf WHERE type_code = #{type}
+	</select>
+	
+	
+	
+	<select id="getBillInfo" resultType="com.alibaba.fastjson.JSONObject">
+		${sql}
+	</select>
+	
+	<select id="getBillInfoDou" resultType="java.util.Map">
+		${sql}
+	</select>
+	
+	
+	
+	
+	<update id="updateBill">
+		${sql}
+	</update>
+	<delete id="delBill" >
+		${sql}
+	</delete>
+	<select id="getJobTypeByOfficeId" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT job_type, (SELECT typename FROM dim_restype WHERE restype = job_type) type_name FROM bill_type_conf WHERE job_kind = (SELECT reskind FROM dim_reskind WHERE depid = #{officeId})
+	</select>
+	<select id="getTypeCodeByJobType" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT type_code, type_name FROM bill_type_conf WHERE job_type = #{jobType}
+	</select>
+	<insert id="insertBill">
+		${sql}
+	</insert>
+	<select id="getActType" resultType="String">
+		SELECT ACTYPE_CODE FROM dim_acreg WHERE ACREG_CODE=#{airNum}
+	</select>
+	<select id="getPickupListData" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT id "id", to_char(create_date,'yyyymmdd') "createDate", flight_number "flightNumber", pu_user "puUser", operator "operator",pic_ids "picture" FROM BILL_PICKUP_HD ORDER BY create_date DESC
+	</select>
+	<select id="getPickupForm" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT id "id", flight_number "flightNumber", aircraft_number "aircraftNumber", remark "remark", to_char(create_date,'yyyymmdd') "createDate", to_char(create_date,'hh24mi') "createTime", pu_user "puUser", pic_ids "picIds", operator "operatorName" FROM bill_pickup_hd WHERE ID = #{id}
+	</select>
+	<select id="getPickupGoods" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT goods_name "goodsName", goods_pos "goodsPos", remark "remark" from bill_pickup_goods WHERE hd_id = #{id}
+	</select>
+	<insert id="savePickup">
+		MERGE INTO bill_pickup_hd h
+		USING (SELECT ${pickup.id} ID FROM dual) i
+		ON (h.ID = i.ID)
+		WHEN MATCHED THEN
+			UPDATE SET h.flight_number = #{pickup.fltNo}, h.aircraft_number = #{pickup.artNo}, h.remark = #{pickup.remark}, h.create_date = to_date(#{pickup.createDate},'yyyymmddhh24mi'), h.pu_user = #{pickup.puUser}, h.operator = #{pickup.operatorName} WHERE h.ID = #{pickup.id}
+		WHEN NOT MATCHED THEN
+ 			INSERT (h.id,h.flight_number,h.aircraft_number,h.remark,h.create_date,h.pu_user,h.operator) VALUES (#{pickup.id}, #{pickup.fltNo}, #{pickup.artNo}, #{pickup.remark}, to_date(#{pickup.createDate},'yyyymmddhh24mi'), #{pickup.puUser}, #{pickup.operatorName})
+	</insert>
+	
+	<insert id="saveBill">
+		MERGE INTO bill_jwhxbz_fee h
+		USING (SELECT #{billJSON.ID} ID FROM dual) i
+		ON (h.ID = i.ID)
+		WHEN MATCHED THEN
+			update set h.FLTID                     = #{billJSON.fltid},
+			       h.FLIGHT_NUMBER             = #{billJSON.flightNumber},
+			       h.ACT_TYPE                  = #{billJSON.actType},
+			       h.AIRCRAFT_NUMBER           = #{billJSON.aircraftNumber},
+			       h.OPERATOR                  = #{billJSON.operator},
+			       h.OPERATOR_NAME             = #{billJSON.operatorName},
+			       h.SIGNATORY                 = #{billJSON.signatory},
+			       h.CREATE_DATE               = #{billJSON.createDate},
+			       h.ACTSTAND_CODE             = #{billJSON.actstandCode},
+			       h.FLIGHT_DATE               = #{billJSON.flightDate},
+			       h.ETD                       = #{billJSON.etd},
+			       h.ETA                       = #{billJSON.eta},
+			       h.ATA                       = #{billJSON.ata},
+			       h.ATD                       = #{billJSON.atd},
+			       h.IN_FLIGHT_NUMBER          = #{billJSON.inFlightNumber},
+			       h.OUT_FLIGHT_NUMBER         = #{billJSON.outFlightNumber},
+			       h.IN_FLTID                  = #{billJSON.inFltid},
+			       h.OUT_FLTID                 = #{billJSON.outFltid},
+			       h.FLT_ATTR_CODE             = #{billJSON.fltAttrCode},
+			       h.ARRIVAL                   = #{billJSON.arrival},
+			       h.TRANSIT                   = #{billJSON.transit},
+			       h.NIGHTSTOP                 = #{billJSON.nightstop},
+			       h.DEPARTURE                 = #{billJSON.departure},
+			       h.RETURNTORAMP              = #{billJSON.returntoramp},
+			       h.OTHERS                    = #{billJSON.others},
+			       h.TOWING_FROM               = #{billJSON.towingFrom},
+			       h.TOWING_TO                 = #{billJSON.towingTo},
+			       h.OIL_UPLIFT_ONE            = #{billJSON.oilUpliftOne},
+			       h.OIL_UPLIFT_TWO            = #{billJSON.oilUpliftTwo},
+			       h.OIL_UPLIFT_THREE          = #{billJSON.oilUpliftThree},
+			       h.OIL_UPLIFT_FOUR           = #{billJSON.oilUpliftFour},
+			       h.OIL_UPLIFT_APU            = #{billJSON.oilUpliftApu},
+			       h.CSDOIL_UPLIFT_ONE         = #{billJSON.csdoilUpliftOne},
+			       h.CSDOIL_UPLIFT_TWO         = #{billJSON.csdoilUpliftTwo},
+			       h.CSDOIL_UPLIFT_THREE       = #{billJSON.csdoilUpliftThree},
+			       h.CSDOIL_UPLIFT_FOUR        = #{billJSON.csdoilUpliftFour},
+			       h.CSDOIL_UPLIFT_APU         = #{billJSON.csdoilUpliftApu},
+			       h.HYDRAULICOIL_UPLIFT_ONE   = #{billJSON.hydraulicoilUpliftOne},
+			       h.HYDRAULICOIL_UPLIFT_TWO   = #{billJSON.hydraulicoilUpliftTwo},
+			       h.HYDRAULICOIL_UPLIFT_THREE = #{billJSON.hydraulicoilUpliftThree},
+			       h.HYDRAULICOIL_UPLIFT_FOUR  = #{billJSON.hydraulicoilUpliftFour},
+			       h.HYDRAULICOIL_UPLIFT_APU   = #{billJSON.hydraulicoilUpliftApu},
+			       h.ENGINEOIL_STOCK           = #{billJSON.engineoilStock},
+			       h.ENGINEOIL_QTY             = #{billJSON.engineoilQty},
+			       h.HYD_STOCK                 = #{billJSON.hydStock},
+			       h.HYD_QTY                   = #{billJSON.hydQty},
+			       h.APUOIL_STOCK              = #{billJSON.apuoilStock},
+			       h.APUOIL_QTY                = #{billJSON.apuoilQty},
+			       h.AIRCRAFT_PUSHOUT          = #{billJSON.aircraftPushout},
+			       h.AIRCRAFT_TOWING           = #{billJSON.aircraftTowing},
+			       h.WATER_SERVICING           = #{billJSON.waterServicing},
+			       h.TOILET_SERVICING          = #{billJSON.toiletServicing},
+			       h.GROUND_POWER_UNIT         = #{billJSON.groundPowerUnit},
+			       h.AIR_CONDITIONG_UNIT       = #{billJSON.airConditiongUnit},
+			       h.GAS_TURBINE_STARTER_UNIT  = #{billJSON.gasTurbineStarterUnit},
+			       h.OXYGEN_CHARGING           = #{billJSON.oxygenCharging},
+			       h.NITROGEN_CHARGING         = #{billJSON.nitrogenCharging},
+			       h.MAINTENANCE_STEPS         = #{billJSON.maintenanceSteps},
+			       h.MAINT_PLATFORM            = #{billJSON.maintPlatform},
+			       h.WHEEL_JACKS               = #{billJSON.wheelJacks},
+			       h.EQUIPMENT_TOW_TUG         = #{billJSON.equipmentTowTug},
+                   h.STA         = #{billJSON.sta},
+                   h.STD         = #{billJSON.std},
+                   h.SIGN         = #{billJSON.sign}
+			 where h.ID = #{billJSON.ID}	
+		WHEN NOT MATCHED THEN
+ 			insert  (h.ID,
+			   h.FLTID,
+			   h.FLIGHT_NUMBER,
+			   h.ACT_TYPE,
+			   h.AIRCRAFT_NUMBER,
+			   h.OPERATOR,
+			   h.OPERATOR_NAME,
+			   h.SIGNATORY,
+			   h.CREATE_DATE,
+			   h.ACTSTAND_CODE,
+			   h.FLIGHT_DATE,
+			   h.ETD,
+			   h.ETA,
+			   h.ATA,
+			   h.ATD,
+			   h.IN_FLIGHT_NUMBER,
+			   h.OUT_FLIGHT_NUMBER,
+			   h.IN_FLTID,
+			   h.OUT_FLTID,
+			   h.FLT_ATTR_CODE,
+			   h.ARRIVAL,
+			   h.TRANSIT,
+			   h.NIGHTSTOP,
+			   h.DEPARTURE,
+			   h.RETURNTORAMP,
+			   h.OTHERS,
+			   h.TOWING_FROM,
+			   h.TOWING_TO,
+			   h.OIL_UPLIFT_ONE,
+			   h.OIL_UPLIFT_TWO,
+			   h.OIL_UPLIFT_THREE,
+			   h.OIL_UPLIFT_FOUR,
+			   h.OIL_UPLIFT_APU,
+			   h.CSDOIL_UPLIFT_ONE,
+			   h.CSDOIL_UPLIFT_TWO,
+			   h.CSDOIL_UPLIFT_THREE,
+			   h.CSDOIL_UPLIFT_FOUR,
+			   h.CSDOIL_UPLIFT_APU,
+			   h.HYDRAULICOIL_UPLIFT_ONE,
+			   h.HYDRAULICOIL_UPLIFT_TWO,
+			   h.HYDRAULICOIL_UPLIFT_THREE,
+			   h.HYDRAULICOIL_UPLIFT_FOUR,
+			   h.HYDRAULICOIL_UPLIFT_APU,
+			   h.ENGINEOIL_STOCK,
+			   h.ENGINEOIL_QTY,
+			   h.HYD_STOCK,
+			   h.HYD_QTY,
+			   h.APUOIL_STOCK,
+			   h.APUOIL_QTY,
+			   h.AIRCRAFT_PUSHOUT,
+			   h.AIRCRAFT_TOWING,
+			   h.WATER_SERVICING,
+			   h.TOILET_SERVICING,
+			   h.GROUND_POWER_UNIT,
+			   h.AIR_CONDITIONG_UNIT,
+			   h.GAS_TURBINE_STARTER_UNIT,
+			   h.OXYGEN_CHARGING,
+			   h.NITROGEN_CHARGING,
+			   h.MAINTENANCE_STEPS,
+			   h.MAINT_PLATFORM,
+			   h.WHEEL_JACKS,
+			   h.EQUIPMENT_TOW_TUG,
+               h.STA,
+               h.STD,
+			   h.SIGN)
+			values
+			  (#{billJSON.ID},
+			   #{billJSON.fltid},
+			   #{billJSON.flightNumber},
+			   #{billJSON.actType},
+			   #{billJSON.aircraftNumber},
+			   #{billJSON.operator},
+			   #{billJSON.operatorName},
+			   #{billJSON.signatory},
+			   #{billJSON.createDate},
+			   #{billJSON.actstandCode},
+			   #{billJSON.flightDate},
+			   #{billJSON.etd},
+			   #{billJSON.eta},
+			   #{billJSON.ata},
+			   #{billJSON.atd},
+			   #{billJSON.inFlightNumber},
+			   #{billJSON.outFlightNumber},
+			   #{billJSON.inFltid},
+			   #{billJSON.outFltid},
+			   #{billJSON.fltAttrCode},
+			   #{billJSON.arrival},
+			   #{billJSON.transit},
+			   #{billJSON.nightstop},
+			   #{billJSON.departure},
+			   #{billJSON.returntoramp},
+			   #{billJSON.others},
+			   #{billJSON.towingFrom},
+			   #{billJSON.towingTo},
+			   #{billJSON.oilUpliftOne},
+			   #{billJSON.oilUpliftTwo},
+			   #{billJSON.oilUpliftThree},
+			   #{billJSON.oilUpliftFour},
+			   #{billJSON.oilUpliftApu},
+			   #{billJSON.csdoilUpliftOne},
+			   #{billJSON.csdoilUpliftTwo},
+			   #{billJSON.csdoilUpliftThree},
+			   #{billJSON.csdoilUpliftFour},
+			   #{billJSON.csdoilUpliftApu},
+			   #{billJSON.hydraulicoilUpliftOne},
+			   #{billJSON.hydraulicoilUpliftTwo},
+			   #{billJSON.hydraulicoilUpliftThree},
+			   #{billJSON.hydraulicoilUpliftFour},
+			   #{billJSON.hydraulicoilUpliftApu},
+			   #{billJSON.engineoilStock},
+			   #{billJSON.engineoilQty},
+			   #{billJSON.hydStock},
+			   #{billJSON.hydQty},
+			   #{billJSON.apuoilStock},
+			   #{billJSON.apuoilQty},
+			   #{billJSON.aircraftPushout},
+			   #{billJSON.aircraftTowing},
+			   #{billJSON.waterServicing},
+			   #{billJSON.toiletServicing},
+			   #{billJSON.groundPowerUnit},
+			   #{billJSON.airConditiongUnit},
+			   #{billJSON.gasTurbineStarterUnit},
+			   #{billJSON.oxygenCharging},
+			   #{billJSON.nitrogenCharging},
+			   #{billJSON.maintenanceSteps},
+			   #{billJSON.maintPlatform},
+			   #{billJSON.wheelJacks},
+			   #{billJSON.equipmentTowTug},
+               #{billJSON.sta},
+               #{billJSON.std},
+               #{billJSON.sign})
+	</insert>
+	
+	<delete id="delPickupGoods">
+		DELETE bill_pickup_goods WHERE hd_id = #{hdId}
+	</delete>
+	<insert id="savePickupGoods">
+		INSERT INTO bill_pickup_goods (id, goods_name, goods_pos, hd_id) VALUES (bill_pickup_goods_s.nextval,#{goods.name},#{goods.pos},#{hdId})
+	</insert>
+	<select id="getPickupId" resultType="String">
+		SELECT bill_pickup_hd_s.nextval FROM dual
+	</select>
+	<delete id="delPickup">
+		DELETE bill_pickup_hd WHERE id = #{hdId}
+	</delete>
+	<delete id="delAlnBill">
+		DELETE bill_jwhxbz_fee WHERE id = #{id}
+	</delete>
+	<select id="getNextAlnBillId" resultType="String">
+		SELECT bill_jwhxbz_fee_s.nextval FROM dual
+	</select>
+	
+	<select id="loadAtcactype" resultType="Map">
+		SELECT TODB_ACTYPE_CODE code,DESCRIPTION_CN description FROM DIM_ACTYPE   ORDER BY CODE       
+	</select>
+	
+	<select id="loadUserList" resultType="Map">
+		SELECT ID code,NAME description FROM SYS_USER where office_id = #{officeId} ORDER BY CODE       
+	</select>
+</mapper>

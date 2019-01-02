@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.flightdynamic.dao.FdRecycleDao">
+	<!-- 航班动态 新增保存插入FD_FLT_GBAK表 -->
+	<insert id="insertFdFltGbaks">
+		insert into FD_FLT_GBAK
+		(ID,
+		BAK_FLTNO,
+		GO_FLTNO,
+		BAK_PROPERTY_CODE,
+		GO_PROPERTY_CODE,
+		TERMINAL_CODE,
+		ALN_FLAG_CODE,
+		CREATE_USER,
+		CREATE_TIME,
+		UPDATE_USER,
+		UPDATE_TIME)
+		SELECT T.*
+		FROM (
+		<foreach collection="list" item="item" index="index"
+			separator=" union all ">
+			SELECT
+			#{item.id},
+			#{item.bakFltno},
+			#{item.goFltno},
+			#{item.bakProperty},
+			#{item.goProperty},
+			#{item.terminal},
+			#{item.alnFlag},
+			#{item.createUser},
+			#{item.createTime},
+			#{item.updateUser},
+			#{item.updateTime}
+			FROM DUAL
+		</foreach>
+		) T
+	</insert>
+
+	<!-- 航班动态 新增保存插入FD_FLT_GBAKREL表 -->
+	<insert id="insertFdFltGbakrels" parameterType="String">
+		insert into FD_FLT_GBAKREL
+		(GBAK_ID,
+		FLTID)
+		SELECT T.*
+		FROM (
+		<foreach collection="list" item="item" index="index"
+			separator=" union all ">
+			SELECT
+			#{item.gbakId},
+			#{item.fltId}
+			FROM DUAL
+		</foreach>
+		) T
+	</insert>
+
+	<!-- 航班动态 新增保存插入FD_FLT_INFO表 -->
+	<insert id="insertFltInfos">
+		insert into FD_FLT_INFO
+		(FLTID,
+		FLIGHT_NUMBER,
+		AIRCRAFT_NUMBER,
+		ACTTYPE_CODE,
+		DEPART_APT4CODE,
+		STD,
+		ETD,
+		ARRIVAL_APT4CODE,
+		STA,
+		ETA,
+		ALN_2CODE,
+		REMARK)
+		SELECT T.*
+		FROM (
+		<foreach collection="list" item="item" index="index"
+			separator=" union all ">
+			SELECT
+			#{item.fltid},
+			#{item.flightNumber},
+			#{item.aircraftNumber},
+			#{item.actTypeCode},
+			#{item.departApt4code},
+			#{item.std},
+			#{item.etd},
+			#{item.arrivalApt4code},
+			#{item.sta},
+			#{item.etd},
+			#{item.aln2code},
+			#{item.remark}
+			FROM DUAL
+		</foreach>
+		) T
+	</insert>
+	<!-- 航班动态 新增保存插入FD_FLT_INFO_OTHER表 -->
+	<insert id="insertFltInfoOthers">
+		insert into FD_FLT_INFO_OTHER
+		(FLTID,
+		FLIGHT_NUMBER,
+		AIRCRAFT_NUMBER,
+		ACTTYPE_CODE,
+		DEPART_APT4CODE,
+		STD,
+		ETD,
+		ARRIVAL_APT4CODE,
+		STA,
+		ETA,
+		ALN_2CODE,
+		REMARK)
+		SELECT T.*
+		FROM (
+		<foreach collection="list" item="item" index="index"
+			separator=" union all ">
+			SELECT
+			#{item.fltid},
+			#{item.flightNumber},
+			#{item.aircraftNumber},
+			#{item.actTypeCode},
+			#{item.departApt4code},
+			#{item.std},
+			#{item.etd},
+			#{item.arrivalApt4code},
+			#{item.sta},
+			#{item.etd},
+			#{item.aln2code},
+			#{item.remark}
+			FROM DUAL
+		</foreach>
+		) T
+	</insert>
+
+	<!-- 航班动态 新增保存插入FD_FLT_IOREL表 -->
+	<insert id="insertFdFltIorels">
+		insert into FD_FLT_IOREL
+		(ID,
+		IN_FLTID,
+		OUT_FLTID)
+		SELECT T.*
+		FROM (
+		<foreach collection="list" item="item" index="index"
+			separator=" union all ">
+			SELECT
+			#{item.iorelId},
+			#{item.inFltid},
+			#{item.outFltid}
+			FROM
+			DUAL
+		</foreach>
+		) T
+	</insert>
+	<!-- 从序列获取FD_FLT_IOREL表主键id -->
+	<select id="getNewIorelId" resultType="String" useCache="false"
+		flushCache="true">
+		select
+		fd_flt_iorel_s.nextval
+		from dual
+	</select>
+</mapper>

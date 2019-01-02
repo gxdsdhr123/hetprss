@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.produce.dao.FltCleanDao">
+	<resultMap id="resultInfo" type="com.alibaba.fastjson.JSONObject">
+		<id column="id" property="id" jdbcType="INTEGER"/>
+		<result column="fltid" property="fltId" jdbcType="INTEGER" />
+		<result column="flight_date" property="flightDate" jdbcType="VARCHAR"/>
+		<result column="flight_number" property="flightNumber" jdbcType="VARCHAR"/>
+        <result column="aln_2code" property="aln2code" jdbcType="VARCHAR"/>
+        <result column="acttype_code" property="acttypeCode" jdbcType="VARCHAR"/>
+        <result column="aircraft_number" property="aircraftNumber" jdbcType="VARCHAR"/>
+        <result column="depart_aptcode" property="departAptCode" jdbcType="VARCHAR"/>
+        <result column="ata" property="ata" jdbcType="VARCHAR" />
+        <result column="ata_str" property="ataStr" jdbcType="VARCHAR"/>
+        <result column="operator" property="operator" jdbcType="VARCHAR"/>
+        <result column="sign" property="sign" jdbcType="VARCHAR"/>
+        <result column="remark" property="remark" jdbcType="VARCHAR"/>
+        <result column="del_flag" property="delFlag" jdbcType="VARCHAR"/>
+        <result column="operator_name" property="operatorName" jdbcType="VARCHAR"/>
+        <result column="aln_3code" property="aln3code" jdbcType="VARCHAR"/>
+        <result column="in_out_flag" property="inOutFlag" jdbcType="VARCHAR"/>
+        <result column="depart_apt_cnname" property="departAptCnname" jdbcType="VARCHAR"/>
+	</resultMap>
+	
+	<resultMap id="fltDetail" type="com.alibaba.fastjson.JSONObject">
+		<result column="fltid" property="fltId" jdbcType="INTEGER" />
+		<result column="flight_date" property="flightDate" jdbcType="VARCHAR"/>
+		<result column="flight_number" property="flightNumber" jdbcType="VARCHAR"/>
+        <result column="aln_2code" property="aln2code" jdbcType="VARCHAR"/>
+        <result column="aircraft_number" property="aircraftNumber" jdbcType="VARCHAR"/>
+        <result column="acttype_code" property="acttypeCode" jdbcType="VARCHAR"/>
+        <result column="ata" property="ata" jdbcType="VARCHAR"/>
+        <result column="ata_str" property="ataStr" jdbcType="VARCHAR"/>
+        <result column="aln_3code" property="aln3code" jdbcType="VARCHAR"/>
+        <result column="in_out_flag" property="inOutFlag" jdbcType="VARCHAR"/>
+        <result column="depart_apt3code" property="departAptcode" jdbcType="VARCHAR"/>
+        <result column="depart_apt_cnname" property="departAptCnname" jdbcType="VARCHAR"/>
+	</resultMap>
+	
+	<select id="getDataCount" resultType="java.lang.Integer" parameterType="java.util.HashMap">
+		select count(*) from BILL_QJ_SERVICE 
+		where to_date(flight_date,'yyyymmdd') between to_date(#{startDate},'yyyymmdd') and to_date(#{endDate},'yyyymmdd')
+		and del_flag = '0'
+	</select>
+	
+	<select id="getDataList" resultMap="resultInfo" parameterType="java.util.HashMap">
+		select t1.*,rownum rn from 
+		(
+			select t.*,rownum rn 
+			from (select a.*,b.description_cn depart_apt_cnname,to_daytime(ata) ata_str from BILL_QJ_SERVICE a,dim_airport b
+				where a.depart_aptcode = b.airport_code(+) 
+				and to_date(flight_date,'yyyymmdd') between to_date(#{startDate},'yyyymmdd') and to_date(#{endDate},'yyyymmdd')
+				and del_flag = '0'
+				order by flight_date,flight_number
+			) t
+		) t1 
+		where t1.rn &lt;= ${end} and rn &gt;= ${begin}
+	</select>
+	
+	<select id="getDownDataList" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+		select a.*,b.description_cn depart_apt_cnname,to_daytime(ata) ata_str from BILL_QJ_SERVICE a,dim_airport b
+		where a.depart_aptcode = b.airport_code(+)  
+		and to_date(flight_date,'yyyymmdd') between to_date(#{startDate},'yyyymmdd') and to_date(#{endDate},'yyyymmdd')
+		and del_flag = '0'
+		order by flight_date,flight_number
+	</select>
+	
+	<select id="getDataById" resultMap="resultInfo" parameterType="java.lang.String">
+		select t.*,to_daytime(ata) ata_str from BILL_QJ_SERVICE t where id = ${id} and del_flag = '0'
+	</select>
+	
+	<select id="getFlightDetail" resultMap="fltDetail" parameterType="java.util.HashMap">
+		select fltid,flight_date,flight_number,aircraft_number,acttype_code,
+		depart_apt3code,to_daytime(ata) ata_str,ata,aln_3code,aln_2code,in_out_flag,t1.description_cn depart_apt_cnname
+		from fd_flt_info t,dim_airport t1
+		where t.depart_apt3code = t1.airport_code(+) 
+		<bind name="pattern" value="'%' + inOutFlag + '%'" />
+		and in_out_flag like #{pattern}
+		and flight_date = #{flightDate} 
+		and flight_number = #{flightNumber}
+	</select>
+	
+	<select id="getFlightDetailHis" resultMap="fltDetail" parameterType="java.util.HashMap">
+		select fltid,flight_date,flight_number,aircraft_number,acttype_code,
+		depart_apt3code,to_daytime(ata) ata_str,ata,aln_3code,aln_2code,in_out_flag,t1.description_cn depart_apt_cnname
+		from fd_flt_info_his@prss2prssp t,dim_airport t1
+		where t.depart_apt3code = t1.airport_code(+)
+		<bind name="pattern" value="'%' + inOutFlag + '%'" />
+		and in_out_flag like #{pattern}
+		and flight_date = #{flightDate} 
+		and flight_number = #{flightNumber}
+		and PART_DAY = #{flightDate}
+	</select>
+
+	<insert id="save" parameterType="java.util.List">
+		INSERT INTO BILL_QJ_SERVICE(id,fltid,flight_date,flight_number,aln_2code,acttype_code,aircraft_number,
+		depart_aptcode,ata,operator,remark,del_flag,update_tm,operator_name,
+		create_user,aln_3code,in_out_flag)
+		select bill_qj_service_s.NEXTVAL, t.* from(
+		<foreach collection="list" item="item" index="index" open="(" close=")" separator="union all">
+			select 
+				${item.fltId} fltid,
+				#{item.flightDate} flight_date,
+				#{item.flightNumber} flight_number,
+				#{item.aln2code} aln_2code,
+				#{item.acttypeCode} acttype_code,
+				#{item.aircraftNumber} aircraft_number,
+				#{item.departAptCode} depart_aptcode,
+				#{item.ata} ata,
+				#{item.operator} operator,
+				#{item.remark},
+				'0' del_flag,
+				sysdate update_tm,
+				#{item.operatorName} operator_name,
+				#{item.createUser} create_user,
+				#{item.aln3code} aln_3code,
+				#{item.inOutFlag} in_out_flag
+			from dual
+		</foreach>
+		) t
+	</insert >
+	
+	<update id="delete" parameterType="java.lang.String">
+		update BILL_QJ_SERVICE set del_flag = '1' where id = ${id}
+	</update>
+	
+	<update id="update" parameterType="com.neusoft.prss.produce.entity.FltCleanServiceEntity">
+		update BILL_QJ_SERVICE
+	    <trim prefix="set" suffixOverrides=",">
+	    	update_tm = sysdate,
+	    	<if test="fltId != null">
+				fltid = ${fltId},
+			</if>
+			<if test="flightDate != null">
+				flight_date = #{flightDate},
+			</if>
+			<if test="flightNumber != null">
+				flight_number = #{flightNumber},
+			</if>
+			<if test="aln2code != null">
+				aln_2code = #{aln2code},
+			</if>
+			<if test="acttypeCode != null">
+				acttype_code = #{acttypeCode},
+			</if>
+			<if test="aircraftNumber != null">
+				aircraft_number = #{aircraftNumber},
+			</if>
+			<if test="departAptCode != null">
+				depart_aptcode = #{departAptCode},
+			</if>
+			<if test="ata != null">
+				ata = #{ata},
+			</if>
+			<if test="operator != null">
+				operator = #{operator},
+			</if>
+			<if test="remark != null">
+				remark = #{remark},
+			</if>
+			<if test="delFlag != null">
+				del_flag = #{delFlag},
+			</if>
+			<if test="operatorName != null">
+				operator_name = #{operatorName},
+			</if>
+			<if test="createUser != null">
+				create_user = #{createUser},
+			</if>
+			<if test="aln3code != null">
+				aln_3code = #{aln3code},
+			</if>
+			<if test="inOutFlag != null">
+				in_out_flag = #{inOutFlag},
+			</if>
+	    </trim>
+	    where id = ${id}
+	</update>
+	
+	<select id="getSysUser" resultType="com.alibaba.fastjson.JSONObject">
+	 	SELECT ID "id",NAME "text" FROM SYS_USER
+	 </select>
+</mapper>

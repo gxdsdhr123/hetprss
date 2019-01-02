@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.scheduling.dao.JobManageDao">
+	<resultMap type="com.alibaba.fastjson.JSONObject" id="fltInfoMap">
+		<id column="fltid" property="fltid"/>
+		<result column="flight_number" property="fltNo"/>
+		<result column="flight_date" property="fltDate"/>
+		<result column="aircraft_number" property="actNo"/>
+		<result column="acttype_code" property="actType"/>
+		<result column="gate" property="gate"/>
+		<result column="actstand_code" property="actStand"/>
+		<result column="d_airportname" property="dAirport"/>
+		<result column="a_airportname" property="aAirport"/>
+		<result column="std" property="std"/>
+		<result column="etd" property="etd"/>
+		<result column="atd" property="atd"/>
+		<result column="sta" property="sta"/>
+		<result column="eta" property="eta"/>
+		<result column="ata" property="ata"/>
+		<result column="in_out_flag" property="inOutFlag"/>
+	</resultMap>
+	<select id="getFltById" resultMap="fltInfoMap">
+		select 
+		   t.fltid,
+		   t.in_out_flag,
+		   nvl(t.flight_number,'--') flight_number, --航班号
+		   flight_date flight_date, --航班日期
+	       nvl(t.aircraft_number,'') aircraft_number, --机号
+	       nvl(t.acttype_code,'--') acttype_code, --机型
+	       nvl(t.gate,'--') gate, --登机口
+	       nvl(t.actstand_code,'--') actstand_code, --机位
+	       nvl(nvl(d_airport.description_cn,t.depart_apt3code),'--') d_airportname, --起场
+	       nvl(nvl(a_airport.description_cn,arrival_apt3code),'--') a_airportname, --落场
+	       nvl(to_daytime(std),'--') std, --计起
+	       nvl(to_daytime(etd),'--') etd, --预起
+	       nvl(to_daytime(atd),'--') atd, --实起
+	       nvl(to_daytime(sta),'--') sta, --计落
+	       nvl(to_daytime(eta),'--') eta, --预落
+	       nvl(to_daytime(ata),'--') ata --实落
+	  from fd_flt_info t,dim_airport d_airport, dim_airport a_airport
+	 where t.depart_apt3code = d_airport.airport_code(+)
+	   and t.arrival_apt3code = a_airport.airport_code(+)
+	   and t.fltid = #{fltid}
+	</select>
+	<select id="getJobTaskList" resultType="com.neusoft.prss.scheduling.entity.JobTaskEntity">
+			select 
+			   a.id,
+			   a.name,
+			   a.rule_proc_id ruleProcId,
+		       a.job_state state,
+		       a.e_start_tm startTime,
+			   a.e_end_tm endTime,
+			   a.auto_flag autoFlag,
+		       b.fltid fltid,
+		       b.in_out_flag inOutFlag,
+		       b.flight_number fltNo,
+		       a.proc_id processId,
+		       c.display_name processName,
+		       d.typename jobType,
+		       d.restype jobTypeId,
+		       e.name person,
+		       e.id personId,
+		       f.proc_inst_id orderId,
+		       g.id flowTaskId,
+		       nvl(node_state,(case when g.parent_task_id='start' then '启动' when a.job_state=3 then '结束' else h.display_name end)) currTask
+		  from jm_task a, 
+		  	   fd_flt_info b, 
+		  	   wf_process c,
+		  	   dim_restype d, 
+		  	   sys_user e,
+		  	   jm_task_proc_inst f,
+		  	   wf_task g,
+		  	   wf_hist_task h
+		 where 
+		 	<choose>
+				<when test="id!=null and id!=''">
+			 		a.id = #{id} 
+			 	</when>
+			 	<otherwise>
+		    	 1 = 1 
+			 	</otherwise>
+			</choose>
+		   and a.del_flag != 1
+		   and a.fltid = b.fltid
+		   and a.job_type = d.restype
+		   and a.proc_id = c.id(+)
+		   and a.operator = e.id(+)
+		   and a.id = f.task_id(+)
+		   and f.proc_inst_id = g.order_id(+)
+		   and g.parent_task_id = h.id(+)
+		   <if test="jobTypes!=null and jobTypes!=''">
+		   		and a.job_type in(${jobTypes})
+		   </if>
+		   <if test="fltids!=null and fltids!=''">
+		   		and b.fltid in(${fltids})
+		   </if>
+		   order by a.name
+	</select>
+	<select id="getProcNum" resultType="hashmap">
+		select 
+			t.fltid as fltid,
+			t.proc_id as procId,
+			count(1)  as num
+		from jm_task t
+		where t.fltid in
+		<foreach collection="fltids" open="(" separator="," close=")" item="id">
+			#{id}
+		</foreach>
+		and t.proc_id in
+		<foreach collection="processIds" open="(" separator="," close=")" item="procId">
+			#{procId}
+		</foreach>
+		and t.del_flag != 1
+		group by t.fltid,t.proc_id
+	</select>
+	<insert id="doSave"  
+			useGeneratedKeys="true" 
+			keyProperty="id" 
+			parameterType="com.neusoft.prss.scheduling.entity.JobTaskEntity">
+		<selectKey resultType="String" keyProperty="id" order="BEFORE">
+			select
+			<choose>
+				<when test="id!=null and id!=''">
+			 		${id}
+			 	</when>
+			 	<otherwise>
+		    	 jm_task_s.nextval
+			 	</otherwise>
+			</choose>
+			from dual
+		</selectKey>
+		merge into jm_task t1
+			using (select 
+						'${id}' id,
+						'${name}' name,
+						'${fltid}' fltid,
+						'${fltDate}' fltDate,
+						'${inOutFlag}' inOutFlag,
+						'${jobKind}' jobKind,
+						'${jobTypeId}' jobType,
+						'${state}' state,
+						'${personId}' person,
+						'${actArrangeTime}' actArrangeTime,
+						'${startTime}' startTime,
+						'${endTime}' endTime,
+						'${processId}' processId,
+						'${ruleProcId}' ruleProcId
+					from 
+					dual) t2
+			on (t1.id = t2.id)
+			when matched then
+			  update 
+				set
+				t1.operator = #{personId},
+				t1.act_arrange_tm = #{actArrangeTime},
+				t1.e_start_tm = #{startTime},
+				t1.e_end_tm = #{endTime},
+				t1.rte_end_tm = #{endTime},
+				t1.proc_id = #{processId}
+			when not matched then
+			  insert (
+					  t1.id, 
+					  t1.name, 
+					  t1.fltid,
+					  t1.flt_date,
+					  t1.iotype,
+					  t1.job_kind,
+					  t1.job_type,
+					  t1.job_state,
+					  t1.operator,
+					  t1.act_arrange_tm,
+					  t1.e_start_tm,
+					  t1.e_end_tm,
+					  t1.rte_end_tm,
+					  t1.proc_id,
+					  t1.rule_proc_id,
+					  t1.auto_flag
+					  ) 
+			  values (
+			  			t2.id,
+			  			t2.name,
+			  			t2.fltid, 
+			  			t2.fltDate,
+			  			t2.inOutFlag,
+			  			t2.jobKind,
+			  			t2.jobType,
+			  			t2.state,
+			  			t2.person,
+			  			t2.actArrangeTime,
+			  			t2.startTime,
+			  			t2.endTime,
+			  			t2.endTime,
+			  			t2.processId,
+			  			t2.ruleProcId,
+			  			1
+			  		)
+	</insert>
+	<delete id="removeJob">
+		update jm_task set del_flag = 1 where id= #{id}
+	</delete>
+	<select id="getJmSemaState" resultType="String">
+		<choose>
+			<when test='state!=null and state=="0"'>
+		 		select (case
+			         when flag = 0 then  0
+			         when flag_updator = #{userId} then  0
+			         else  flag end) flag
+			  from jm_sema where office_id = #{officeId}
+		 	</when>
+		 	<when test='state!=null and state=="1"'>
+		 		select flag
+			    from jm_sema 
+			    where office_id = #{officeId} 
+			    and flag_updator = #{userId}
+		 	</when>
+		</choose>
+	</select>
+	<update id="updateJmSemaState">
+	  update jm_sema
+	     set flag = #{flag}, 
+	     	 update_time = sysdate, 
+	     	 flag_updator = #{userId}
+	   where office_id = #{officeId}
+	   <if test='flag!=null and flag=="0"'>
+	   	and flag_updator = #{userId}
+	   </if>
+	</update>
+	<select id="getInstCount" resultType="Integer">
+		select count(1) num from jm_task_proc_inst where task_id=#{jobTaskId}
+	</select>
+	<select id="getPlusColumns" resultType="com.alibaba.fastjson.JSONObject">
+		select 
+			job_kind "jobKind",
+			attr_code "attrCode", 
+			attr_display_name "disName",
+			decode(dim_tab,null,'input','select') "disType",
+			dim_tab "dimTab",
+			dim_tab_code_col "codeCol",
+			dim_tab_name_col "nameCol",
+			show_order
+		  from jm_task_plus_conf
+		  where job_kind = #{jobKind}
+		 order by show_order
+	</select>
+	<select id="getPlusData" resultType="com.alibaba.fastjson.JSONObject">
+		select 
+			taskid "taskId", 
+			attr_code "attrCode", 
+			attr_value "attrValue"
+  		from jm_task_plus
+  		where taskid in(${taskIds})
+	</select>
+	<update id="saveJobPlusData">
+		merge into jm_task_plus t1
+		using (select '${taskId}' task_id,'${attrCode}'  attr_code, '${attrValue}' attr_value from dual) t2
+		on (t1.taskid = t2.task_id and t1.attr_code = t2.attr_code)
+		when matched then
+		  update set t1.attr_value = t2.attr_value, t1.update_date = sysdate
+		when not matched then
+		  insert
+		    (t1.id, t1.taskid, t1.attr_code, t1.attr_value, t1.update_date)
+		  values
+		    (jm_task_plus_s.nextval,
+		     t2.task_id,
+		     t2.attr_code,
+		     t2.attr_value,
+		     sysdate)
+	</update>
+	<select id="getPlusDimColData" resultType="com.alibaba.fastjson.JSONObject">
+		select distinct ${codeCol} "id",${nameCol} "text"
+		from ${dimTab}
+	</select>
+	<select id="plusDataFormat" resultType="String">
+		select distinct ${nameCol} from ${dimTab} where ${codeCol} = #{colValue}
+	</select>
+	<insert id="writeSurrogateLog">
+		insert into wf_task_surrogate_log
+  			(task_id, wf_task_id, operation, surrogate_reason, remark)
+  			values(#{jobTaskId},#{taskId},#{operation},#{reason},#{remark})
+	</insert>
+	<select id="checkTaskStarted" resultType="integer">
+		select count(1)
+		from jm_task
+		where id = #{taskId} and JOB_STATE = 2
+	</select>
+	<select id="checkTaskReleased" resultType="integer">
+		select count(1)
+		from jm_task
+		where id = #{taskId} and JOB_STATE = 6
+	</select>
+	<update id="recoveryTask" >
+		update jm_task set JOB_STATE = 0 where id = #{taskId} and JOB_STATE = 6
+	</update>
+	<select id="getTaskSurrogateByOrder" resultType="com.alibaba.fastjson.JSONObject">
+		select distinct a.wf_task_id       "taskId",
+		                a.surrogate_reason "reason",
+		                a.remark           "remark",
+		                b.name             "operation"
+		  from wf_task_surrogate_log a, sys_user b
+		 where a.operation = b.id
+		   and a.task_id in (select task_id from jm_task_proc_inst where proc_inst_id=#{orderId})
+	</select>
+	<select id="getTaskStatus" resultType="string">
+		select t.job_state from jm_task t
+		where t.id = #{taskId}
+	</select>
+	<update id="updateTaskActor">
+		update jm_task set operator = #{targetActor} where id = #{taskId}
+	</update>
+	<select id="getTaskIsDel" resultType="integer">
+		select t.del_flag from jm_task t
+		where t.id = #{taskId}
+	</select>
+</mapper>

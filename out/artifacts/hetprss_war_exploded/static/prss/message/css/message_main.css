@@ -1,0 +1,177 @@
+.height {
+	height: 100%;
+	margin: 0px;
+}
+
+.height-top {
+	height: 7%;
+}
+
+.height-90 {
+	height:460px;
+	overflow:auto; 
+}
+
+.padding {
+	padding: 0px;
+}
+
+.templto-div, .templto-div-select, .toreply-div, .toreply-div-select {
+	background-repeat: no-repeat;
+	background-position: right;
+	border-radius: 3px;
+	margin: 5px;
+	padding: 5px;
+	color: rgb(199, 197, 192);
+}
+
+
+#messRecipient .toreply-div {
+	color: rgb(60, 141, 188);
+	background-image: url(ctxStatic+"/images/close.png");
+}
+.toreply-div-select:HOVER{
+	background-color: rgb(60, 141, 188);
+}
+
+#messRecipient .toreply-div-select {
+	cursor: pointer;
+	color:#ffffff;
+	background-image: url(ctxStatic+"/images/close_hover.png");
+}
+
+#messRecipient .templto-div {
+	cursor: pointer;
+	background-image: url(ctxStatic+"/images/close.png");
+	border:1px solid #006DC0;
+	background-color:#021e44;
+	color:#ffffff;
+}
+.templto-div:HOVER {
+	background-color: rgb(60, 141, 188);
+}
+
+#messRecipient .templto-div-select {
+	border:1px solid #006DC0;
+	color:#ffffff;
+	background-color: rgb(60, 141, 188);
+	background-image: url(ctxStatic+"/images/close_hover.png");
+}
+
+.template-templ {
+	margin: 5px 0px 0px 5px;
+	width: 48%;
+	white-space: pre-wrap;
+}
+
+.layui-tab .layui-tab-content .template-select {
+	color: #fff;
+	margin: 5px 0px 0px 5px;
+	background-color: rgb(60, 141, 188);
+	white-space: wrap;
+}
+
+.layui-tab .layui-tab-content .template-select:HOVER button.wrap {
+	color: #fff !important;
+	background-color: rgb(60, 141, 188);
+}
+
+.template:HOVER {
+	background-color: rgb(51, 122, 183);
+	color: #fff;
+}
+
+.wrap {
+	width: 100px;
+	height: 100px;
+	background: #6c0;
+}
+
+.text-right {
+	text-align: right;
+}
+
+.input-width {
+	width: 60px;
+}
+
+.layui-tab .layui-tab-content .mess-color {
+	color: rgb(199, 197, 192);
+}
+.layui-layer .layui-layer-content, .layui-layer .layui-layer-btn{
+	color: rgb(199, 197, 192);
+}
+html body, html .box, .bootstrap-table .fixed-table-loading, .layui-side{
+	color: rgb(199, 197, 192);
+}
+
+.mess-div, .unread-message {
+	margin: 10px;
+}
+
+.mess-div-select{
+	background-color: rgb(242, 242, 242);
+}
+.layui-tab-content {
+	padding: 0px 0px 0px 0px;
+	height: 88%;
+}
+
+.legend {
+	margin: 5px 0px 0px; 5 px;
+	width: 100%;
+}
+
+form {
+	margin: 5px 0px 0px 10px;
+}
+
+.templateList {
+	padding: 0px;
+	height: 100% !important;
+	overflow-y: auto;
+	overflow-x: hidden;
+}
+td{
+	text-align: center;
+}
+.mtext{
+	resize: none;
+	height: 100px;
+	width: 98%;
+	border: 1px #fff solid;
+	background-color: rgb(242, 242, 242);
+	overflow-y: auto;
+}
+.query_mess_div{
+	text-align: right;
+	padding-right: 8px;
+}
+.fiotype{
+	padding: 5px;
+}
+.div_mtext{
+	text-indent: 25px;
+	word-wrap: break-word;
+}
+.templto{
+	color:rgb(199, 197, 192);
+}
+.layui-icon{
+	float: right;
+	cursor: pointer;
+}
+.layui-tab .layui-tab-content button{
+	color:rgb(199, 197, 192);
+}
+.talk-a{
+	cursor: pointer;
+	text-decoration: underline;
+}
+.layui-table{
+	margin: 0px;
+}
+.favorite{
+	float: right;
+	cursor: pointer;
+}

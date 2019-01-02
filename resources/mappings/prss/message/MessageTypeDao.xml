@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.message.dao.MessageTypeDao">
+
+	<resultMap id="ent" type="com.neusoft.prss.message.entity.MessageTypeVO">
+		<result property="id" column="id" />
+		<result property="tcode" column="tcode" />
+		<result property="tname" column="tname" />
+		<result property="ifreply" column="ifreply" />
+		<result property="ifflight" column="ifflight" />
+		<result property="disc" column="disc" />
+	</resultMap>
+
+
+	<select id="getMessageType" resultType="com.alibaba.fastjson.JSONObject">
+<!-- 		SELECT 0 as "id",'消息类型管理' as "name",'' as "pId" FROM MM_TYPE -->
+<!-- 		UNION  -->
+		SELECT id as "id",tname as "name",'0' as "pId" FROM MM_TYPE
+  	</select>
+	
+	
+	<!-- add -->
+	<insert id="insertItem" parameterType="com.neusoft.prss.message.entity.MessageTypeVO">
+		insert into MM_TYPE
+		(ID,TCODE,TNAME,IFREPLY,IFFLIGHT,DISC)
+		values
+		(MM_TYPE_S.NEXTVAL,#{tcode},#{tname},#{ifreply},#{ifflight},#{disc})
+	</insert>
+ 
+	<!-- del -->
+	<delete id="deleteItem" parameterType="string">
+		delete from MM_TYPE where id = #{value}
+	</delete>
+
+	<!-- update -->
+	<update id="updateItem"
+		parameterType="com.neusoft.prss.message.entity.MessageTypeVO">
+		update MM_TYPE set
+		ID=#{id},TCODE=#{tcode},TNAME=#{tname},IFREPLY=#{ifreply},IFFLIGHT=#{ifflight},DISC=#{disc}
+		where id = #{id}
+	</update>
+
+	<!--    -->
+	<select id="selectOne" parameterType="HashMap" resultMap="ent">
+		select * from MM_TYPE where id =#{id}
+	</select>
+	<!--    -->
+	<select id="selectOneByCode" parameterType="HashMap"
+		resultMap="ent">
+		select * from MM_TYPE where tcode =#{tcode}
+	</select>
+
+	<select id="selectCount" parameterType="HashMap"
+		resultType="int">
+		select count(*) as cou from MM_TYPE where 1=1
+
+	</select>
+	<select id="selectAll" parameterType="HashMap" resultMap="ent">
+		select * from MM_TYPE
+	</select>
+	
+	<select id="getTemplCount" parameterType="string" resultType="int">
+		SELECT COUNT(*) NUM  FROM mm_template t WHERE t.mtype = #{value}
+	</select>
+</mapper>

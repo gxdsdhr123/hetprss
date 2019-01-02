@@ -1,0 +1,76 @@
+body{
+	background: url(../../images/login_bg.jpg) no-repeat center top;
+	background-size:100% auto;
+}
+.layui-form {
+	width: 400px;
+	height: 320px;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	margin-left: -200px;
+	margin-top: -150px;
+	background: rgba(9, 41, 85, 0.4);
+	box-shadow:4px 4px 4px 4px rgba(0, 0, 0, 0.3);
+	padding:10px 30px !important;
+	border-radius:5px 5px 5px 5px;
+}
+
+.layui-form input{
+	background-color:#a6c6dd!important;
+	border:1px solid #929292 !important;
+	color:#555555!important;
+	border-left:0 !important;
+}
+
+.layui-form .input-group span.input-group-addon{
+	background-color:#a6c6dd!important;
+	border:1px solid #929292 !important;
+	color:#555555!important;
+	border-right:0 !important;
+}
+.layui-form button{
+	background-color:#0066B6;
+}
+.form-title {
+	line-height: 30px;
+	padding-bottom: 10px;
+	color: #fff;
+	border-bottom: 1px solid #3781B9;
+	font-size: 24px;
+	font-weight: 500;
+}
+
+.productName {
+	color: #fff;
+	font-size: 40px;
+	margin-top: 0px;
+	line-height: 60px;
+}
+
+.layui-layout-admin .layui-footer {
+	position: fixed;
+	left: 0px;
+	right: 0px;
+	bottom: 0px;
+	height: 44px;
+	line-height: 44px;
+	background-color: #fff;
+	text-align: center;
+}
+
+.layui-header{
+	height:100px;
+}
+
+.layui-header{
+	text-align:center;
+	background: transparent !important;
+	letter-spacing: 2px;
+	margin-left:-400px;
+	margin-top:-250px;
+	top: 50%;
+	left: 50%;
+	position: absolute;
+}
+

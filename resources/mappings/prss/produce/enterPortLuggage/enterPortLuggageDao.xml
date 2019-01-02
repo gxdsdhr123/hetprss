@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.produce.enterPortLuggage.dao.EnterPortLuggageDao">
+	
+	
+	
+	
+	
+	<select id="listBillListCount" resultType="int" parameterType="java.util.Map">
+	   select 
+       	count(*)
+	   from BILL_JGXLJJD_HD mainI
+	   <!-- left join SYS_USER SU on mainI.OPERATOR = SU.ID -->
+	   <!-- left join BILL_JGXLJJD_HD_GOODS BJHG on BJHG.BILL_ID = mainI.ID -->
+	   <!-- left join FD_FLT_INFO FFI on FFI.FLTID =  mainI.Fltid  -->
+
+	</select>
+	<select id="listBillList" resultType="com.alibaba.fastjson.JSONObject" parameterType="java.util.Map">
+	SELECT * FROM (SELECT B.*, rownum r FROM (select * from (
+	
+	   select 
+	       mainI.ID ,
+	       <!-- BJHG.ID as douxf, -->
+	       mainI.FLIGHT_DATE,
+	       mainI.Flight_Number,
+	       mainI.Aircraft_Number,
+	       mainI.OPERATOR,
+	       users.NAME as chali,
+	       mainI.CREATE_DATE
+	       <!-- BJHG.RECEIVER -->
+
+	   from BILL_JGXLJJD_HD mainI
+	   left join sys_user users on mainI.OPERATOR = users.id
+	   <!-- left join BILL_JGXLJJD_HD_GOODS BJHG on BJHG.BILL_ID = mainI.ID -->
+
+	<![CDATA[) order by ${sortName} ${sortOrder}) B WHERE rownum <= #{end} ) B WHERE r > #{begin}]]>
+
+	</select>
+	
+	
+	<insert id="saveBillGoos" parameterType="java.util.Map">
+		insert into bill_jgxljjd_hd_goods(id,COLL_CODE,INC_GOODS,REMARK,OPERATOR_DATE,RECEIVER,RECEIVE_TIME,BILL_ID)
+		values(bill_jgxljjd_hd_goods_s.nextval,#{collCode},#{incGoods},#{renark},#{operatorDate},#{receiver},#{receiveTime},#{billId})
+	
+	</insert>
+	
+	<select id="selChaLi" resultType="java.util.Map">
+		<!-- SELECT ID,NAME FROM sys_user WHERE office_id='6cbe05d24e2e4945a1422ef1d476e0aa' -->
+		SELECT ID,NAME FROM sys_user
+	</select>
+	
+	<select id="findInfo" resultType="java.util.Map">
+		SELECT 
+	       AIRCRAFT_NUMBER,
+	       ACTSTAND_CODE, 
+	       ATA
+		FROM FD_FLT_INFO
+		WHERE FLIGHT_DATE = #{flightDate}
+		AND FLIGHT_NUMBER = #{flightNumber}
+	</select>
+	
+	<!-- <insert id="saveBJH" parameterType="java.util.Map">
+		insert into bill_jgxljjd_hd(ID,FLIGHT_DATE,FLIGHT_NUMBER,AIRCRAFT_NUMBER,Actstand_Code,ATA,OPERATOR)
+		values(bill_jgxljjd_hd_s.nextval,#{flightDate},#{flightNumber},#{aircraftNumber},#{actstandCode},#{ata},#{chali});
+	</insert> -->
+	
+	<insert id="saveBJH" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id">
+		<selectKey keyProperty="id" resultType="string" order="BEFORE">
+			select bill_jgxljjd_hd_s.NEXTVAL as id from dual
+		</selectKey>
+		
+		insert into bill_jgxljjd_hd(ID,FLIGHT_DATE,FLIGHT_NUMBER,AIRCRAFT_NUMBER,Actstand_Code,ATA,OPERATOR,CREATE_DATE)
+		values(bill_jgxljjd_hd_s.NEXTVAL,#{flightDate},#{flightNumber},#{aircraftNumber},#{actstandCode},#{ata},#{chali},sysdate)
+	</insert>
+	
+	<select id="findMainI" resultType="java.util.Map">
+		select * from bill_jgxljjd_hd where id = #{mainId}
+	</select>
+	
+	<!-- <select id="findB" resultType="java.util.Map">
+		SELECT 
+		   ID,
+		   COLL_CODE as collCode,
+	       INC_GOODS as incGoods,
+	       REMARK as renark,
+	       OPERATOR_DATE as operatorDate,
+	       RECEIVER as receiver,
+	       RECEIVE_TIME as receiveTime 
+		from bill_jgxljjd_hd_goods
+		where id = #{id}
+	</select> -->	
+	<select id="findB" resultType="java.util.Map" parameterType="string">
+	select 
+         BJHG.ID,
+         BJHG.COLL_CODE as collCode,
+         BJHG.INC_GOODS as incGoods,
+         BJHG.REMARK as renark,
+         BJHG.OPERATOR_DATE as operatorDate,
+         BJHG.RECEIVER as receiver,
+         BJHG.RECEIVE_TIME as receiveTime
+     from BILL_JGXLJJD_HD mainI
+     left join BILL_JGXLJJD_HD_GOODS BJHG on BJHG.BILL_ID = mainI.ID
+     where mainI.Id=#{id}
+	</select>
+	
+	
+	
+	
+	<update id="updateMain" parameterType="java.util.Map">
+		update bill_jgxljjd_hd 
+		<set>
+			<if test='flightDate !="" and flightDate !=null'>
+				FLIGHT_DATE=#{flightDate},
+			</if>
+			<if test='flightNumber!="" and flightNumber!=null'>
+				FLIGHT_NUMBER=#{flightNumber},
+			</if>
+			<if test='aircraftNumber!="" and aircraftNumber!=null'>
+				AIRCRAFT_NUMBER = #{aircraftNumber},
+			</if>
+			<if test='actstandCode!="" and actstandCode!=null'>
+				ACTSTAND_CODE = #{actstandCode},
+			</if>
+			<if test='ata!="" and ata!=null'>
+				ATA = #{ata},
+			</if>
+			<if test='chali!="" and chali!=null'>
+				OPERATOR=#{chali},
+			</if>
+		</set>
+		<where>
+			ID=#{id}
+		</where>
+	</update>
+
+
+	<update id="updateGoods" parameterType="java.util.Map">
+		update bill_jgxljjd_hd_goods
+		<set>
+			<if test='collCode !="" and  collCode !=null'>
+				COLL_CODE = #{collCode},
+			</if>
+			
+			<if test='incGoods !="" and incGoods!=null'>
+				INC_GOODS = #{incGoods},
+			</if>
+			
+			<if test='renark !="" and renark!=null'>
+				REMARK = #{renark},
+			</if>
+			
+			<if test='operatorDate!="" and operatorDate!=null'>
+				OPERATOR_DATE = #{operatorDate},
+			</if>
+			
+			<if test='receiver !="" and receiver!=null'>
+				RECEIVER = #{receiver},
+			</if>
+			
+			<if test='receiveTime !="" and receiveTime!=null'>
+				RECEIVE_TIME = #{receiveTime},
+			</if>
+		</set>
+		<where>
+			ID=#{id}
+		</where>
+		
+	</update>
+	
+	
+	<delete id="delDoods" parameterType="string">
+		delete from bill_jgxljjd_hd_goods where BILL_ID=#{id}
+	</delete>
+	
+	<delete id="delDoodsMain" parameterType="string">
+		delete from bill_jgxljjd_hd where ID=#{id}
+	</delete>
+	
+	
+	<select id="findMainAndB" parameterType="string" resultType='string'>
+		select 
+     	count(*)
+     	from BILL_JGXLJJD_HD mainI
+     	left join BILL_JGXLJJD_HD_GOODS BJHG on BJHG.BILL_ID = mainI.ID
+     	where mainI.Id=#{id}
+	</select>
+	
+	
+	<delete id="delgoodsB" parameterType="string">
+		delete from bill_jgxljjd_hd_goods where BILL_ID=#{id}
+	</delete>
+	
+	<!-- 获取货运司机列表 -->
+	<select id="getReceiverListDou" resultType="hashmap">
+		select 
+		 	id  as"value", 
+		 	name as "text"
+		from
+			sys_user 
+	</select>
+	
+	<!-- 判断同一天是否出现两天相同的日期 -->
+	<select id="countGulf" resultType="string" parameterType="java.util.Map">
+		select count(*) from bill_jgxljjd_hd where FLIGHT_DATE=#{flightDate} and FLIGHT_NUMBER=#{flightNumber}
+	</select>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+
+
+
+
+
+
+</mapper>

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.mobile.dao.MobileRecordDao">
+
+	<select id="SearchBuMen" resultType="hashmap">
+		SELECT distinct A.OFFICE_ID ID,B.NAME NAME
+		  FROM SYS_PDA A,SYS_OFFICE B
+		 WHERE A.OFFICE_ID = B.ID
+	</select>
+	
+	<select id="getDataCount"  parameterType="hashmap" resultType="int" >
+		select count(*)
+		  from (select a.*, b.pda_no, b.imei, c.name
+				  from (select k.*
+				          from (select t.PDA_ID PDA_ID,
+				                       t.PDA_USESTATUS PDA_STATUS,
+				                       t.USE_USER USE_USER,
+				                       to_char(t.USE_TIME, 'yyyy-mm-dd hh24:mi:ss') USE_TIME,
+				                       t.BACK_USER BACK_USER,
+				                       to_char(t.BACK_TIME, 'yyyy-mm-dd hh24:mi:ss') BACK_TIME,
+				                       row_number() over(partition by PDA_ID order by log_Id desc) rn
+				                  from SYS_PDA_USE_LOG t) k
+				         where k.rn = 1) a,
+				       SYS_PDA b,
+				       SYS_OFFICE c
+				 where A.PDA_ID = B.ID
+				   and b.office_id = c.id
+		 <if test='zhuangTai !="null" '>
+				and a.PDA_USESTATUS = #{zhuangTai} 
+		 </if>
+		 <if test='buMen !="null" '>
+				and b.OFFICE_ID = #{buMen}
+		 </if>
+		 )
+	</select>
+	
+	<select id="getDataList"  parameterType="hashmap" resultType="com.alibaba.fastjson.JSONObject" >
+		select *
+		  from (SELECT A.*, rownum mn
+		          from (select a.*, b.pda_no, b.imei, c.name
+						  from (select k.*
+						          from (select t.PDA_ID PDA_ID,
+						                       t.PDA_USESTATUS PDA_STATUS,
+						                       t.USE_USER USE_USER,
+						                       to_char(t.USE_TIME, 'yyyy-mm-dd hh24:mi:ss') USE_TIME,
+						                       t.BACK_USER BACK_USER,
+						                       to_char(t.BACK_TIME, 'yyyy-mm-dd hh24:mi:ss') BACK_TIME,
+						                       row_number() over(partition by PDA_ID order by log_Id desc) rn
+						                  from SYS_PDA_USE_LOG t) k
+						         where k.rn = 1) a,
+						       SYS_PDA b,
+						       SYS_OFFICE c
+						 where A.PDA_ID = B.ID
+						   and b.office_id = c.id
+						 <if test='zhuangTai !="null" '>
+								and a.PDA_USESTATUS = #{zhuangTai} 
+						 </if>
+						 <if test='buMen !="null" '>
+								and b.OFFICE_ID = #{buMen}
+						 </if>
+		          ) A
+		         where #{end} >= rownum)
+		 where mn > #{begin}
+	</select>
+	
+	<select id="SelectMobileLog" parameterType="hashmap" resultType="hashmap">
+		SELECT case PDA_USESTATUS                     
+	           when '2' then
+	            to_char(BACK_TIME, 'yyyy-mm-dd hh24:mi:ss')
+	            else to_char(USE_TIME, 'yyyy-mm-dd hh24:mi:ss')
+	         end TIME,
+	         case PDA_USESTATUS         
+	           when '2' then
+	            BACK_USER
+	            else use_user
+	         end NAME,
+	         case PDA_USESTATUS
+	           when '1' then
+	            '借出'
+	           when '2' then
+	            '归还'
+	            when '3' then
+	            '交接'
+	         end PDA_STATUS
+	    FROM SYS_PDA_USE_LOG
+		 WHERE PDA_ID = #{pdaId}
+		 <if test='param !="" '>
+		 	and (USE_USER like '%${param}%' or PDA_USESTATUS = case #{param} when '借出' then '1' when '在库' then '2' end or to_char(USE_TIME,'yyyy-mm-dd hh24:mi:ss') like '%${param}%')
+		 </if>
+		 order by log_id DESC
+	</select>
+	
+	<select id="getPrintList"  parameterType="hashmap" resultType="hashmap" >
+		  select a.*, b.pda_no, nvl(b.imei,' ') IMEI, c.name
+						  from (select k.*
+						          from (select t.PDA_ID PDA_ID,
+						                       t.PDA_USESTATUS PDA_STATUS,
+						                       t.USE_USER USE_USER,
+						                       to_char(t.USE_TIME, 'yyyy-mm-dd hh24:mi:ss') USE_TIME,
+						                       t.BACK_USER BACK_USER,
+						                       to_char(t.BACK_TIME, 'yyyy-mm-dd hh24:mi:ss') BACK_TIME,
+						                       row_number() over(partition by PDA_ID order by log_Id desc) rn
+						                  from SYS_PDA_USE_LOG t) k
+						         where k.rn = 1) a,
+						       SYS_PDA b,
+						       SYS_OFFICE c
+						 where A.PDA_ID = B.ID
+						   and b.office_id = c.id
+		 <if test='zhuangTai !="" '>
+				and a.PDA_USESTATUS = #{zhuangTai} 
+		 </if>
+		 <if test='buMen !="" '>
+				and b.OFFICE_ID = #{buMen}
+		 </if>
+	</select>
+</mapper>

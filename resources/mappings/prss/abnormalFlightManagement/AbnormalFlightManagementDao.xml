@@ -1,0 +1,575 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="com.neusoft.prss.abnormalFlightManagement.dao.AbnormalFlightManagementDao">
+
+	<!-- 查询发送的部门 -->
+	<select id="getSenDepart" resultType="hashmap">
+		SELECT so.ID, so.NAME
+		FROM SYS_OFFICE so
+		WHERE exists (SELECT DEPID FROM DIM_RESKIND dr where dr.depid = so.id)
+	</select>
+	<!-- 查询不正常航班信息 -->
+	<select id="getAbnormalFlightInfo" resultType="hashmap">
+		SELECT IN_FLT.FLTID, <!--航班ID -->
+		       IN_FLT.ALN_2CODE, <!--航空公司 -->
+		       IN_FLT.FLIGHT_NUMBER IN_FLIGHT_NUMBER, <!--进港航班号 -->
+		       IN_FLT.AIRCRAFT_NUMBER, <!--机号 -->
+		       IN_FLT.ACTTYPE_CODE, <!--机型 -->
+		       OUT_FLT.FLIGHT_NUMBER OUT_FLIGHT_NUMBER, <!--出港航班号 -->
+		       IN_FLT.STA, <!--STA -->
+		       OUT_FLT.STD, <!--STD -->
+		       IN_FLT.ATA, <!--ATA -->
+		       OUT_FLT.ATD, <!--ATD -->
+		       OUT_FLT.HTCH_CLO_TM, <!--客关时间 -->
+		       GOOD.GOODCLOSE, <!--货关时间 -->
+		       CLA.FTSAT_TM, <!--首次TSAT -->
+		       (SELECT DESCRIPTION_CN FROM dim_airport where ICAO_CODE = (CASE
+		         WHEN IN_FLT.FLIGHT_NUMBER = #{flightNumber} THEN
+		          IN_FLT.DEPART_APT4CODE
+		         WHEN OUT_FLT.FLIGHT_NUMBER = #{flightNumber} AND
+		              OUT_FLT.IN_OUT_FLAG = 'D1' THEN
+		          IN_FLT.DEPART_APT4CODE
+		         ELSE
+		          OUT_FLT.DEPART_APT4CODE
+		       END)) AS DEPART_APT4CODE, <!--起场 -->
+		       (SELECT DESCRIPTION_CN FROM dim_airport where ICAO_CODE = (CASE
+		         WHEN OUT_FLT.FLIGHT_NUMBER = #{flightNumber} THEN
+		          OUT_FLT.ARRIVAL_APT4CODE
+		         WHEN IN_FLT.FLIGHT_NUMBER = #{flightNumber} AND 
+		              IN_FLT.IN_OUT_FLAG = 'A1' THEN
+		          OUT_FLT.ARRIVAL_APT4CODE
+		         ELSE
+		          IN_FLT.ARRIVAL_APT4CODE
+		       END)) AS ARRIVAL_APT4CODE, <!--落场 -->
+		       CLA.TSAT, <!--TSAT -->
+		       DELAY.DEALY_REASON, <!--延误原因 -->
+		       IN_FLT.ACTSTAND_CODE <!--机位 -->
+		  FROM FD_FLT_INFO_ALL_V IN_FLT,
+		       FD_FLT_INFO_ALL_V OUT_FLT,
+		       FD_FLT_IOREL_ALL_V IOREL,
+		       FD_FLT_CLA_AIRGROUND_ALL_V CLA,
+		       (SELECT FLTID,
+		               NVL(NVL(ZPJCZX_GOODCLOSE_T, ZPCGZX_GOODCLOSE_T),
+		                   ZPJGZX_GOODCLOSE_T) GOODCLOSE
+		          FROM WF_TASKNODE_FINISH_TIME_V) GOOD,
+		       (SELECT A.FLTID, WM_CONCAT(B.NAME || '/' || A.DELAY_TM) DEALY_REASON
+		          FROM FD_DELAY_INFO A, DIM_DELAY_TYPE B
+		         WHERE A.DELAY_TYPE = B.ID
+		         GROUP BY A.FLTID) DELAY
+		 WHERE IN_FLT.FLTID = IOREL.IN_FLTID
+		   AND IOREL.OUT_FLTID = OUT_FLT.FLTID(+)
+		   AND GOOD.FLTID(+) = OUT_FLT.FLTID
+		   AND CLA.FLTID(+) = OUT_FLT.FLTID
+		   AND DELAY.FLTID(+) = IN_FLT.FLTID
+		   AND IN_FLT.STATUS NOT IN ('1', '2')
+		   AND OUT_FLT.STATUS NOT IN ('1', '2')
+		   AND ((IN_FLT.FLIGHT_DATE = #{flightDate} AND
+		       IN_FLT.FLIGHT_NUMBER = #{flightNumber}) or
+		       (OUT_FLT.FLIGHT_DATE = #{flightDate} AND
+		       OUT_FLT.FLIGHT_NUMBER = #{flightNumber}))
+	</select>
+	<!-- 获取表格数据（主页面） -->
+	<select id="getGridData" resultType="hashmap">
+	select *
+  from (SELECT rownum no, a.*
+          FROM (SELECT fla.id ID,
+                       fla.FLIGHT_DATE FLIGHTDATE,
+                       fla.FLIGHT_NUMBER FLIGHTNUMBER,
+                       fla.AIRCRAFT_NUMBER AIRCRAFTNUMBER,
+                       fla.REMARK REMARK,
+                       to_char(fla.OPER_DATE, 'yyyy-mm-dd hh24:mi') OPERDATE,
+                       data1.deptName DEPTNAME,
+                       data1.sta DEPTSTA,
+                       NVL(fla.CDM_USER, '0') CMDSTA
+                  FROM FD_FLT_ABNORMAL fla,
+                       (SELECT ffaf.ABNORMAL_ID id,
+                               TO_CHAR(WMSYS.WM_CONCAT(to_char(so.NAME))) deptName,
+                               TO_CHAR(WMSYS.WM_CONCAT(NVL2(ffaf.OPERATROR,
+                                                            '1',
+                                                            '0'))) sta
+                          FROM FD_FLT_ABNORMAL_FEEDBACK ffaf
+                          LEFT JOIN sys_office so
+                            ON so.id = ffaf.OFFICE_ID
+                            <if test="officeId !='6f1207e13dc745e5b11e57df3df7fde3' and officeId !='7e43436d31634c17b02b83f94273c691'">
+								where ffaf.OFFICE_ID = #{officeId}
+							</if>
+                         GROUP BY ffaf.ABNORMAL_ID) data1,
+                       fd_flt_airline_ownership_v a,
+                       fd_flt_info b
+                 where data1.id = fla.id
+                   and A.fltid = FLA.fltid
+                   and A.fltid = B.fltid
+			<if test="null != startTime || null != endTime">
+				AND fla.FLIGHT_DATE 
+				<!-- 时间搜索 -->
+				<if test="null != startTime and null != endTime">
+					BETWEEN  #{startTime} AND  #{endTime}
+				</if>
+				<if test="null != startTime and null == endTime ">
+					BETWEEN  #{startTime} AND  TO_CHAR(SYSDATE, 'yyyymmdd') 
+				</if>
+				<if test="null == startTime and null != endTime">
+					<![CDATA[  
+						<= 
+	  				]]>  
+					#{endTime} 
+				</if>
+			</if>
+			<!-- 涉及部门搜索-->		
+			<if test="null != sendDept">
+				AND ffaf.office_id = #{sendDept} 
+			</if>
+			<if test="null != sql">
+				${sql}
+			</if>
+			ORDER BY fla.OPER_DATE desc ) a
+		<trim prefix="WHERE" prefixOverrides="AND |OR ">
+			<if test="null != dept">
+				AND DEPTSTA LIKE #{dept} 
+			</if>
+			<if test="null != cdm">
+				AND CMDSTA = #{cdm}
+			</if>
+		</trim>
+		)
+		<if test="totalSize != 0">		
+		  where no BETWEEN #{pageNumber} AND #{pageSize} ORDER BY no
+		</if>
+	</select>
+	<!-- 获取 -->
+	<select id="getAbnormalFlightById" resultType="hashmap">
+		SELECT
+			FFA.ID FEEDBACKID,
+			FFA.FLTID,
+			FFA.FLIGHT_DATE,
+			FFA.FLIGHT_NUMBER,
+			FFA.AIRCRAFT_NUMBER,
+			FFA.INFO_SOURCE,
+			FFA.REMARK,
+			FFA.OPERATROR,
+			FFA.OPER_DATE,
+			FFA.CDM_CONTENT,
+			FFA.CDM_USER CDMUSERID,
+			SU1.NAME CDMUSERNAME,
+			FFA.CDM_DATE,
+			SU.NAME DUTYNAME,
+			DATA1.OFFICEID OFFICEIDCHECKED 
+		FROM
+			FD_FLT_ABNORMAL FFA
+			LEFT JOIN SYS_USER SU ON SU.ID = FFA.OPERATROR
+			LEFT JOIN SYS_USER SU1 ON SU1.ID = FFA.CDM_USER
+			LEFT JOIN (
+		SELECT
+			FFAF.ABNORMAL_ID ID,
+			TO_CHAR(WMSYS.WM_CONCAT ( FFAF.OFFICE_ID )) OFFICEID 
+		FROM
+			FD_FLT_ABNORMAL_FEEDBACK FFAF
+			LEFT JOIN SYS_OFFICE SO ON SO.ID = FFAF.OFFICE_ID 
+		GROUP BY
+			FFAF.ABNORMAL_ID 
+			) DATA1 ON DATA1.ID = FFA.ID 
+		<trim prefix="WHERE" prefixOverrides="AND |OR ">
+			<if test="null != searchId">
+				AND FFA.ID = #{searchId}
+			</if>
+		</trim>
+	</select>
+	<!-- 获取该不正常航班所涉及的部门 -->
+	<select id="getDepartFeedBackInfo" resultType="hashmap">
+		SELECT
+			FFAF.ID,
+			FFAF.ABNORMAL_ID,
+			FFAF.OFFICE_ID,
+			FFAF.CONTENT,
+			FFAF.OPERATROR,
+			FFAF.OPER_DATE ,
+			SO.NAME OFFICENAME,
+			SU.NAME DEPTFEENNAME
+		FROM
+			FD_FLT_ABNORMAL_FEEDBACK FFAF
+			LEFT JOIN SYS_OFFICE SO ON SO.ID = FFAF.OFFICE_ID
+			LEFT JOIN SYS_USER SU ON SU.ID = FFAF.OPERATROR
+		<trim prefix="WHERE" prefixOverrides="AND |OR ">
+			<if test="searchId != null">		
+				AND FFAF.ABNORMAL_ID = #{searchId}
+			</if>
+			<if test="userOfficeId != null">		
+				AND FFAF.OFFICE_ID = #{userOfficeId}
+			</if>
+		</trim>
+	</select>
+
+	<!-- 得到当前最大排序值 -->
+<!-- 	<select id="getBackMaxId" resultType="string"> -->
+<!-- 		select max(id) from -->
+<!-- 		FD_FLT_ABNORMAL_FEEDBACK -->
+<!-- 	</select> -->
+	<!-- 获取航空公司下拉选 -->
+	<select id="getAirFlightList" resultType="hashmap">
+		SELECT AIRLINE_CODE,DESCRIPTION_CN FROM DIM_AIRLINES 
+	</select>
+	<!-- 保存不正常航班 -->
+	<insert id="addAbnormalFlightAbnormal" useGeneratedKeys="true" keyProperty="id" 
+			parameterType="com.neusoft.prss.abnormalFlightManagement.entity.FdFltAbnorrmal">
+		<selectKey resultType="String" keyProperty="id" order="BEFORE">
+			SELECT
+			<choose>
+				<when test="id!='null' and id!=''">
+					#{id}
+				</when>
+				<otherwise>
+					FD_FLT_ABNORMAL_S.NEXTVAL
+				</otherwise>
+			</choose>
+			from dual
+		</selectKey>
+		INSERT INTO FD_FLT_ABNORMAL(ID, FLTID, FLIGHT_DATE, FLIGHT_NUMBER,
+		AIRCRAFT_NUMBER, INFO_SOURCE, REMARK, OPERATROR, OPER_DATE)
+		VALUES(#{id}, #{fltid}, #{flightDate}, #{flightNumber},
+		#{aircraftNumber}, #{infoSource}, #{remark}, #{operatror},
+		#{operDate})
+	</insert>
+	<!-- 保存不正常航班反馈表 -->
+	<insert id="addAbnormalFlightAbnormalFeedackBatch" parameterType="hashmap">
+		INSERT INTO FD_FLT_ABNORMAL_FEEDBACK (ID, ABNORMAL_ID, OFFICE_ID)
+			  select FD_FLT_ABNORMAL_FEEDBACK_S.NEXTVAL, A.* from(
+		<foreach collection="list" item="tabdata" index="index" open="(" close=")" separator="union all">
+			select #{tabdata.abnormalId}, #{tabdata.officeId} from dual
+		</foreach>
+		) A
+	</insert>
+	<!-- 不正常航班涉及部门信息反馈 -->
+	<update id="feedBackAirRep" parameterType="hashmap">
+		UPDATE FD_FLT_ABNORMAL_FEEDBACK SET
+			<if test="null != feedBackContent">
+				CONTENT = #{feedBackContent},			
+			</if>
+			<if test="null != feedBackOper">
+				OPERATROR = #{feedBackOper},
+			</if>
+			<if test="null != feedBackDate">
+				OPER_DATE = to_date(#{feedBackDate}, 'yyyy-mm-dd HH24:MI')
+			</if>
+		WHERE
+		ID = #{feedBackId}
+	</update>
+	<!-- CDM判责信息录入 -->
+	<update id="aCDMContractorResponsible" parameterType="hashmap">
+		UPDATE FD_FLT_ABNORMAL SET 
+		<if test="null != cdmId">
+			CDM_USER = #{cdmId},
+		</if>
+		<if test="null != cmdContent">
+			CDM_CONTENT = #{cmdContent},
+		</if>
+		<if test="null != cdmDate">
+		  	CDM_DATE = to_date(#{cdmDate}, 'yyyy-mm-dd HH24:MI')
+		</if>
+		where ID = #{feedBackId}
+	</update>
+	<!-- 删除当前不正常航班 -->
+	<delete id="delAbnormalFlight" parameterType="hashmap">
+		DELETE FROM FD_FLT_ABNORMAL WHERE ID = #{searchId}
+	</delete>
+	<!-- 删除当前不正常航班反馈信息 -->
+	<delete id="delAbnormalFeedBack" parameterType="hashmap">
+		DELETE FROM FD_FLT_ABNORMAL_FEEDBACK WHERE ABNORMAL_ID = #{searchId}
+	</delete>
+
+	<!-- 以下为航班相关信息查询 -->
+	<select id="getAbnormalFlightInfoFromPrssA0" resultType="hashmap">
+		SELECT IN_FLT.FLTID, <!--航班ID -->
+		       IN_FLT.ALN_2CODE, <!--航空公司 -->
+		       IN_FLT.FLIGHT_NUMBER IN_FLIGHT_NUMBER, <!--进港航班号 -->
+		       IN_FLT.AIRCRAFT_NUMBER, <!--机号 -->
+		       IN_FLT.ACTTYPE_CODE, <!--机型 -->
+		       '' OUT_FLIGHT_NUMBER, <!--出港航班号 -->
+		       IN_FLT.STA, <!--STA -->
+		       '' STD, <!--STD -->
+		       IN_FLT.ATA, <!--ATA -->
+		       '' ATD, <!--ATD -->
+		       IN_FLT.HTCH_CLO_TM, <!--客关时间 -->
+		       GOOD.GOODCLOSE, <!--货关时间 -->
+		       CLA.FTSAT_TM, <!--首次TSAT -->
+		       (SELECT DESCRIPTION_CN FROM dim_airport where ICAO_CODE = IN_FLT.DEPART_APT4CODE
+		         ) AS DEPART_APT4CODE, <!--起场 -->
+		       (SELECT DESCRIPTION_CN FROM dim_airport where ICAO_CODE = IN_FLT.ARRIVAL_APT4CODE
+		         ) AS ARRIVAL_APT4CODE, <!--落场 -->
+		       CLA.TSAT, <!--TSAT -->
+		       to_char(DELAY.DEALY_REASON),  <!--延误原因 -->
+		       IN_FLT.ACTSTAND_CODE <!--机位 -->
+		  FROM FD_FLT_INFO IN_FLT,
+		       FD_FLT_IOREL IOREL,
+		       FD_FLT_CLA_AIRGROUND CLA,
+		       (SELECT FLTID,
+		               NVL(NVL(ZPJCZX_GOODCLOSE_T, ZPCGZX_GOODCLOSE_T),
+		                   ZPJGZX_GOODCLOSE_T) GOODCLOSE
+		          FROM WF_TASKNODE_FINISH_TIME_V) GOOD,
+		       (SELECT A.FLTID, WM_CONCAT(B.NAME || '/' || A.DELAY_TM) DEALY_REASON
+		          FROM FD_DELAY_INFO A, DIM_DELAY_TYPE B
+		         WHERE A.DELAY_TYPE = B.ID
+		         GROUP BY A.FLTID) DELAY
+		 WHERE IN_FLT.IN_OUT_FLAG = 'A0'
+		   AND GOOD.FLTID(+) = IN_FLT.FLTID
+		   AND CLA.FLTID(+) = IN_FLT.FLTID
+		   AND DELAY.FLTID(+) = IN_FLT.FLTID
+		   AND IN_FLT.STATUS NOT IN ('1', '2')
+		   AND IN_FLT.FLIGHT_DATE = #{flightDate} 
+		   AND IN_FLT.FLIGHT_NUMBER = #{flightNumber}
+	       AND rownum = 1
+	</select>
+	<select id="getAbnormalFlightInfoFromPrssD0" resultType="hashmap">
+		SELECT OUT_FLT.FLTID, <!--航班ID -->
+		       OUT_FLT.ALN_2CODE, <!--航空公司 -->
+		       '' IN_FLIGHT_NUMBER, <!--进港航班号 -->
+		       OUT_FLT.AIRCRAFT_NUMBER, <!--机号 -->
+		       OUT_FLT.ACTTYPE_CODE, <!--机型 -->
+		       OUT_FLT.FLIGHT_NUMBER OUT_FLIGHT_NUMBER, <!--出港航班号 -->
+		       '' STA, <!--STA -->
+		       OUT_FLT.STD, <!--STD -->
+		       '' ATA, <!--ATA -->
+		       OUT_FLT.ATD, <!--ATD -->
+		       OUT_FLT.HTCH_CLO_TM, <!--客关时间 -->
+		       GOOD.GOODCLOSE, <!--货关时间 -->
+		       CLA.FTSAT_TM, <!--首次TSAT -->
+		       (SELECT DESCRIPTION_CN FROM dim_airport where ICAO_CODE = OUT_FLT.DEPART_APT4CODE
+		         ) AS DEPART_APT4CODE, <!--起场 -->
+		       (SELECT DESCRIPTION_CN FROM dim_airport where ICAO_CODE = OUT_FLT.ARRIVAL_APT4CODE
+		         ) AS ARRIVAL_APT4CODE, <!--落场 -->
+		       CLA.TSAT, <!--TSAT -->
+		       to_char(DELAY.DEALY_REASON),  <!--延误原因 -->
+		       OUT_FLT.ACTSTAND_CODE <!--机位 -->
+		  FROM FD_FLT_INFO OUT_FLT,
+		       FD_FLT_IOREL IOREL,
+		       FD_FLT_CLA_AIRGROUND CLA,
+		       (SELECT FLTID,
+		               NVL(NVL(ZPJCZX_GOODCLOSE_T, ZPCGZX_GOODCLOSE_T),
+		                   ZPJGZX_GOODCLOSE_T) GOODCLOSE
+		          FROM WF_TASKNODE_FINISH_TIME_V) GOOD,
+		       (SELECT A.FLTID, WM_CONCAT(B.NAME || '/' || A.DELAY_TM) DEALY_REASON
+		          FROM FD_DELAY_INFO A, DIM_DELAY_TYPE B
+		         WHERE A.DELAY_TYPE = B.ID
+		         GROUP BY A.FLTID) DELAY
+		 WHERE OUT_FLT.IN_OUT_FLAG = 'D0'
+		   AND GOOD.FLTID(+) = OUT_FLT.FLTID
+		   AND CLA.FLTID(+) = OUT_FLT.FLTID
+		   AND DELAY.FLTID(+) = OUT_FLT.FLTID
+		   AND OUT_FLT.STATUS NOT IN ('1', '2')
+		   AND OUT_FLT.FLIGHT_DATE = #{flightDate} 
+		   AND OUT_FLT.FLIGHT_NUMBER = #{flightNumber}
+	       AND rownum = 1
+	</select>
+	<select id="getAbnormalFlightInfoFromPrss" resultType="hashmap">
+		SELECT IN_FLT.FLTID, <!--航班ID -->
+			   IN_FLT.ALN_2CODE, <!--航空公司 -->
+		       IN_FLT.FLIGHT_NUMBER IN_FLIGHT_NUMBER, <!--进港航班号 -->
+		       IN_FLT.AIRCRAFT_NUMBER, <!--机号 -->
+		       IN_FLT.ACTTYPE_CODE, <!--机型 -->
+		       OUT_FLT.FLIGHT_NUMBER OUT_FLIGHT_NUMBER, <!--出港航班号 -->
+		       IN_FLT.STA, <!--STA -->
+		       OUT_FLT.STD, <!--STD -->
+		       IN_FLT.ATA, <!--ATA -->
+		       OUT_FLT.ATD, <!--ATD -->
+		       OUT_FLT.HTCH_CLO_TM, <!--客关时间 -->
+		       GOOD.GOODCLOSE, <!--货关时间 -->
+		       CLA.FTSAT_TM, <!--首次TSAT -->
+		       (SELECT DESCRIPTION_CN FROM dim_airport where ICAO_CODE = (CASE
+		         WHEN IN_FLT.FLIGHT_NUMBER = #{flightNumber} THEN
+		          IN_FLT.DEPART_APT4CODE
+		         WHEN OUT_FLT.FLIGHT_NUMBER = #{flightNumber} AND
+		              OUT_FLT.IN_OUT_FLAG = 'D1' THEN
+		          IN_FLT.DEPART_APT4CODE
+		         ELSE
+		          OUT_FLT.DEPART_APT4CODE
+		       END)) AS DEPART_APT4CODE, <!--起场 -->
+		       (SELECT DESCRIPTION_CN FROM dim_airport where ICAO_CODE = (CASE
+		         WHEN OUT_FLT.FLIGHT_NUMBER = #{flightNumber} THEN
+		          OUT_FLT.ARRIVAL_APT4CODE
+		         WHEN IN_FLT.FLIGHT_NUMBER = #{flightNumber} AND 
+		              IN_FLT.IN_OUT_FLAG = 'A1' THEN
+		          OUT_FLT.ARRIVAL_APT4CODE
+		         ELSE
+		          IN_FLT.ARRIVAL_APT4CODE
+		       END)) AS ARRIVAL_APT4CODE, <!--落场 -->
+		       CLA.TSAT, <!--TSAT -->
+		       to_char(DELAY.DEALY_REASON),  <!--延误原因 -->
+		       IN_FLT.ACTSTAND_CODE <!--机位 -->
+		  FROM FD_FLT_INFO IN_FLT,
+		       FD_FLT_INFO OUT_FLT,
+		       FD_FLT_IOREL IOREL,
+		       FD_FLT_CLA_AIRGROUND CLA,
+		       (SELECT FLTID,
+		               NVL(NVL(ZPJCZX_GOODCLOSE_T, ZPCGZX_GOODCLOSE_T),
+		                   ZPJGZX_GOODCLOSE_T) GOODCLOSE
+		          FROM WF_TASKNODE_FINISH_TIME_V) GOOD,
+		       (SELECT A.FLTID, WM_CONCAT(B.NAME || '/' || A.DELAY_TM) DEALY_REASON
+		          FROM FD_DELAY_INFO A, DIM_DELAY_TYPE B
+		         WHERE A.DELAY_TYPE = B.ID
+		         GROUP BY A.FLTID) DELAY
+		 WHERE IN_FLT.FLTID = IOREL.IN_FLTID
+		   AND IOREL.OUT_FLTID = OUT_FLT.FLTID(+)
+		   AND GOOD.FLTID(+) = OUT_FLT.FLTID
+		   AND CLA.FLTID(+) = OUT_FLT.FLTID
+		   AND DELAY.FLTID(+) = OUT_FLT.FLTID
+		   AND IN_FLT.STATUS NOT IN ('1', '2')
+		   AND OUT_FLT.STATUS NOT IN ('1', '2')
+		   AND ((IN_FLT.FLIGHT_DATE = #{flightDate} AND
+		       IN_FLT.FLIGHT_NUMBER = #{flightNumber}) or
+		       (OUT_FLT.FLIGHT_DATE = #{flightDate} AND
+		       OUT_FLT.FLIGHT_NUMBER = #{flightNumber}))
+	       AND rownum = 1
+	</select>
+	<select id="getAbnormalFlightInfoFromPrsspA0" resultType="hashmap">
+		SELECT IN_FLT.FLTID, <!--航班ID -->
+		       IN_FLT.ALN_2CODE, <!--航空公司 -->
+		       IN_FLT.FLIGHT_NUMBER IN_FLIGHT_NUMBER, <!--进港航班号 -->
+		       IN_FLT.AIRCRAFT_NUMBER, <!--机号 -->
+		       IN_FLT.ACTTYPE_CODE, <!--机型 -->
+		       '' OUT_FLIGHT_NUMBER, <!--出港航班号 -->
+		       IN_FLT.STA, <!--STA -->
+		       '' STD, <!--STD -->
+		       IN_FLT.ATA, <!--ATA -->
+		       '' ATD, <!--ATD -->
+		       IN_FLT.HTCH_CLO_TM, <!--客关时间 -->
+		       GOOD.GOODCLOSE, <!--货关时间 -->
+		       CLA.FTSAT_TM, <!--首次TSAT -->
+		       (SELECT DESCRIPTION_CN FROM dim_airport where ICAO_CODE = IN_FLT.DEPART_APT4CODE
+		         ) AS DEPART_APT4CODE, <!--起场 -->
+		       (SELECT DESCRIPTION_CN FROM dim_airport where ICAO_CODE = IN_FLT.ARRIVAL_APT4CODE
+		         ) AS ARRIVAL_APT4CODE, <!--落场 -->
+		       CLA.TSAT, <!--TSAT -->
+		       to_char(DELAY.DEALY_REASON),  <!--延误原因 -->
+		       IN_FLT.ACTSTAND_CODE <!--机位 -->
+		  FROM FD_FLT_INFO_HIS@PRSS2PRSSP IN_FLT,
+		       FD_FLT_IOREL_HIS@prss2prssp IOREL,
+		       FD_FLT_CLA_AIRGROUND_HIS@prss2prssp CLA,
+		       (SELECT FLTID,
+		               NVL(NVL(ZPJCZX_GOODCLOSE_T, ZPCGZX_GOODCLOSE_T),
+		                   ZPJGZX_GOODCLOSE_T) GOODCLOSE
+		          FROM WF_TASKNODE_FINISH_TIME_V) GOOD,
+		       (SELECT A.FLTID, WM_CONCAT(B.NAME || '/' || A.DELAY_TM) DEALY_REASON
+		          FROM FD_DELAY_INFO_HIS@PRSS2PRSSP A, DIM_DELAY_TYPE B
+		         WHERE A.DELAY_TYPE = B.ID
+		         GROUP BY A.FLTID) DELAY
+		 WHERE IN_FLT.IN_OUT_FLAG = 'A0'
+		   AND GOOD.FLTID(+) = IN_FLT.FLTID
+		   AND CLA.FLTID(+) = IN_FLT.FLTID
+		   AND DELAY.FLTID(+) = IN_FLT.FLTID
+		   AND IN_FLT.STATUS NOT IN ('1', '2')
+		   AND IN_FLT.FLIGHT_DATE = #{flightDate} 
+		   AND IN_FLT.FLIGHT_NUMBER = #{flightNumber}
+	       AND rownum = 1
+	</select>
+	<select id="getAbnormalFlightInfoFromPrsspD0" resultType="hashmap">
+		SELECT OUT_FLT.FLTID, <!--航班ID -->
+		       OUT_FLT.ALN_2CODE, <!--航空公司 -->
+		       '' IN_FLIGHT_NUMBER, <!--进港航班号 -->
+		       OUT_FLT.AIRCRAFT_NUMBER, <!--机号 -->
+		       OUT_FLT.ACTTYPE_CODE, <!--机型 -->
+		       OUT_FLT.FLIGHT_NUMBER OUT_FLIGHT_NUMBER, <!--出港航班号 -->
+		       '' STA, <!--STA -->
+		       OUT_FLT.STD, <!--STD -->
+		       '' ATA, <!--ATA -->
+		       OUT_FLT.ATD, <!--ATD -->
+		       OUT_FLT.HTCH_CLO_TM, <!--客关时间 -->
+		       GOOD.GOODCLOSE, <!--货关时间 -->
+		       CLA.FTSAT_TM, <!--首次TSAT -->
+		       (SELECT DESCRIPTION_CN
+		          FROM dim_airport
+		         where ICAO_CODE = OUT_FLT.DEPART_APT4CODE) AS DEPART_APT4CODE, <!--起场 -->
+		       (SELECT DESCRIPTION_CN
+		          FROM dim_airport
+		         where ICAO_CODE = OUT_FLT.ARRIVAL_APT4CODE) AS ARRIVAL_APT4CODE, <!--落场 -->
+		       CLA.TSAT, <!--TSAT -->
+		       to_char(DELAY.DEALY_REASON),  <!--延误原因 -->
+		       OUT_FLT.ACTSTAND_CODE <!--机位 -->
+		  FROM FD_FLT_INFO_HIS@PRSS2PRSSP OUT_FLT,
+		       FD_FLT_IOREL_HIS@prss2prssp IOREL,
+		       FD_FLT_CLA_AIRGROUND_HIS@prss2prssp CLA,
+		       (SELECT FLTID,
+		               NVL(NVL(ZPJCZX_GOODCLOSE_T, ZPCGZX_GOODCLOSE_T),
+		                   ZPJGZX_GOODCLOSE_T) GOODCLOSE
+		          FROM WF_TASKNODE_FINISH_TIME_V) GOOD,
+		       (SELECT A.FLTID, WM_CONCAT(B.NAME || '/' || A.DELAY_TM) DEALY_REASON
+		          FROM FD_DELAY_INFO_HIS@PRSS2PRSSP A, DIM_DELAY_TYPE B
+		         WHERE A.DELAY_TYPE = B.ID
+		         GROUP BY A.FLTID) DELAY
+		 WHERE OUT_FLT.IN_OUT_FLAG = 'D0'
+		   AND GOOD.FLTID(+) = OUT_FLT.FLTID
+		   AND CLA.FLTID(+) = OUT_FLT.FLTID
+		   AND DELAY.FLTID(+) = OUT_FLT.FLTID
+		   AND OUT_FLT.STATUS NOT IN ('1', '2')
+		   AND OUT_FLT.FLIGHT_DATE = #{flightDate} 
+		   AND OUT_FLT.FLIGHT_NUMBER = #{flightNumber}
+		   AND rownum = 1
+	</select>
+	<select id="getAbnormalFlightInfoFromPrssp" resultType="hashmap">
+		SELECT IN_FLT.FLTID, <!--航班ID -->
+		       IN_FLT.ALN_2CODE, <!--航空公司 -->
+		       IN_FLT.FLIGHT_NUMBER IN_FLIGHT_NUMBER, <!--进港航班号 -->
+		       IN_FLT.AIRCRAFT_NUMBER, <!--机号 -->
+		       IN_FLT.ACTTYPE_CODE, <!--机型 -->
+		       OUT_FLT.FLIGHT_NUMBER OUT_FLIGHT_NUMBER, <!--出港航班号 -->
+		       IN_FLT.STA, <!--STA -->
+		       OUT_FLT.STD, <!--STD -->
+		       IN_FLT.ATA, <!--ATA -->
+		       OUT_FLT.ATD, <!--ATD -->
+		       OUT_FLT.HTCH_CLO_TM, <!--客关时间 -->
+		       GOOD.GOODCLOSE, <!--货关时间 -->
+		       CLA.FTSAT_TM, <!--首次TSAT -->
+		       (SELECT DESCRIPTION_CN FROM dim_airport where ICAO_CODE = (CASE
+		         WHEN IN_FLT.FLIGHT_NUMBER = #{flightNumber} THEN
+		          IN_FLT.DEPART_APT4CODE
+		         WHEN OUT_FLT.FLIGHT_NUMBER = #{flightNumber} AND
+		              OUT_FLT.IN_OUT_FLAG = 'D1' THEN
+		          IN_FLT.DEPART_APT4CODE
+		         ELSE
+		          OUT_FLT.DEPART_APT4CODE
+		       END)) AS DEPART_APT4CODE, <!--起场 -->
+		       (SELECT DESCRIPTION_CN FROM dim_airport where ICAO_CODE = (CASE
+		         WHEN OUT_FLT.FLIGHT_NUMBER = #{flightNumber} THEN
+		          OUT_FLT.ARRIVAL_APT4CODE
+		         WHEN IN_FLT.FLIGHT_NUMBER = #{flightNumber} AND 
+		              IN_FLT.IN_OUT_FLAG = 'A1' THEN
+		          OUT_FLT.ARRIVAL_APT4CODE
+		         ELSE
+		          IN_FLT.ARRIVAL_APT4CODE
+		       END)) AS ARRIVAL_APT4CODE, <!--落场 -->
+		       CLA.TSAT, <!--TSAT -->
+		       to_char(DELAY.DEALY_REASON),  <!--延误原因 -->
+		       IN_FLT.ACTSTAND_CODE <!--机位 -->
+		  FROM FD_FLT_INFO_HIS@PRSS2PRSSP IN_FLT,
+		       FD_FLT_INFO_HIS@PRSS2PRSSP OUT_FLT,
+		       FD_FLT_IOREL_HIS@prss2prssp IOREL,
+		       FD_FLT_CLA_AIRGROUND_HIS@prss2prssp CLA,
+		       (SELECT FLTID,
+		               NVL(NVL(ZPJCZX_GOODCLOSE_T, ZPCGZX_GOODCLOSE_T),
+		                   ZPJGZX_GOODCLOSE_T) GOODCLOSE
+		          FROM WF_TASKNODE_FINISH_TIME_V) GOOD,
+		       (SELECT A.FLTID, WM_CONCAT(B.NAME || '/' || A.DELAY_TM) DEALY_REASON
+		          FROM FD_DELAY_INFO_HIS@PRSS2PRSSP A, DIM_DELAY_TYPE B
+		         WHERE A.DELAY_TYPE = B.ID
+		         GROUP BY A.FLTID) DELAY
+		 WHERE IN_FLT.FLTID = IOREL.IN_FLTID
+		   AND IOREL.OUT_FLTID = OUT_FLT.FLTID(+)
+		   AND GOOD.FLTID(+) = OUT_FLT.FLTID
+		   AND CLA.FLTID(+) = OUT_FLT.FLTID
+		   AND DELAY.FLTID(+) = OUT_FLT.FLTID
+		   AND IN_FLT.STATUS NOT IN ('1', '2')
+		   AND OUT_FLT.STATUS NOT IN ('1', '2')
+		   AND ((IN_FLT.FLIGHT_DATE = #{flightDate} AND
+		       IN_FLT.FLIGHT_NUMBER = #{flightNumber}) or
+		       (OUT_FLT.FLIGHT_DATE = #{flightDate} AND
+		       OUT_FLT.FLIGHT_NUMBER = #{flightNumber}))
+	       AND rownum = 1
+	</select>
+	<select id="getOfficeNames" resultType="string" >
+		SELECT NAME
+		FROM SYS_OFFICE 
+		WHERE ID IN 
+		<foreach collection="list" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+	</select>
+</mapper>

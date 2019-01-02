@@ -1,0 +1,164 @@
+html,body{
+	width:100% !important;
+	height:100% !important;
+	overflow:auto;
+}
+#baseTables{
+	width: 100%;
+	overflow: auto;
+}
+#totalBox{
+	position: absolute;
+	bottom: 0px;
+	font-size: 85%;
+	width: 100%;
+	height: 26px;
+	line-height: 26px;
+	padding: 0px 13px;
+	color: #ccc;
+}
+#baseTable{
+	text-align:center;
+}
+#baseTable>tbody td{
+	padding:0px;
+	line-height: 37px;
+}
+#tool-box button{
+	padding:6px 2px;
+	margin-left: 12px;
+}
+#filterForm .layui-form-label{
+	width:135px;
+}
+#filterForm{
+	padding: 20px;
+}
+#filterForm .layui-inline{
+	padding-left:20px !important;
+}
+.layui-form-label {
+	padding: 5px 10px !important;
+}
+.layui-layer-content{
+	overflow: auto !important;
+}
+.select2-container{
+	width:100% !important;
+}
+input.select2-search__field{
+	width:100%;
+	margin-top:0px !important;
+}
+.select2-selection__clear{
+	margin-top:0px !important;
+	margin-right:0px !important;
+}
+#filterForm .select2-selection{
+	padding: 0px 2px;
+	border: 1px solid #e6e6e6;
+	border-radius:2px;
+	height:32px;
+}
+#filterForm .select2-selection__rendered{
+	padding-right:30px;
+}
+#filterForm .select2-selection--single .select2-selection__rendered{
+	line-height: 36px;
+}
+#filterForm .select2-selection__rendered li{
+	margin-top:5px;
+	color:#000;
+}
+#filterForm .select2-selection__arrow{
+	width:30px;
+	height:30px;
+}
+#filterForm .select2-selection__arrow b{
+	display:none;
+	border-color: #c2c2c2 transparent transparent transparent;
+	border-width: 6px 6px 0 6px;
+	left: 40%;
+	margin-left: -3px;
+	margin-top: -4px;
+}
+#filterForm .form-control{
+	padding-left:5px;
+}
+.select2-container--default .select2-search--dropdown .select2-search__field {
+	border: 1px solid #e6e6e6;
+}
+/* .select2-selection__placeholder{
+	margin:0px !important;
+} */
+.select2-dropdown{
+	border-color:#e6e6e6;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, .12);
+}
+#refresh {
+	padding-right:0px !important;
+}
+.separator{
+	border-right: 3px solid #ccc;
+}
+#msgDiv{
+	width:100%;
+	height:100%;
+}
+#context-menu .dropdown a b{
+	position:absolute;
+	right:0px;
+	top:7px;
+}
+.divider{
+	margin:0px !important;
+}
+#recycleBox{
+	height: 100px;
+}
+#recycleBox .radio {
+	margin-bottom: 7px;
+}
+#recycleBox span {
+	float: right;
+	margin-right: 15px;
+}
+#recycleBox form {
+	width: 47%;
+	display: inline-block;
+	padding-left: 35px;
+}
+#switch {
+	width: 60px;
+	display: inline-block;
+	line-height: 0px;
+	padding: 0px !important
+}
+.layui-form-switch {
+	width: 55px;
+	padding: 11px 5px;
+	margin-top:0px;
+}
+.btn.btn-default{
+	border: 1px solid #006DC0;
+	background-color: #021e44;
+	color: #ffffff;
+}
+.btn.btn-default:HOVER{
+	background-color: #002F63;
+	border: 1px solid #006DC0;
+	color: #ffffff;
+}
+#hisdate {
+	width: 170px;
+	display: inline-block;
+	float: right;
+}
+#quickDate {
+	width: 100px;
+	display: inline-block;
+	height: 30px;
+	padding: 0px 10px;
+	float: right;
+	margin-left: 10px;
+}

@@ -1,0 +1,509 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.neusoft.prss.arrange.dao.EmpPlanDao">
+	<resultMap id="empPlanMap" type="com.neusoft.prss.arrange.entity.EmpPlanMain">
+		<id property="id" column="id" />
+		<!-- 部门ID-->
+		<result property="officeId" column="office_id" />
+		<!-- 员工ID-->
+		<result property="workerId" column="worker_id" />
+		<!-- 排班日期-->
+		<result property="pdate" column="pdate" />
+		<!-- 员工名称-->
+		<result property="loginName" column="login_name" />
+		<!-- 时间段1开始名称-->
+		<result property="stime1Label" column="stime1_label" />
+		<!-- 时间段1结束名称-->
+		<result property="etime1Label" column="etime1_label" />
+		<!-- 时间段1开始-->
+		<result property="stime1" column="stime1" />
+		<!-- 时间段1结束-->
+		<result property="etime1" column="etime1" />
+		<!-- 时间段2开始名称 -->
+		<result property="stime2Label" column="stime2_label" />
+		<!-- 时间段2结束名称-->
+		<result property="etime2Label" column="etime2_label" />
+		<!-- 时间段2开始-->
+		<result property="stime2" column="stime2" />
+		<!-- 时间段2结束-->
+		<result property="etime2" column="etime2" />
+		<!-- 时间段3开始名称-->
+		<result property="stime3Label" column="stime3_label" />
+		<!-- 时间段3结束名称-->
+		<result property="etime3Label" column="etime3_label" />
+		<!-- 时间段3开始-->
+		<result property="stime3" column="stime3" />
+		<!-- 时间段3结束-->
+		<result property="etime3" column="etime3" />
+		<!-- 忙时工作时间间隔-->
+		<result property="busyInterval" column="busy_interval" />
+		<!-- 闲时工作时间间隔-->
+		<result property="idleInterval" column="idle_interval" />
+		<!-- 排序-->
+		<result property="sortnum" column="sortnum" />
+		<!--班制ID-->
+		<result property="shiftsId" column="shifts_id" />
+		<!-- 班制名称-->
+		<result property="shiftsName" column="shifts_name" />
+		<!-- 停止工作原因-->
+		<result property="blockupReason" column="blockup_reason" />
+		<!-- 停止工作时段-->
+		<result property="blockupTime" column="blockup_time" />
+		<!-- 工作时段一-->
+		<result property="label1" column="label1" />
+		<!-- 工作时段二-->
+		<result property="label2" column="label2" />
+		<!-- 工作时段三-->
+		<result property="label3" column="label3" />
+		
+	</resultMap>
+	
+	<resultMap id="planMap" type="com.neusoft.prss.arrange.entity.PlanVO">
+		<result property="title" column="title" />
+		<result property="start" column="start_date" />
+		<result property="end" column="end_date" />
+	</resultMap>
+	
+	<resultMap id="shiftsMap" type="com.neusoft.prss.arrange.entity.ShiftsVO">
+		<result property="id" column="id" />
+		<result property="shiftsName" column="shifts_name" />
+		<result property="stime" column="stime" />
+		<result property="etime" column="etime" />
+	</resultMap>
+	
+	<!-- <select id="getEmpPlanList" resultMap="planMap" parameterType="java.util.Map">
+		SELECT B.NAME||' '||STIME1_LABEL||'-'||ETIME1_LABEL title,PDATE start_date,PDATE end_date 
+		FROM AM_WORKER_PLAN A, SYS_USER B 
+		WHERE A.WORKER_ID = B.ID AND A.OFFICE_ID = #{officeId} 
+			AND SUBSTR(A.PDATE,1,7) = SUBSTR(#{selDate},1,7)
+		ORDER BY SORTNUM
+	</select> -->
+	<select id="getEmpPlanList" resultMap="planMap" parameterType="java.util.Map">
+		SELECT case
+	         when STIME1_LABEL is NULL then
+	          name
+	         else
+	          NAME || ' ' || STIME1_LABEL || '-' || ETIME1_LABEL
+	       end title,
+	       PDATE start_date,
+	       PDATE end_date
+	  from (select gu.name,
+	               a.PDATE,
+	               max(decode(gu.id, u.id, a.STIME1_LABEL, null)) as STIME1_LABEL,
+	               max(decode(gu.id, u.id, a.ETIME1_LABEL, null)) as ETIME1_LABEL
+	          from AM_WORKER_PLAN      A,
+	               AM_GROUP_INFO       g,
+	               sys_user            u,
+	               sys_user            gu,
+	               AM_GROUP_WORKER_REL r
+	         where a.worker_id = u.id
+	           and u.id = r.worker_id(+)
+	           and r.group_id = g.group_id(+)
+	           and g.pri_master_id = gu.id(+)
+	           and g.office_id = #{officeId} 
+	           AND SUBSTR(A.PDATE, 1, 7) =
+	               SUBSTR(#{selDate}, 1, 7)
+	         group by gu.name, a.PDATE)
+	</select>
+	
+	<delete id="deletePlan" parameterType="java.util.Map">
+		delete from AM_WORKER_PLAN 
+		where PDATE BETWEEN #{dateStart} AND #{dateEnd} AND OFFICE_ID = #{officeId} 
+	</delete>
+	
+	<select id="getPlanGridList" resultMap="empPlanMap" parameterType="java.util.Map">
+		<![CDATA[
+			select * from (
+	        SELECT  A.ID,a.worker_id||'@'||NAME LOGIN_NAME,c.SHIFTS_NAME,SORTNUM,BUSY_INTERVAL,IDLE_INTERVAL,
+	          CASE WHEN STIME1_LABEL IS NULL THEN NULL ELSE STIME1_LABEL || '-' || ETIME1_LABEL END LABEL1,
+	          CASE WHEN STIME2_LABEL IS NULL THEN NULL ELSE STIME2_LABEL || '-' || ETIME2_LABEL END LABEL2,
+	          CASE WHEN STIME3_LABEL IS NULL THEN NULL ELSE STIME3_LABEL || '-' || ETIME3_LABEL END LABEL3,
+	          CASE WHEN d.blockup_stime IS NULL THEN NULL 
+	            ELSE nvl(d.blockup_stime,'')||'</br>'||nvl(d.blockup_etime,'') END blockup_time,
+	          BLOCKUP_REASON,c.SHIFTS_ID
+	        FROM AM_WORKER_PLAN a,SYS_USER b,dim_shifts_type C,AM_WORKER_BLOCKUP d
+	        WHERE a.worker_id=B.ID AND a.shifts_id=C.SHIFTS_ID(+)
+	          and to_date(d.blockup_etime(+),'yyyy-MM-dd hh24:mi:ss') > to_date('${selDate} 00:00:00','yyyy-MM-dd hh24:mi:ss')
+	          and to_date(d.blockup_stime(+),'yyyy-MM-dd hh24:mi:ss') < to_date('${selDate} 23:59:59','yyyy-MM-dd hh24:mi:ss')
+	          and a.worker_id = d.worker_id(+)
+	          AND a.OFFICE_ID = #{officeId} and A.PDATE=#{selDate}
+	      )
+	      order by blockup_time DESC,LABEL1,LABEL2,LABEL3
+		]]>
+	</select>
+	
+	<select id="getGroupInfo" parameterType="hashmap" resultType="hashmap">
+  		select GROUP_ID as id,GROUP_NAME as name 
+  		from AM_GROUP_INFO
+  		where OFFICE_ID = #{officeId}
+  	</select>
+  	
+	<select id="getEmpInfoById" parameterType="hashmap" resultType="hashmap">
+  		SELECT DISTINCT WORKER_ID ID,C.NAME NAME FROM AM_GROUP_INFO A,AM_GROUP_WORKER_REL B,SYS_USER C
+			WHERE A.GROUP_ID = B.GROUP_ID AND b.worker_id=C.ID
+			AND C.DEL_FLAG = '0' 
+			AND A.Group_Id=#{groupId} and a.OFFICE_ID = #{officeId}
+			<if test="personName!=null and personName!=''">
+				and name like '%'||#{personName}||'%'
+			</if>
+  	</select>
+  	
+  	<select id="getAllEmpInfo" parameterType="hashmap" resultType="hashmap">
+  		SELECT DISTINCT WORKER_ID ID,C.NAME NAME FROM AM_GROUP_INFO A,AM_GROUP_WORKER_REL B,SYS_USER C
+			WHERE A.GROUP_ID = B.GROUP_ID AND b.worker_id=C.ID
+			AND C.DEL_FLAG = '0' 
+			AND a.OFFICE_ID = #{officeId}
+			<if test="personName!=null and personName!=''">
+				and name like '%'||#{personName}||'%'
+			</if>
+  	</select>
+	
+	<select id="getShiftsList" resultMap="shiftsMap" parameterType="hashmap">
+		select shifts_id||','||stime||','||etime id,
+			shifts_name,stime,etime 
+		from dim_shifts_type a,SYS_USER B
+		WHERE A.CREATOR_ID = B.ID(+) and SHIFTS_NAME IS NOT NULL 
+		and stime IS NOT NULL and etime IS NOT NULL
+        and (B.OFFICE_ID IN(SELECT OFFICE_ID FROM SYS_USER WHERE ID=#{userId}) OR '${userId}'='1')
+		${str}
+		order by stime,etime
+	</select>
+	
+	<insert id="savePlanInfo">
+		insert into AM_WORKER_PLAN
+		(id,office_id,update_time,worker_id,pdate,stime1,etime1,stime2,etime2,stime3,etime3,
+			busy_interval,idle_interval,sortnum,shifts_type,
+			stime1_label,etime1_label,stime2_label,etime2_label,stime3_label,etime3_label,shifts_id)
+		SELECT AM_WORKER_PLAN_S.nextval,#{officeId},sysdate,T.* FROM (
+		<foreach collection="planDetails" item="detail" index="index" separator=" union all ">
+			SELECT
+			#{detail.workerId},
+			#{detail.pdate},
+			#{detail.stime1},
+			#{detail.etime1},
+			#{detail.stime2},
+			#{detail.etime2},
+			#{detail.stime3},
+			#{detail.etime3},
+			#{detail.busyInterval},
+			#{detail.idleInterval},
+			#{detail.sortnum},
+			#{detail.shiftsType},
+			#{detail.stime1Label},
+			#{detail.etime1Label},
+			#{detail.stime2Label},
+			#{detail.etime2Label},
+			#{detail.stime3Label},
+			#{detail.etime3Label},
+			#{detail.shiftsId}
+			FROM DUAL
+		</foreach>
+		) T
+	</insert>
+	
+	<delete id="deleteEmpPlan" parameterType="string">
+		delete from AM_WORKER_PLAN where id in 
+		<foreach item="id" index="index" collection="array" open="(" separator="," close=")">  
+			#{id}  
+		</foreach> 
+	</delete>
+	
+	<select id="getPlanInfoById" parameterType="string" resultType="hashmap">
+  		SELECT BUSY_INTERVAL,IDLE_INTERVAL,STIME1_LABEL,ETIME1_LABEL,
+  			STIME2_LABEL,ETIME2_LABEL,STIME3_LABEL,ETIME3_LABEL,shifts_id
+  		FROM AM_WORKER_PLAN
+		WHERE ID in
+		<foreach item="id" collection="array" open="(" separator="," close=")">
+		   #{id}
+		</foreach>
+  	</select>
+  	
+  	<update id="modifyPlanInfo" parameterType="hashmap">
+  		update AM_WORKER_PLAN 
+  		set BUSY_INTERVAL = #{busyInterval},
+  			IDLE_INTERVAL = #{idleInterval},
+  			STIME1_LABEL = #{stime1Label},
+  			ETIME1_LABEL = #{etime1Label},
+  			STIME2_LABEL = #{stime2Label},
+  			ETIME2_LABEL = #{etime2Label},
+  			STIME3_LABEL = #{stime3Label},
+  			ETIME3_LABEL = #{etime3Label},
+  			STIME1 = #{stime1},
+  			ETIME1 = #{etime1},
+  			STIME2 = #{stime2},
+  			ETIME2 = #{etime2},
+  			STIME3 = #{stime3},
+  			ETIME3 = #{etime3},
+  			SHIFTS_ID = #{shiftsId}
+  		where id in
+  		<foreach item="i" collection="id" open="(" separator="," close=")">
+		   #{i}
+		</foreach>
+  	</update>
+  	
+  	<select id="showOrderPlan" parameterType="hashmap" resultType="hashmap">
+  		SELECT ROWNUM NUM,t.* FROM (SELECT a.ID,NAME LOGIN_NAME,SHIFTS_NAME,
+       		CASE WHEN STIME1_LABEL IS NULL THEN NULL ELSE STIME1_LABEL || '-' || ETIME1_LABEL END LABEL1,
+         	CASE WHEN STIME2_LABEL IS NULL THEN NULL ELSE STIME2_LABEL || '-' || ETIME2_LABEL END LABEL2,
+          	CASE WHEN STIME3_LABEL IS NULL THEN NULL ELSE STIME3_LABEL || '-' || ETIME3_LABEL END LABEL3
+		FROM AM_WORKER_PLAN a,SYS_USER b,dim_shifts_type C,am_worker_blockup d
+		WHERE A.WORKER_ID =B.ID AND A.SHIFTS_ID=C.SHIFTS_ID(+)
+			AND a.OFFICE_ID = #{officeId} and A.PDATE=#{selDate}
+			and a.worker_id = d.worker_id(+)
+			and (d.blockup_etime is null or d.blockup_etime &lt; to_char(sysdate,'yyyy-MM-dd hh24:mi:ss'))
+		ORDER BY LABEL1,A.SORTNUM  ) t
+  	</select>
+  	
+  	<update id="saveOrderInfo" parameterType="hashmap">
+  		update AM_WORKER_PLAN 
+  		set SORTNUM = #{sortnum}
+  		where id = #{id}
+  	</update>
+  	
+  	<insert id="saveStopInfo" parameterType="hashmap">
+  		insert into am_worker_blockup (WORKER_ID,BLOCKUP_STIME,BLOCKUP_ETIME,BLOCKUP_REASON)
+  		SELECT #{workId},#{blockupStime},#{blockupEtime},#{blockupReason} FROM DUAL
+  	</insert>
+  	
+  	<select id="checkTask" parameterType="hashmap" resultType="string">
+  		select count(1) from jm_task t
+		where t.operator = #{workId} and t.job_state in (1,2)
+			and t.e_start_tm &lt;= #{blockupEtime} and t.e_end_tm &gt;= #{blockupStime}
+  	</select>
+  	
+  	<insert id="saveLog" parameterType="hashmap">
+  		insert into AM_BLOCKUP_LOG 
+  			(ID,office_id,WORKER_ID,WORKER_NAME,OPT_TYPE,STIME,ETIME,RTIME,RWORKER_ID,BLOCKUP_REASON)
+  		SELECT AM_BLOCKUP_LOG_S.nextval,
+  			#{officeId},#{workId},#{workName},
+  			#{optType},#{blockupStime},#{blockupEtime},
+  			to_char(sysdate,'yyyy-MM-dd hh24:mi:ss'),#{curWorkId},#{blockupReason}
+  			FROM DUAL
+  	</insert>
+  	
+  	<select id="checkStopState" parameterType="hashmap" resultType="string">
+  		select count(1) from jm_task t
+		where t.operator = #{workId} and t.job_state in (2,3)
+			and (t.e_start_tm between #{blockupEtime} and #{blockupStime})
+  	</select>
+  	
+  	<delete id="deleteStopInfo" parameterType="hashmap">
+		delete from am_worker_blockup where WORKER_ID =#{workId}
+	</delete>
+	
+	<select id="getLogList" parameterType="hashmap" resultType="hashmap" >
+		SELECT * FROM (SELECT ROWNUM RM,b.* FROM (
+			SELECT WORKER_NAME,DECODE(OPT_TYPE, '0', '停用', '1', '恢复') OPT_TYPE,
+		      	CASE WHEN OPT_TYPE = '0' THEN STIME || '至' || ETIME ELSE RTIME END WORK_TIME,
+		        BLOCKUP_REASON
+		    FROM AM_BLOCKUP_LOG
+		    WHERE OFFICE_ID = #{officeId} 
+		        AND WORKER_NAME LIKE '%'||#{empName}||'%' 
+				AND (((SUBSTR(RTIME, 1, 10) BETWEEN #{timeStart} AND #{timeEnd}) AND OPT_TYPE = 1) OR
+                    (SUBSTR(STIME, 1, 10) BETWEEN #{timeStart} AND #{timeEnd} or
+                    SUBSTR(ETIME, 1, 10) BETWEEN #{timeStart} AND #{timeEnd}))
+		    ORDER BY RTIME DESC) B )
+		 WHERE RM &gt; ${begin} AND RM &lt;= ${end}
+	</select>
+	
+	<select id="getLogListCount"  resultType="int" parameterType="hashmap">
+	select count(*) from(
+		select WORKER_NAME,decode(OPT_TYPE,'0','停用','1','恢复') OPT_TYPE,
+			 case when OPT_TYPE='0' then STIME||' 至 '||ETIME else RTIME end work_time,
+			 BLOCKUP_REASON
+		FROM AM_BLOCKUP_LOG
+		where OFFICE_ID = #{officeId} 
+		    AND WORKER_NAME LIKE '%'||#{empName}||'%' 
+			AND (((SUBSTR(RTIME, 1, 10) BETWEEN #{timeStart} AND #{timeEnd}) AND OPT_TYPE = 1) OR
+                    (SUBSTR(STIME, 1, 10) BETWEEN #{timeStart} AND #{timeEnd} AND
+                    SUBSTR(ETIME, 1, 10) BETWEEN #{timeStart} AND #{timeEnd}))
+	   )
+	</select>
+	
+	<select id="getUnfixedList" parameterType="hashmap" resultType="hashmap" >
+		     select * from (
+     select rownum rm,x.id,x.name,y.shifts from(
+     select  id,listagg(to_char(name),'/')  within group(order by cnt) name from(
+     select a.name,b.id,instr(b.worker_ids,a.id) cnt from sys_user a,DIM_AMBULATORY_SHIFTS_CONF b
+     where  ','||b.worker_ids||',' like '%,'||a.id ||',%'
+     and b.office_id = #{officeId}
+     and a.del_flag = 0
+     )
+     group by id
+     )x,(    
+     select id,listagg(to_char(shifts_name),'/')  within group(order by cnt) shifts from(
+     select distinct a.shifts_name,b.id,instr(b.shifts_ids,a.shifts_id) cnt 
+     from dim_ambulatory_shifts_type a,DIM_AMBULATORY_SHIFTS_CONF b
+     where  ','||b.shifts_ids||',' like '%,'||a.shifts_id ||',%'
+     and b.office_id = #{officeId}
+     )
+     group by id
+     ) y
+     where x.id = y.id
+     ) where  RM &gt; ${begin} AND RM &lt;= ${end}
+     
+	</select>
+	
+	<select id="getUnfixedListCount" resultType="int" parameterType="hashmap">
+	select count(*) from(
+    SELECT * FROM (SELECT ROWNUM RM,b.* FROM (
+    SELECT M.ID, N.NAME, M.SHIFTS
+        FROM (SELECT ID, LISTAGG(SHIFTS_NAME, '/') WITHIN GROUP(ORDER BY ORD) SHIFTS
+              FROM (SELECT DISTINCT X.ID, C.SHIFTS_NAME, ORD
+                    FROM DIM_AMBULATORY_SHIFTS_TYPE C,
+                    (select id, substr(t, 1, instr(t, ',', 1) - 1) SHIFT_ID, d as ord
+					   from (select id,
+					                substr(s, instr(s, ',', 1, rownum) + 1) || ',' as t,
+					                rownum as d,
+					                instr(s, ',', 1, rownum) + 1
+					           from (select SHIFTS_IDS as s, id from DIM_AMBULATORY_SHIFTS_CONF)
+					        connect by instr(s, ',', '1', rownum) &gt; 1)) X
+					WHERE C.SHIFTS_ID = X.SHIFT_ID AND OFFICE_ID = #{officeId} ) Y
+           GROUP BY ID) M,
+           (SELECT ID, LISTAGG(TO_CHAR(NAME), '/') WITHIN GROUP(ORDER BY ORD) NAME
+              FROM (SELECT DISTINCT X.ID, C.NAME , ORD
+                      FROM SYS_USER C,
+                      (select id, substr(t, 1, instr(t, ',', 1) - 1) worker_id, d as ord
+						 from (select id,
+						              substr(s, instr(s, ',', 1, rownum) + 1) || ',' as t,
+						              rownum as d,
+						              instr(s, ',', 1, rownum) + 1
+						         from (select WORKER_IDS as s, id from DIM_AMBULATORY_SHIFTS_CONF)
+						       connect by instr(s, ',', '1', rownum) &gt; 1)) X
+                	WHERE C.ID = X.WORKER_ID AND OFFICE_ID = #{officeId}) Y
+           GROUP BY ID) N
+     WHERE M.ID = N.ID
+    ) B )
+  )
+	</select>
+	
+	<select id="getTeamList" parameterType="hashmap" resultType="hashmap">
+  		SELECT DISTINCT LEADER_ID ID,NAME NAME FROM AM_TASK_TEAM A,SYS_USER B
+		WHERE A.LEADER_ID = B.ID AND A.OFFICE_ID = #{officeId}
+		<if test="teamName!=null and teamName!=''">
+			and name like '%'||#{teamName}||'%'
+		</if>
+  	</select>
+	
+	<select id="getUnfixedDim" parameterType="hashmap" resultType="hashmap">
+  		SELECT DISTINCT SHIFTS_ID ID,SHIFTS_NAME NAME
+		FROM DIM_AMBULATORY_SHIFTS_TYPE
+		WHERE OFFICE_ID = #{officeId} AND SHIFTS_NAME is NOT NULL
+		<if test="unfixedName!=null and unfixedName!=''">
+			and SHIFTS_NAME like '%'||#{unfixedName}||'%'
+		</if>
+  	</select>
+	
+	<insert id="saveUnfiexPlan" parameterType="hashmap">
+  		insert into dim_ambulatory_shifts_conf (ID,WORKER_IDS,SHIFTS_IDS,OFFICE_ID)
+  		SELECT DIM_AMBULATORY_SHIFTS_CONF_S.nextval,#{workerIds},#{shiftsIds},#{officeId} FROM DUAL
+  	</insert>
+  	
+  	<delete id="deleteUnfixedPlan" parameterType="string">
+		delete from dim_ambulatory_shifts_conf where id =#{id}
+	</delete>
+	
+	<select id="getWorkerHaveList" parameterType="hashmap" resultType="hashmap">
+		SELECT ID,NAME,TEAM_ID FROM (
+  		SELECT DISTINCT A.ID ID,A.NAME NAME
+		FROM SYS_USER A ,(
+			select id, substr(t, 1, instr(t, ',', 1) - 1) worker_id
+  from (select id,substr(s, instr(s, ',', 1, rownum) + 1) || ',' as t,
+               instr(s, ',', 1, rownum) + 1
+          from (select ','||WORKER_IDS as s, id from DIM_AMBULATORY_SHIFTS_CONF WHERE ID = #{id})
+        connect by instr(s, ',', '1', rownum) &gt; 1)) B 
+		WHERE A.ID = B.WORKER_ID
+		) c,AM_TASK_TEAM b
+		WHERE b.LEADER_ID(+) = C.ID AND b.OFFICE_ID(+) =#{officeId}
+  	</select>
+  	
+  	<select id="getShiftsHaveList" parameterType="hashmap" resultType="hashmap">
+  		SELECT DISTINCT A.SHIFTS_ID ID,A.SHIFTS_NAME NAME 
+  		FROM DIM_AMBULATORY_SHIFTS_TYPE A,(
+			select id, substr(t, 1, instr(t, ',', 1) - 1) SHIFT_ID
+  from (select id,
+               substr(s, instr(s, ',', 1, rownum) + 1) || ',' as t,
+               instr(s, ',', 1, rownum) + 1
+          from (select ','||SHIFTS_IDS as s, id from DIM_AMBULATORY_SHIFTS_CONF WHERE ID = #{id})
+        connect by instr(s, ',', '1', rownum) &gt; 1)) B
+		WHERE A.SHIFTS_ID = B.SHIFT_ID
+  	</select>
+  	
+  	<update id="modifyUnfiexPlan" parameterType="hashmap">
+  		update DIM_AMBULATORY_SHIFTS_CONF 
+  		set WORKER_IDS = #{workerIds},
+  			SHIFTS_IDS = #{shiftsIds}
+  		where id = #{id}
+  	</update>
+  	
+  	<select id="ifHavePlanInfo" resultType="int" parameterType="hashmap">
+		select count(*) 
+		from am_worker_plan
+		where OFFICE_ID = #{officeId} and WORKER_ID=#{workerId}
+		and PDATE = #{pdate}
+		<!-- <if test="stime1!=null and stime1!=''">
+	 		and STIME1=#{stime1}
+	 	</if>
+	 	<if test="etime1!=null and etime1!=''">
+	 		and ETIME1=#{etime1}
+	 	</if>
+		<if test="stime2!=null and stime2!=''">
+	 		and STIME2=#{stime2}
+	 	</if>
+	 	<if test="etime2!=null and etime2!=''">
+	 		and ETIME2=#{etime2}
+	 	</if>
+	 	<if test="stime3!=null and stime3!=''">
+	 		and STIME3=#{stime3}
+	 	</if>
+	 	<if test="etime3!=null and etime3!=''">
+	 		and ETIME1=#{etime3}
+	 	</if> -->
+	</select>
+	<select id="getExportPlan" parameterType="hashmap" resultType="hashmap">
+  		select 
+  			rownum RM,
+  			tt.*
+  		from
+  		(select 
+  				case
+		         when l.is_leader = 1 then
+		          l.name || '(' || l.group_name || ')'
+		         else
+		          l.name
+		       end name,
+		       m.*
+		  from (SELECT worker_id
+		  <foreach collection="dateList" item="dateStr" >
+	               ,nvl(max(decode(pdate, REPLACE(#{dateStr},'/','-'), str, null)), 'OFF') as "${dateStr}"
+		  </foreach>
+		          from (select worker_id,
+		                       pdate,
+		                       to_char(wm_concat(stime_label || '-' || etime_label)) str
+		                  from AM_WORKER_PLAN_TIME_V
+		                 where office_id = #{officeId}
+		                 group by worker_id, pdate)
+		         group by worker_id) m,
+		       (select u.id,
+		               u.name,
+		               g.group_name,
+		               case
+		                 when r.worker_id = g.pri_master_id then
+		                  1
+		                 else
+		                  0
+		               end is_leader
+		          from AM_GROUP_INFO g, sys_user u, AM_GROUP_WORKER_REL r
+		         where u.id = r.worker_id(+)
+		           and r.group_id = g.group_id(+)) l
+		 where m.worker_id = l.id
+		 order by l.group_name, l.is_leader desc) tt
+  	</select>
+  	
+  	<select id="getPlanCount" resultType="integer">
+  		select count(distinct pdate) from  am_worker_plan 
+		where pdate between #{stime} and #{etime}
+		and office_id = #{officeId}
+  	</select>
+	
+</mapper>
